@@ -6,8 +6,9 @@ import UsersTable from './UsersTable'
 import AuditLogsTable from './AuditLogsTable'
 import TableSkeleton from './TableSkeleton'
 
-export default async function AdminPage(props: { searchParams: Promise<{ error?: string, message?: string }> }) {
+export default async function AdminPage(props: { searchParams: Promise<{ error?: string, message?: string, query?: string }> }) {
     const searchParams = await props.searchParams
+    const query = searchParams.query
     const supabase = await createClient()
 
     const {
@@ -56,7 +57,7 @@ export default async function AdminPage(props: { searchParams: Promise<{ error?:
                 <AdminClient
                     usersTabContent={
                         <Suspense fallback={<TableSkeleton />}>
-                            <UsersTable />
+                            <UsersTable query={query} />
                         </Suspense>
                     }
                     logsTabContent={
