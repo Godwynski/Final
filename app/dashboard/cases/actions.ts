@@ -16,9 +16,14 @@ export async function createCase(formData: FormData) {
     }
 
     const title = formData.get('title') as string
-    const description = formData.get('description') as string
+    const incident_type = formData.get('incident_type') as string
+    const narrative_facts = formData.get('narrative_facts') as string
+    const narrative_action = formData.get('narrative_action') as string
     const incident_date = formData.get('incident_date') as string
     const incident_location = formData.get('incident_location') as string
+
+    // Legacy Description for backward compatibility
+    const description = `[${incident_type}] FACTS: ${narrative_facts}\n\nACTION TAKEN: ${narrative_action}`
 
     // Validate Incident Date
     const incidentDateObj = new Date(incident_date)
@@ -32,6 +37,9 @@ export async function createCase(formData: FormData) {
         .from('cases')
         .insert({
             title,
+            incident_type,
+            narrative_facts,
+            narrative_action,
             description,
             incident_date: new Date(incident_date).toISOString(),
             incident_location,

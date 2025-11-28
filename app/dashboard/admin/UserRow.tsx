@@ -66,7 +66,7 @@ export default function UserRow({ user }: { user: User }) {
                     {user.role}
                 </span>
             </td>
-            <td className="px-6 py-4">{new Date(user.created_at).toLocaleDateString()}</td>
+            <td className="px-6 py-4" suppressHydrationWarning>{new Date(user.created_at).toLocaleDateString()}</td>
             <td className="px-6 py-4">
                 <div className="flex items-center gap-3">
                     <button onClick={() => setIsEditing(true)} className="font-medium text-blue-600 dark:text-blue-500 hover:underline">Edit</button>

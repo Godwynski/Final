@@ -11,7 +11,7 @@ export async function updateCaseStatus(caseId: string, formData: FormData) {
 
     const { data: caseData } = await supabase
         .from('cases')
-        .select('reported_by, title')
+        .select('reported_by, title, status')
         .eq('id', caseId)
         .single()
 
@@ -31,6 +31,20 @@ export async function updateCaseStatus(caseId: string, formData: FormData) {
             title: 'Case Status Updated',
             message: `Case "${caseData.title}" is now ${status}`,
             link: `/dashboard/cases/${caseId}`,
+        })
+    }
+
+    // Log the status change
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+        await supabase.from('audit_logs').insert({
+            user_id: user.id,
+            action: 'Status Updated',
+            details: {
+                old_status: caseData?.status || 'Unknown',
+                new_status: status
+            },
+            case_id: caseId
         })
     }
 
@@ -173,4 +187,83 @@ export async function toggleGuestLinkStatus(linkId: string, currentStatus: boole
     }
 
     revalidatePath(`/dashboard/cases/${caseId}`)
+}
+
+export async function updateCaseDetails(caseId: string, formData: FormData) {
+    const supabase = await createClient()
+
+    const title = formData.get('title') as string
+    const incident_date = formData.get('incident_date') as string
+    const incident_location = formData.get('incident_location') as string
+    const incident_type = formData.get('incident_type') as string
+    const narrative_facts = formData.get('narrative_facts') as string
+    const narrative_action = formData.get('narrative_action') as string
+
+    const { error } = await supabase
+        .from('cases')
+        .update({
+            title,
+            incident_date,
+            incident_location,
+            incident_type,
+            narrative_facts,
+            narrative_action,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', caseId)
+
+    if (error) {
+        redirect(`/dashboard/cases/${caseId}/edit?error=${encodeURIComponent(error.message)}`)
+    }
+
+    revalidatePath(`/dashboard/cases/${caseId}`)
+    redirect(`/dashboard/cases/${caseId}?message=Case updated successfully`)
+}
+
+export async function deleteCase(caseId: string) {
+    const supabase = await createClient()
+
+    // Assuming DB has ON DELETE CASCADE for foreign keys, we just delete the case.
+    const { error } = await supabase
+        .from('cases')
+        .delete()
+        .eq('id', caseId)
+
+    if (error) {
+        redirect(`/dashboard/cases/${caseId}/edit?error=${encodeURIComponent(error.message)}`)
+    }
+
+    revalidatePath('/dashboard/cases')
+    redirect('/dashboard/cases?message=Case deleted successfully')
+}
+
+export async function updateActionTaken(caseId: string, formData: FormData) {
+    const supabase = await createClient()
+    const narrative_action = formData.get('narrative_action') as string
+
+    const { error } = await supabase
+        .from('cases')
+        .update({
+            narrative_action,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', caseId)
+
+    if (error) {
+        redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent(error.message)}`)
+    }
+
+    // Log the action
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+        await supabase.from('audit_logs').insert({
+            user_id: user.id,
+            action: 'Case Updated',
+            details: { narrative_action: narrative_action },
+            case_id: caseId
+        })
+    }
+
+    revalidatePath(`/dashboard/cases/${caseId}`)
+    redirect(`/dashboard/cases/${caseId}?message=Action taken updated successfully`)
 }
