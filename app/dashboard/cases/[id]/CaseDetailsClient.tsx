@@ -29,10 +29,12 @@ export default function CaseDetailsClient({
 }) {
     const [activeTab, setActiveTab] = useState<Tab>('overview')
     const [formattedDate, setFormattedDate] = useState<string>('')
+    const [origin, setOrigin] = useState<string>('')
 
     // Format date on client only to avoid hydration mismatch
     useEffect(() => {
         setFormattedDate(new Date(caseData.incident_date).toLocaleString())
+        setOrigin(window.location.origin)
     }, [caseData.incident_date])
 
     return (
@@ -345,7 +347,7 @@ export default function CaseDetailsClient({
                                                 <div className="flex flex-col gap-1">
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-sm font-mono text-blue-600 dark:text-blue-400">Link: ...{link.token.slice(-8)}</span>
-                                                        <CopyButton text={`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/guest/${link.token}`} label="Copy Link" />
+                                                        <CopyButton text={`/guest/${link.token}`} label="Copy Link" />
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-xs font-bold text-gray-700 dark:text-gray-300">PIN: {link.pin}</span>
@@ -367,7 +369,7 @@ export default function CaseDetailsClient({
                                             </div>
                                             {link.is_active && (
                                                 <form action={emailGuestLink} className="mt-2 flex gap-2 items-center pl-2">
-                                                    <input type="hidden" name="link" value={`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/guest/${link.token}`} />
+                                                    <input type="hidden" name="link" value={`${origin}/guest/${link.token}`} />
                                                     <input type="hidden" name="pin" value={link.pin} />
                                                     <input type="hidden" name="caseId" value={caseData.id} />
                                                     <input type="email" name="email" placeholder="Recipient Email" required className="bg-white border border-gray-300 text-gray-900 text-xs rounded-lg p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white w-48" />

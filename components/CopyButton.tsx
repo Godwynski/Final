@@ -6,8 +6,13 @@ export default function CopyButton({ text, label = 'Copy' }: { text: string, lab
     const [copied, setCopied] = useState(false)
 
     const handleCopy = async () => {
+        let textToCopy = text
+        if (typeof window !== 'undefined' && text.startsWith('/')) {
+            textToCopy = `${window.location.origin}${text}`
+        }
+
         try {
-            await navigator.clipboard.writeText(text)
+            await navigator.clipboard.writeText(textToCopy)
             setCopied(true)
             setTimeout(() => setCopied(false), 2000)
         } catch (err) {
