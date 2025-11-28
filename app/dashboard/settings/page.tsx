@@ -22,9 +22,9 @@ export default async function SettingsPage(props: { searchParams: Promise<{ erro
     }
 
     return (
-        <div className="p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
-            <div className="max-w-3xl mx-auto space-y-8">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Account Settings</h1>
+        <div className="p-4">
+            <div className="space-y-6">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Account Settings</h1>
 
                 {searchParams.message && (
                     <div className="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400" role="alert">

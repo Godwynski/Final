@@ -46,165 +46,111 @@ export default async function Dashboard() {
     const getPercent = (count: number) => totalCases > 0 ? (count / totalCases) * 100 : 0
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div className="p-4">
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Overview</h1>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         Welcome back, <span className="font-semibold text-gray-900 dark:text-white">{profile?.email}</span>
                     </p>
                 </div>
-                <div className="mt-4 sm:mt-0 flex space-x-3">
+                <div className="mt-4 sm:mt-0">
                     <Link
                         href="/dashboard/cases/new"
-                        className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 inline-flex items-center"
                     >
-                        <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                        </svg>
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
                         New Case
                     </Link>
                 </div>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-                {/* Total Cases */}
-                <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-                    <div className="p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <div className="rounded-md bg-blue-500 p-3">
-                                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.414.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Cases</dt>
-                                    <dd>
-                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{totalCases}</div>
-                                    </dd>
-                                </dl>
-                            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+                <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm dark:border-gray-700 sm:p-6 dark:bg-gray-800">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-base font-normal text-gray-500 dark:text-gray-400">Total Cases</h3>
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900">
+                            <svg className="w-4 h-4 text-blue-600 dark:text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.414.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                         </div>
                     </div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalCases}</div>
                 </div>
 
-                {/* Active Cases */}
-                <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-                    <div className="p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <div className="rounded-md bg-yellow-500 p-3">
-                                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Active Cases</dt>
-                                    <dd>
-                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{activeCases}</div>
-                                    </dd>
-                                </dl>
-                            </div>
+                <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm dark:border-gray-700 sm:p-6 dark:bg-gray-800">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-base font-normal text-gray-500 dark:text-gray-400">Active Cases</h3>
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-yellow-100 dark:bg-yellow-900">
+                            <svg className="w-4 h-4 text-yellow-600 dark:text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         </div>
                     </div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{activeCases}</div>
                 </div>
 
-                {/* Resolved Cases */}
-                <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-                    <div className="p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <div className="rounded-md bg-green-500 p-3">
-                                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Resolved</dt>
-                                    <dd>
-                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{resolvedCases}</div>
-                                    </dd>
-                                </dl>
-                            </div>
+                <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm dark:border-gray-700 sm:p-6 dark:bg-gray-800">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-base font-normal text-gray-500 dark:text-gray-400">Resolved</h3>
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-900">
+                            <svg className="w-4 h-4 text-green-600 dark:text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         </div>
                     </div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{resolvedCases}</div>
                 </div>
 
-                {/* New This Month */}
-                <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-                    <div className="p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <div className="rounded-md bg-indigo-500 p-3">
-                                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">New This Month</dt>
-                                    <dd>
-                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{newThisMonth}</div>
-                                    </dd>
-                                </dl>
-                            </div>
+                <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm dark:border-gray-700 sm:p-6 dark:bg-gray-800">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-base font-normal text-gray-500 dark:text-gray-400">New This Month</h3>
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900">
+                            <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
                         </div>
                     </div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{newThisMonth}</div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Recent Cases Table */}
-                <div className="lg:col-span-2 bg-white dark:bg-gray-800 shadow rounded-lg">
-                    <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                        <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">Recent Cases</h3>
-                        <Link href="/dashboard/cases" className="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400">View all</Link>
+                <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <div className="px-4 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Cases</h3>
+                        <Link href="/dashboard/cases" className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-500">View all</Link>
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead className="bg-gray-50 dark:bg-gray-700">
+                        <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                            <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                                 <tr>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Case ID</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Title</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
-                                    <th scope="col" className="relative px-6 py-3">
+                                    <th scope="col" className="px-4 py-3">Case ID</th>
+                                    <th scope="col" className="px-4 py-3">Title</th>
+                                    <th scope="col" className="px-4 py-3">Status</th>
+                                    <th scope="col" className="px-4 py-3">Date</th>
+                                    <th scope="col" className="px-4 py-3">
                                         <span className="sr-only">Edit</span>
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            <tbody>
                                 {cases?.slice(0, 5).map((c) => (
-                                    <tr key={c.id}>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                    <tr key={c.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                        <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                                             #{c.case_number}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                        <td className="px-4 py-3">
                                             {c.title}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                ${c.status === 'New' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
-                                                    c.status === 'Under Investigation' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                                                        c.status === 'Settled' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                        <td className="px-4 py-3">
+                                            <span className={`px-2 py-1 text-xs font-medium rounded-full 
+                                                ${c.status === 'New' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300' :
+                                                    c.status === 'Under Investigation' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' :
+                                                        c.status === 'Settled' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
                                                             'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}>
                                                 {c.status}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                        <td className="px-4 py-3">
                                             {new Date(c.created_at).toLocaleDateString()}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <Link href={`/dashboard/cases/${c.id}`} className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
+                                        <td className="px-4 py-3 text-right">
+                                            <Link href={`/dashboard/cases/${c.id}`} className="font-medium text-blue-600 dark:text-blue-500 hover:underline">
                                                 Manage
                                             </Link>
                                         </td>
@@ -212,7 +158,7 @@ export default async function Dashboard() {
                                 ))}
                                 {(!cases || cases.length === 0) && (
                                     <tr>
-                                        <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                                        <td colSpan={5} className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
                                             No cases found.
                                         </td>
                                     </tr>
@@ -222,62 +168,56 @@ export default async function Dashboard() {
                     </div>
                 </div>
 
-                {/* Case Distribution & Quick Stats */}
-                <div className="space-y-8">
-                    {/* Distribution */}
-                    <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-                        <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">Case Distribution</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <div className="flex justify-between text-sm font-medium text-gray-900 dark:text-white mb-1">
-                                    <span>New</span>
-                                    <span>{Math.round(getPercent(newCases))}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                                    <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${getPercent(newCases)}%` }}></div>
-                                </div>
+                {/* Case Distribution */}
+                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 sm:p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Case Distribution</h3>
+                    <div className="space-y-4">
+                        <div>
+                            <div className="flex justify-between mb-1">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">New</span>
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">{Math.round(getPercent(newCases))}%</span>
                             </div>
-                            <div>
-                                <div className="flex justify-between text-sm font-medium text-gray-900 dark:text-white mb-1">
-                                    <span>Under Investigation</span>
-                                    <span>{Math.round(getPercent(pendingCases))}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                                    <div className="bg-yellow-500 h-2.5 rounded-full" style={{ width: `${getPercent(pendingCases)}%` }}></div>
-                                </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                                <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${getPercent(newCases)}%` }}></div>
                             </div>
-                            <div>
-                                <div className="flex justify-between text-sm font-medium text-gray-900 dark:text-white mb-1">
-                                    <span>Settled</span>
-                                    <span>{Math.round(getPercent(settledCases))}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                                    <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${getPercent(settledCases)}%` }}></div>
-                                </div>
+                        </div>
+                        <div>
+                            <div className="flex justify-between mb-1">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">Under Investigation</span>
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">{Math.round(getPercent(pendingCases))}%</span>
                             </div>
-                            <div>
-                                <div className="flex justify-between text-sm font-medium text-gray-900 dark:text-white mb-1">
-                                    <span>Closed</span>
-                                    <span>{Math.round(getPercent(closedCases))}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                                    <div className="bg-gray-500 h-2.5 rounded-full" style={{ width: `${getPercent(closedCases)}%` }}></div>
-                                </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                                <div className="bg-yellow-400 h-2.5 rounded-full" style={{ width: `${getPercent(pendingCases)}%` }}></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div className="flex justify-between mb-1">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">Settled</span>
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">{Math.round(getPercent(settledCases))}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                                <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${getPercent(settledCases)}%` }}></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div className="flex justify-between mb-1">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">Closed</span>
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">{Math.round(getPercent(closedCases))}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                                <div className="bg-gray-500 h-2.5 rounded-full" style={{ width: `${getPercent(closedCases)}%` }}></div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Quick Links / Info */}
-                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-100 dark:border-blue-800">
-                        <h4 className="text-base font-semibold text-blue-900 dark:text-blue-100 mb-2">Did you know?</h4>
-                        <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <div className="mt-6 p-4 bg-blue-50 rounded-lg dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
+                        <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">Did you know?</h4>
+                        <p className="text-xs text-blue-700 dark:text-blue-400">
                             You can generate secure upload links for guests to upload evidence directly to a case without logging in.
                         </p>
-                        <div className="mt-4">
-                            <Link href="/dashboard/cases" className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
-                                Go to Cases &rarr;
-                            </Link>
-                        </div>
+                        <Link href="/dashboard/cases" className="mt-2 inline-block text-xs font-medium text-blue-600 hover:underline dark:text-blue-500">
+                            Go to Cases &rarr;
+                        </Link>
                     </div>
                 </div>
             </div>

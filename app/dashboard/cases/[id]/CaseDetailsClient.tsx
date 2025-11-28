@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import CopyButton from '@/components/CopyButton'
 import StatusStepper from '@/components/StatusStepper'
 import SubmitButton from '@/components/SubmitButton'
-import { updateCaseStatus, addInvolvedParty, addCaseNote, generateCaseGuestLink, toggleGuestLinkStatus, emailGuestLink, updateActionTaken } from './actions'
+import { updateCaseStatus, addInvolvedParty, addCaseNote, deleteCaseNote, generateCaseGuestLink, toggleGuestLinkStatus, emailGuestLink, updateActionTaken } from './actions'
 import DashboardEvidenceList from '@/components/DashboardEvidenceList'
 import DashboardEvidenceUploadForm from '@/components/DashboardEvidenceUploadForm'
 
@@ -47,19 +47,19 @@ export default function CaseDetailsClient({
     }, [caseData.incident_date])
 
     return (
-        <div className="max-w-6xl mx-auto">
+        <div className="p-4">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <div>
                     <div className="flex items-center gap-3 mb-2">
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Case #{caseData.case_number}: {caseData.title}</h1>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Case #{caseData.case_number}: {caseData.title}</h1>
                         {caseData.incident_type && (
-                            <span className="px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
+                            <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-purple-900 dark:text-purple-300">
                                 {caseData.incident_type}
                             </span>
                         )}
                     </div>
-                    <p className="text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                         Reported on {formattedDate || new Date(caseData.incident_date).toISOString().slice(0, 10)} • {caseData.incident_location}
                     </p>
                 </div>
@@ -77,91 +77,119 @@ export default function CaseDetailsClient({
             </div>
 
             {/* Printable Abstract (Visible only on print) */}
-            <div className="hidden print:block p-8 bg-white text-black">
-                <div className="text-center mb-8 border-b-2 border-black pb-4">
-                    <h1 className="text-2xl font-bold uppercase">Barangay Blotter Extract</h1>
-                    <p className="text-sm">Republic of the Philippines</p>
-                    <p className="text-sm">Office of the Punong Barangay</p>
+            <div className="hidden print:block bg-white text-black p-8 max-w-[210mm] mx-auto">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-8 border-b-2 border-black pb-4">
+                    <div className="w-24 h-24 flex items-center justify-center border border-gray-300 rounded-full">
+                        <span className="text-xs text-center text-gray-500">Barangay Logo</span>
+                    </div>
+                    <div className="text-center flex-1">
+                        <h1 className="text-xl font-bold uppercase tracking-wide">Republic of the Philippines</h1>
+                        <p className="text-sm uppercase">Province of [Province Name]</p>
+                        <p className="text-sm uppercase">City/Municipality of [City Name]</p>
+                        <h2 className="text-2xl font-black uppercase mt-2">Barangay [Barangay Name]</h2>
+                        <h3 className="text-lg font-bold uppercase mt-4 border-2 border-black inline-block px-4 py-1">Blotter Extract</h3>
+                    </div>
+                    <div className="w-24 h-24 flex items-center justify-center border border-gray-300 rounded-full">
+                        <span className="text-xs text-center text-gray-500">City/Muni Logo</span>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                {/* Case Meta */}
+                <div className="flex justify-between items-end mb-6">
                     <div>
-                        <p className="font-bold">Case Number:</p>
-                        <p className="text-lg">{caseData.case_number}</p>
+                        <p className="text-sm font-bold">Case Number:</p>
+                        <p className="text-xl font-mono border-b border-black">{caseData.case_number}</p>
                     </div>
                     <div className="text-right">
-                        <p className="font-bold">Date Reported:</p>
-                        <p>{formattedDate}</p>
+                        <p className="text-sm font-bold">Date & Time Reported:</p>
+                        <p className="text-lg border-b border-black">{formattedDate}</p>
                     </div>
                 </div>
 
-                <div className="mb-6">
-                    <p className="font-bold mb-2">Incident Type:</p>
-                    <p className="border-b border-gray-300 pb-1">{caseData.incident_type}</p>
-                </div>
+                {/* Main Content Table */}
+                <div className="border-2 border-black">
+                    {/* Row 1: Incident Type & Location */}
+                    <div className="flex border-b border-black">
+                        <div className="w-1/2 p-2 border-r border-black">
+                            <p className="text-xs font-bold uppercase text-gray-600">Nature of Incident</p>
+                            <p className="font-semibold">{caseData.incident_type}</p>
+                        </div>
+                        <div className="w-1/2 p-2">
+                            <p className="text-xs font-bold uppercase text-gray-600">Place of Incident</p>
+                            <p className="font-semibold">{caseData.incident_location}</p>
+                        </div>
+                    </div>
 
-                <div className="mb-6">
-                    <p className="font-bold mb-2">Title/Subject:</p>
-                    <p className="border-b border-gray-300 pb-1">{caseData.title}</p>
-                </div>
+                    {/* Row 2: Title */}
+                    <div className="p-2 border-b border-black">
+                        <p className="text-xs font-bold uppercase text-gray-600">Subject / Title</p>
+                        <p className="font-bold text-lg">{caseData.title}</p>
+                    </div>
 
-                <div className="mb-6">
-                    <h3 className="font-bold border-b border-black mb-2">Involved Parties</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <p className="font-semibold underline">Complainant(s):</p>
-                            <ul className="list-disc pl-5">
+                    {/* Row 3: Parties */}
+                    <div className="flex border-b border-black">
+                        <div className="w-1/2 p-2 border-r border-black">
+                            <p className="text-xs font-bold uppercase text-gray-600 mb-1">Complainant(s)</p>
+                            <ul className="list-disc list-inside text-sm">
                                 {involvedParties.filter(p => p.type === 'Complainant').map(p => (
-                                    <li key={p.id}>{p.name}</li>
+                                    <li key={p.id}><span className="font-semibold">{p.name}</span> {p.contact_number && <span className="text-xs text-gray-500">({p.contact_number})</span>}</li>
                                 ))}
-                                {involvedParties.filter(p => p.type === 'Complainant').length === 0 && <li>N/A</li>}
+                                {involvedParties.filter(p => p.type === 'Complainant').length === 0 && <li className="italic text-gray-500">None listed</li>}
                             </ul>
                         </div>
-                        <div>
-                            <p className="font-semibold underline">Respondent(s):</p>
-                            <ul className="list-disc pl-5">
+                        <div className="w-1/2 p-2">
+                            <p className="text-xs font-bold uppercase text-gray-600 mb-1">Respondent(s)</p>
+                            <ul className="list-disc list-inside text-sm">
                                 {involvedParties.filter(p => p.type === 'Respondent').map(p => (
-                                    <li key={p.id}>{p.name}</li>
+                                    <li key={p.id}><span className="font-semibold">{p.name}</span></li>
                                 ))}
-                                {involvedParties.filter(p => p.type === 'Respondent').length === 0 && <li>N/A</li>}
+                                {involvedParties.filter(p => p.type === 'Respondent').length === 0 && <li className="italic text-gray-500">None listed</li>}
                             </ul>
                         </div>
                     </div>
-                </div>
 
-                <div className="mb-8">
-                    <h3 className="font-bold border-b border-black mb-2">Narrative of Facts</h3>
-                    <p className="whitespace-pre-wrap text-justify leading-relaxed">
-                        {caseData.narrative_facts || caseData.description}
-                    </p>
-                </div>
-
-                <div className="mb-8">
-                    <h3 className="font-bold border-b border-black mb-2">Action Taken</h3>
-                    <p className="whitespace-pre-wrap text-justify leading-relaxed">
-                        {caseData.narrative_action || 'No specific action recorded.'}
-                    </p>
-                </div>
-
-                <div className="mb-8">
-                    <h3 className="font-bold border-b border-black mb-2">Current Status</h3>
-                    <p className="uppercase font-bold">{caseData.status}</p>
-                </div>
-
-                <div className="mt-16 grid grid-cols-2 gap-8">
-                    <div className="text-center">
-                        <div className="border-t border-black w-3/4 mx-auto mt-8"></div>
-                        <p className="text-sm font-bold">Complainant Signature</p>
+                    {/* Row 4: Narrative */}
+                    <div className="p-4 border-b border-black min-h-[150px]">
+                        <p className="text-xs font-bold uppercase text-gray-600 mb-2">Narrative of Facts</p>
+                        <p className="text-justify whitespace-pre-wrap leading-snug text-sm">
+                            {caseData.narrative_facts || caseData.description}
+                        </p>
                     </div>
-                    <div className="text-center">
-                        <div className="border-t border-black w-3/4 mx-auto mt-8"></div>
-                        <p className="text-sm font-bold">Desk Officer / Secretary</p>
+
+                    {/* Row 5: Action Taken */}
+                    <div className="p-4 min-h-[100px]">
+                        <p className="text-xs font-bold uppercase text-gray-600 mb-2">Action Taken / Disposition</p>
+                        <p className="text-justify whitespace-pre-wrap leading-snug text-sm">
+                            {caseData.narrative_action || 'No specific action recorded.'}
+                        </p>
                     </div>
                 </div>
 
-                <div className="mt-8 text-center text-xs text-gray-500">
-                    <p>This is a system-generated report. Not valid without official seal.</p>
-                    <p>Generated on {generatedDate}</p>
+                {/* Status Footer */}
+                <div className="mt-4 mb-12">
+                    <p className="text-sm">Current Status: <span className="font-bold uppercase">{caseData.status}</span></p>
+                </div>
+
+                {/* Signatures */}
+                <div className="grid grid-cols-2 gap-12 mt-12">
+                    <div className="text-center">
+                        <div className="border-b border-black mb-2"></div>
+                        <p className="text-xs font-bold uppercase">Signature of Complainant</p>
+                    </div>
+                    <div className="text-center">
+                        <div className="border-b border-black mb-2"></div>
+                        <p className="text-xs font-bold uppercase">Certified Correct By:</p>
+                        <p className="text-sm font-semibold mt-4">[Name of Desk Officer]</p>
+                        <p className="text-xs">Barangay Secretary / Desk Officer</p>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="mt-16 text-center text-[10px] text-gray-500 border-t border-gray-300 pt-2">
+                    <p>This document is a system-generated extract from the Barangay Blotter System.</p>
+                    <p>Generated on: {generatedDate} | Case ID: {caseData.id}</p>
+                    <p>Not valid without the official Barangay Seal.</p>
                 </div>
             </div>
 
@@ -169,7 +197,7 @@ export default function CaseDetailsClient({
             <div className="print:hidden">
 
                 {/* Status Stepper */}
-                <div className="mb-8 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+                <div className="mb-8 p-4 bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700">
                     <StatusStepper status={caseData.status} />
                 </div>
 
@@ -211,7 +239,7 @@ export default function CaseDetailsClient({
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             {/* Left Column: Facts & Context */}
                             <div className="lg:col-span-2 space-y-6">
-                                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-6">
+                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6 space-y-6">
                                     <div>
                                         <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Facts of the Case</h2>
                                         <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{caseData.narrative_facts || caseData.description}</p>
@@ -219,10 +247,10 @@ export default function CaseDetailsClient({
                                 </div>
 
                                 {/* Quick Summary of Parties */}
-                                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
                                     <div className="flex justify-between items-center mb-4">
                                         <h3 className="text-lg font-bold text-gray-900 dark:text-white">Involved Parties</h3>
-                                        <button onClick={() => setActiveTab('parties')} className="text-sm text-blue-600 hover:underline">View All</button>
+                                        <button onClick={() => setActiveTab('parties')} className="text-sm text-blue-600 hover:underline dark:text-blue-500">View All</button>
                                     </div>
                                     {involvedParties.length > 0 ? (
                                         <div className="flex flex-wrap gap-2">
@@ -233,7 +261,7 @@ export default function CaseDetailsClient({
                                             ))}
                                         </div>
                                     ) : (
-                                        <p className="text-gray-500 italic text-sm">No parties listed.</p>
+                                        <p className="text-gray-500 italic text-sm dark:text-gray-400">No parties listed.</p>
                                     )}
                                 </div>
                             </div>
@@ -241,9 +269,9 @@ export default function CaseDetailsClient({
                             {/* Right Column: Action & Status (The "Last Right") */}
                             <div className="space-y-6">
                                 {/* Action Taken - Editable */}
-                                <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg shadow border border-blue-100 dark:border-blue-800">
+                                <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-100 dark:border-blue-800">
                                     <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
                                         Action Taken
                                     </h2>
 
@@ -298,7 +326,7 @@ export default function CaseDetailsClient({
                                             name="narrative_action"
                                             rows={6}
                                             defaultValue={caseData.narrative_action}
-                                            className="block p-2.5 w-full text-sm text-gray-900 bg-white rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white mb-3"
+                                            className="block p-2.5 w-full text-sm text-gray-900 bg-white rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 mb-3"
                                             placeholder="Describe the actions taken to resolve this case..."
                                         ></textarea>
                                         <SubmitButton className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800" loadingText="Updating...">
@@ -308,7 +336,7 @@ export default function CaseDetailsClient({
                                 </div>
 
                                 {/* Status Update */}
-                                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
                                     <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Update Status</h3>
                                     <form action={updateCaseStatus.bind(null, caseData.id)} className="flex flex-col gap-3">
                                         <select name="status" defaultValue={caseData.status} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
@@ -324,7 +352,7 @@ export default function CaseDetailsClient({
                                 </div>
 
                                 {/* Case Info Metadata */}
-                                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
                                     <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Case Info</h3>
                                     <dl className="space-y-2 text-sm">
                                         <div className="flex justify-between">
@@ -350,14 +378,14 @@ export default function CaseDetailsClient({
                         activeTab === 'parties' && (
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 <div className="lg:col-span-2">
-                                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
                                         <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Involved Parties</h2>
                                         {involvedParties.length === 0 ? (
-                                            <p className="text-gray-500 italic">No parties added yet.</p>
+                                            <p className="text-gray-500 italic dark:text-gray-400">No parties added yet.</p>
                                         ) : (
                                             <ul className="space-y-4">
                                                 {involvedParties.map(party => (
-                                                    <li key={party.id} className="border-b dark:border-gray-700 pb-4 last:border-0 last:pb-0">
+                                                    <li key={party.id} className="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-0 last:pb-0">
                                                         <div className="flex justify-between items-start">
                                                             <div>
                                                                 <p className="font-medium text-gray-900 dark:text-white">{party.name}</p>
@@ -374,32 +402,32 @@ export default function CaseDetailsClient({
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
                                         <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Add Party</h3>
                                         <form action={addInvolvedParty.bind(null, caseData.id)} className="space-y-4">
                                             <div>
-                                                <label htmlFor="name" className="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Name</label>
-                                                <input type="text" name="name" id="name" required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" />
+                                                <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Name</label>
+                                                <input type="text" name="name" id="name" required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
                                             </div>
                                             <div>
-                                                <label htmlFor="type" className="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Type</label>
-                                                <select name="type" id="type" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+                                                <label htmlFor="type" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Type</label>
+                                                <select name="type" id="type" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
                                                     <option value="Complainant">Complainant</option>
                                                     <option value="Respondent">Respondent</option>
                                                     <option value="Witness">Witness</option>
                                                 </select>
                                             </div>
                                             <div>
-                                                <label htmlFor="contact" className="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Contact #</label>
-                                                <input type="text" name="contact" id="contact" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" />
+                                                <label htmlFor="contact" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Contact #</label>
+                                                <input type="text" name="contact" id="contact" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
                                             </div>
                                             <div>
-                                                <label htmlFor="email" className="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Email</label>
-                                                <input type="email" name="email" id="email" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" />
+                                                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Email</label>
+                                                <input type="email" name="email" id="email" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
                                             </div>
                                             <div>
-                                                <label htmlFor="address" className="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Address</label>
-                                                <input type="text" name="address" id="address" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" />
+                                                <label htmlFor="address" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Address</label>
+                                                <input type="text" name="address" id="address" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
                                             </div>
                                             <SubmitButton className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800" loadingText="Adding Party...">
                                                 Add Party
@@ -415,7 +443,7 @@ export default function CaseDetailsClient({
                     {
                         activeTab === 'evidence' && (
                             <div className="space-y-6">
-                                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
                                     <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Evidence</h2>
                                     <DashboardEvidenceList evidence={evidence} caseId={caseData.id} />
 
@@ -427,11 +455,11 @@ export default function CaseDetailsClient({
                                     </div>
                                 </div>
 
-                                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
                                     <div className="flex justify-between items-center mb-4">
                                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">Guest Upload Links</h2>
                                         <form action={generateCaseGuestLink.bind(null, caseData.id)}>
-                                            <SubmitButton className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-green-500 dark:hover:bg-green-600" loadingText="Generating...">
+                                            <SubmitButton className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-green-500 dark:hover:bg-green-600 dark:focus:ring-green-800" loadingText="Generating...">
                                                 Generate New Link
                                             </SubmitButton>
                                         </form>
@@ -440,7 +468,7 @@ export default function CaseDetailsClient({
                                     <div className="space-y-4">
                                         {guestLinks.map(link => (
                                             <div key={link.id} className="mb-4">
-                                                <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 rounded gap-2 ${link.is_active ? 'bg-blue-50 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-700 opacity-75'}`}>
+                                                <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 rounded-lg gap-2 border ${link.is_active ? 'bg-blue-50 border-blue-100 dark:bg-blue-900/30 dark:border-blue-800' : 'bg-gray-100 border-gray-200 dark:bg-gray-700 dark:border-gray-600 opacity-75'}`}>
                                                     <div className="flex flex-col gap-1">
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-sm font-mono text-blue-600 dark:text-blue-400">Link: ...{link.token.slice(-8)}</span>
@@ -450,7 +478,7 @@ export default function CaseDetailsClient({
                                                             <span className="text-xs font-bold text-gray-700 dark:text-gray-300">PIN: {link.pin}</span>
                                                             <CopyButton text={link.pin} label="Copy PIN" />
                                                         </div>
-                                                        <span className="text-xs text-gray-500">Expires: <span suppressHydrationWarning>{new Date(link.expires_at).toLocaleString()}</span></span>
+                                                        <span className="text-xs text-gray-500 dark:text-gray-400">Expires: <span suppressHydrationWarning>{new Date(link.expires_at).toLocaleString()}</span></span>
                                                         {!link.is_active && <span className="text-xs text-red-500 font-bold">INACTIVE</span>}
                                                     </div>
                                                     <div className="flex gap-3 items-center">
@@ -469,15 +497,15 @@ export default function CaseDetailsClient({
                                                         <input type="hidden" name="link" value={`${origin}/guest/${link.token}`} />
                                                         <input type="hidden" name="pin" value={link.pin} />
                                                         <input type="hidden" name="caseId" value={caseData.id} />
-                                                        <input type="email" name="email" placeholder="Recipient Email" required className="bg-white border border-gray-300 text-gray-900 text-xs rounded-lg p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white w-48" />
-                                                        <SubmitButton className="text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-lg text-xs px-3 py-1.5 dark:bg-blue-500 dark:hover:bg-blue-600" loadingText="Sending...">
+                                                        <input type="email" name="email" placeholder="Recipient Email" required className="bg-gray-50 border border-gray-300 text-gray-900 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-48 p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
+                                                        <SubmitButton className="text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-lg text-xs px-3 py-1.5 dark:bg-blue-500 dark:hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-800" loadingText="Sending...">
                                                             Email
                                                         </SubmitButton>
                                                     </form>
                                                 )}
                                             </div>
                                         ))}
-                                        {guestLinks.length === 0 && <p className="text-sm text-gray-500 italic">No links generated yet.</p>}
+                                        {guestLinks.length === 0 && <p className="text-sm text-gray-500 italic dark:text-gray-400">No links generated yet.</p>}
                                     </div>
                                 </div>
                             </div>
@@ -489,28 +517,55 @@ export default function CaseDetailsClient({
                         activeTab === 'notes' && (
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 <div className="lg:col-span-2">
-                                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
                                         <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Case Notes & Timeline</h2>
                                         <div className="space-y-6">
                                             {notes.map(note => (
-                                                <div key={note.id} className="border-l-4 border-blue-500 pl-4 py-1">
-                                                    <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{note.content}</p>
-                                                    <p className="text-xs text-gray-500 mt-1">
-                                                        By {note.created_by?.full_name || note.created_by?.email || 'Unknown'} on <span suppressHydrationWarning>{new Date(note.created_at).toLocaleString()}</span>
+                                                <div key={note.id} className="border-l-4 border-blue-500 pl-4 py-1 group relative">
+                                                    <div className="flex justify-between items-start">
+                                                        <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap flex-1">{note.content}</p>
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (confirm('Are you sure you want to delete this note?')) {
+                                                                    const result = await deleteCaseNote(caseData.id, note.id)
+                                                                    if (result?.error) alert(result.error)
+                                                                }
+                                                            }}
+                                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 ml-2"
+                                                            title="Delete Note"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                        </button>
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">
+                                                        By {note.profiles?.full_name || note.profiles?.email || 'Unknown'} on <span suppressHydrationWarning>{new Date(note.created_at).toLocaleString()}</span>
                                                     </p>
                                                 </div>
                                             ))}
-                                            {notes.length === 0 && <p className="text-gray-500 italic">No notes added yet.</p>}
+                                            {notes.length === 0 && <p className="text-gray-500 italic dark:text-gray-400">No notes added yet.</p>}
                                         </div>
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
                                         <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Add Note</h3>
-                                        <form action={addCaseNote.bind(null, caseData.id)} className="space-y-4">
+                                        <form
+                                            action={async (formData) => {
+                                                const result = await addCaseNote(caseData.id, formData)
+                                                if (result?.error) {
+                                                    alert(result.error)
+                                                } else {
+                                                    // Reset the textarea
+                                                    const form = document.getElementById('add-note-form') as HTMLFormElement
+                                                    if (form) form.reset()
+                                                }
+                                            }}
+                                            id="add-note-form"
+                                            className="space-y-4"
+                                        >
                                             <div>
-                                                <label htmlFor="content" className="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Note Content</label>
-                                                <textarea name="content" id="content" rows={4} required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"></textarea>
+                                                <label htmlFor="content" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Note Content</label>
+                                                <textarea name="content" id="content" rows={4} required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"></textarea>
                                             </div>
                                             <SubmitButton className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800" loadingText="Adding Note...">
                                                 Add Note
@@ -525,11 +580,11 @@ export default function CaseDetailsClient({
                     {/* ACTIVITY TAB */}
                     {
                         activeTab === 'activity' && (
-                            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                            <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
                                 <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Activity Log</h2>
                                 <div className="relative border-l border-gray-200 dark:border-gray-700 ml-3">
                                     {auditLogs.length === 0 ? (
-                                        <p className="text-gray-500 italic ml-4">No activity recorded yet.</p>
+                                        <p className="text-gray-500 italic ml-4 dark:text-gray-400">No activity recorded yet.</p>
                                     ) : (
                                         auditLogs.map((log) => (
                                             <div key={log.id} className="mb-10 ml-6">

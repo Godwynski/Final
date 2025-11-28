@@ -118,7 +118,7 @@ export async function addCaseNote(caseId: string, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) throw new Error('Unauthorized')
+    if (!user) return { error: 'Unauthorized' }
 
     const content = formData.get('content') as string
 
@@ -131,11 +131,30 @@ export async function addCaseNote(caseId: string, formData: FormData) {
         })
 
     if (error) {
-        redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent(error.message)}`)
+        return { error: error.message }
     }
 
     revalidatePath(`/dashboard/cases/${caseId}`)
-    redirect(`/dashboard/cases/${caseId}?message=Note added successfully`)
+    return { success: true }
+}
+
+export async function deleteCaseNote(caseId: string, noteId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: 'Unauthorized' }
+
+    const { error } = await supabase
+        .from('case_notes')
+        .delete()
+        .eq('id', noteId)
+
+    if (error) {
+        return { error: error.message }
+    }
+
+    revalidatePath(`/dashboard/cases/${caseId}`)
+    return { success: true }
 }
 
 export async function generateCaseGuestLink(caseId: string, formData: FormData) {

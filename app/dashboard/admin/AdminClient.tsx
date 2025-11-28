@@ -67,7 +67,7 @@ export function AdminClient({ usersTabContent, logsTabContent }: AdminClientProp
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full bg-gray-900/50 backdrop-blur-sm">
                     <div className="relative w-full max-w-md max-h-full">
-                        <div className="relative bg-white rounded-lg shadow dark:bg-gray-700">
+                        <div className="relative bg-white rounded-lg shadow dark:bg-gray-800">
                             <button
                                 type="button"
                                 onClick={() => setIsModalOpen(false)}

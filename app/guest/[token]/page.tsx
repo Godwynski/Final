@@ -58,11 +58,11 @@ export default async function GuestPage(props: { params: Promise<{ token: string
             <div className="max-w-5xl mx-auto space-y-8">
 
                 {/* Header Card */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-                    <div className="bg-blue-600 px-6 py-4">
+                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 overflow-hidden">
+                    <div className="bg-blue-700 px-6 py-4 dark:bg-blue-900">
                         <div className="flex justify-between items-center text-white">
                             <h1 className="text-2xl font-bold">Guest Access Portal</h1>
-                            <span className="text-sm bg-blue-500 px-3 py-1 rounded-full">
+                            <span className="text-sm bg-blue-600 px-3 py-1 rounded-full dark:bg-blue-800 border border-blue-500 dark:border-blue-700">
                                 Expires: {new Date(link.expires_at).toLocaleDateString()}
                             </span>
                         </div>
@@ -75,14 +75,14 @@ export default async function GuestPage(props: { params: Promise<{ token: string
                                     Case #{caseData.case_number} • {new Date(caseData.incident_date).toLocaleDateString()} • {caseData.incident_location}
                                 </p>
                             </div>
-                            <span className={`px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wide ${caseData.status === 'New' ? 'bg-blue-100 text-blue-800' :
-                                    caseData.status === 'Settled' ? 'bg-green-100 text-green-800' :
-                                        'bg-yellow-100 text-yellow-800'
+                            <span className={`px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wide border ${caseData.status === 'New' ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:border-blue-800' :
+                                caseData.status === 'Settled' ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300 dark:border-green-800' :
+                                    'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 dark:border-yellow-800'
                                 }`}>
                                 {caseData.status}
                             </span>
                         </div>
-                        <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
                             <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Description</h3>
                             <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                                 {caseData.description}
@@ -103,7 +103,7 @@ export default async function GuestPage(props: { params: Promise<{ token: string
 
                     {/* Right Column: Upload Form */}
                     <div className="lg:col-span-1">
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow sticky top-8">
+                        <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 sticky top-8">
                             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Upload New Evidence</h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">

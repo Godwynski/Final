@@ -16,7 +16,7 @@ export default function SettingsClient({ user }: { user: User }) {
     return (
         <div className="space-y-8">
             {/* Profile Card */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
                 <div className="flex justify-between items-start mb-6">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">Profile Information</h2>
                     <button
@@ -38,7 +38,7 @@ export default function SettingsClient({ user }: { user: User }) {
                     </div>
                     <div>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Role</p>
-                        <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                        <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'}`}>
                             {user.role}
                         </span>
                     </div>
@@ -46,7 +46,7 @@ export default function SettingsClient({ user }: { user: User }) {
             </div>
 
             {/* Security & Preferences */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
                 <h2 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">Security & Preferences</h2>
 
                 <div className="space-y-6">

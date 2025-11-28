@@ -1,13 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { login, signup } from './actions'
+import { login } from './actions'
 
 export function LoginForm() {
     const [showPassword, setShowPassword] = useState(false)
 
     return (
-        <form className="space-y-4">
+        <form className="space-y-4 md:space-y-6">
             <div>
                 <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                     Your email
@@ -17,7 +17,7 @@ export function LoginForm() {
                     name="email"
                     type="email"
                     required
-                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                     placeholder="name@company.com"
                 />
             </div>
@@ -31,7 +31,7 @@ export function LoginForm() {
                         name="password"
                         type={showPassword ? 'text' : 'password'}
                         required
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white pr-10"
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 pr-10"
                         placeholder="••••••••"
                     />
                     <button
@@ -68,26 +68,22 @@ export function LoginForm() {
                     Forgot password?
                 </a>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
                 <button
                     formAction={login}
                     className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                 >
                     Sign in
                 </button>
-                <button
-                    formAction={signup}
-                    className="w-full text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700"
-                >
-                    Sign up
-                </button>
             </div>
-            <h1 className="text-blue-700 dark:text-blue-500">
-                Email: admin@barangay.gov.ph
-            </h1>
-            <h1 className="text-blue-700 dark:text-blue-500">
-                Password: admin123
-            </h1>
+
+            <div className="p-4 mb-4 text-sm text-blue-800 rounded-lg bg-blue-50 dark:bg-gray-700 dark:text-blue-400" role="alert">
+                <span className="font-medium">Demo Credentials:</span>
+                <ul className="mt-1.5 ml-4 list-disc list-inside">
+                    <li>Email: admin@barangay.gov.ph</li>
+                    <li>Password: admin123</li>
+                </ul>
+            </div>
         </form>
     )
 }
