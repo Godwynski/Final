@@ -82,6 +82,12 @@ export function LoginForm() {
                     Sign up
                 </button>
             </div>
+            <h1 className="text-blue-700 dark:text-blue-500">
+                Email: admin@barangay.gov.ph
+            </h1>
+            <h1 className="text-blue-700 dark:text-blue-500">
+                Password: admin123
+            </h1>
         </form>
     )
 }
