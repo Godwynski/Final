@@ -271,26 +271,30 @@ export async function updateActionTaken(caseId: string, formData: FormData) {
     redirect(`/dashboard/cases/${caseId}?message=Action taken updated successfully`)
 }
 
+import { createAdminClient } from '@/utils/supabase/admin'
+
 export async function uploadEvidence(caseId: string, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Unauthorized')
+    if (!user) return { error: 'Unauthorized' }
+
+    const supabaseAdmin = createAdminClient()
 
     const file = formData.get('file') as File
     const description = formData.get('description') as string
 
-    if (!file) redirect(`/dashboard/cases/${caseId}?error=No file uploaded`)
+    if (!file) return { error: 'No file uploaded' }
 
     // Validate File Type (Images Only for now, but could be expanded)
     if (!file.type.startsWith('image/')) {
-        redirect(`/dashboard/cases/${caseId}?error=Only image files are allowed`)
+        return { error: 'Only image files are allowed' }
     }
 
     // Upload to Storage
     const fileExt = file.name.split('.').pop()
     const fileName = `${caseId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
 
-    const { error: uploadError } = await supabase
+    const { error: uploadError } = await supabaseAdmin
         .storage
         .from('evidence')
         .upload(fileName, file, {
@@ -299,17 +303,17 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
         })
 
     if (uploadError) {
-        redirect(`/dashboard/cases/${caseId}?error=Storage upload failed: ${uploadError.message}`)
+        return { error: `Storage upload failed: ${uploadError.message}` }
     }
 
     // Get Public URL
-    const { data: { publicUrl } } = supabase
+    const { data: { publicUrl } } = supabaseAdmin
         .storage
         .from('evidence')
         .getPublicUrl(fileName)
 
     // Insert Record
-    const { error: insertError } = await supabase
+    const { error: insertError } = await supabaseAdmin
         .from('evidence')
         .insert({
             case_id: caseId,
@@ -321,27 +325,29 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
         })
 
     if (insertError) {
-        redirect(`/dashboard/cases/${caseId}?error=Database insert failed: ${insertError.message}`)
+        return { error: `Database insert failed: ${insertError.message}` }
     }
 
     revalidatePath(`/dashboard/cases/${caseId}`)
-    redirect(`/dashboard/cases/${caseId}?message=Evidence uploaded successfully`)
+    return { success: true }
 }
 
 export async function deleteEvidence(caseId: string, evidenceId: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Unauthorized')
+    if (!user) return { error: 'Unauthorized' }
+
+    const supabaseAdmin = createAdminClient()
 
     // Get evidence to find file path
-    const { data: evidence, error: fetchError } = await supabase
+    const { data: evidence, error: fetchError } = await supabaseAdmin
         .from('evidence')
         .select('*')
         .eq('id', evidenceId)
         .single()
 
     if (fetchError || !evidence) {
-        redirect(`/dashboard/cases/${caseId}?error=Evidence not found`)
+        return { error: 'Evidence not found' }
     }
 
     // Delete from Storage
@@ -350,22 +356,22 @@ export async function deleteEvidence(caseId: string, evidenceId: string) {
         const pathParts = url.pathname.split('/evidence/')
         if (pathParts.length > 1) {
             const storagePath = pathParts[1]
-            await supabase.storage.from('evidence').remove([storagePath])
+            await supabaseAdmin.storage.from('evidence').remove([storagePath])
         }
     } catch (e) {
         console.error('Error parsing file path:', e)
     }
 
     // Delete Record
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await supabaseAdmin
         .from('evidence')
         .delete()
         .eq('id', evidenceId)
 
     if (deleteError) {
-        redirect(`/dashboard/cases/${caseId}?error=Failed to delete record: ${deleteError.message}`)
+        return { error: `Failed to delete record: ${deleteError.message}` }
     }
 
     revalidatePath(`/dashboard/cases/${caseId}`)
-    redirect(`/dashboard/cases/${caseId}?message=Evidence deleted successfully`)
+    return { success: true }
 }

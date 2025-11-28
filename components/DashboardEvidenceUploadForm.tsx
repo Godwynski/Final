@@ -5,19 +5,29 @@ import { uploadEvidence } from '@/app/dashboard/cases/[id]/actions'
 
 export default function DashboardEvidenceUploadForm({ caseId }: { caseId: string }) {
     const [isLoading, setIsLoading] = useState(false)
+    const [message, setMessage] = useState('')
+    const [error, setError] = useState('')
 
     async function handleSubmit(formData: FormData) {
         setIsLoading(true)
-        // We rely on the server action to redirect/revalidate, so we don't need manual error handling here 
-        // unless we want to intercept it. The server action redirects on success/error.
-        // However, for better UX, we might want to handle it here if we change the action to return data instead of redirect.
-        // But the current action redirects. So we just set loading.
-        await uploadEvidence(caseId, formData)
+        setMessage('')
+        setError('')
+
+        const res = await uploadEvidence(caseId, formData)
+
+        if (res?.error) {
+            setError(res.error)
+        } else if (res?.success) {
+            setMessage('Evidence uploaded successfully!')
+            // Reset form
+            const form = document.getElementById('dashboard-upload-form') as HTMLFormElement
+            form?.reset()
+        }
         setIsLoading(false)
     }
 
     return (
-        <form action={handleSubmit} className="space-y-4">
+        <form id="dashboard-upload-form" action={handleSubmit} className="space-y-4">
             <div>
                 <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white" htmlFor="dashboard_file_input">Upload Evidence (Images)</label>
                 <input
@@ -39,6 +49,9 @@ export default function DashboardEvidenceUploadForm({ caseId }: { caseId: string
                     placeholder="Describe this evidence..."
                 ></textarea>
             </div>
+
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+            {message && <p className="text-sm text-green-600 dark:text-green-400">{message}</p>}
 
             <button
                 type="submit"

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import CopyButton from '@/components/CopyButton'
 import StatusStepper from '@/components/StatusStepper'
 import SubmitButton from '@/components/SubmitButton'
@@ -30,7 +31,9 @@ export default function CaseDetailsClient({
     userRole: string,
     userId: string
 }) {
-    const [activeTab, setActiveTab] = useState<Tab>('overview')
+    const searchParams = useSearchParams()
+    const initialTab = (searchParams.get('tab') as Tab) || 'overview'
+    const [activeTab, setActiveTab] = useState<Tab>(initialTab)
     const [formattedDate, setFormattedDate] = useState<string>('')
     const [origin, setOrigin] = useState<string>('')
 
