@@ -1,8 +1,9 @@
 import { createAdminClient } from '@/utils/supabase/admin'
 import { notFound } from 'next/navigation'
-import { uploadGuestEvidence } from './actions'
 import { cookies } from 'next/headers'
 import PinEntryForm from './pin-form'
+import GuestUploadForm from './GuestUploadForm'
+import GuestEvidenceList from './GuestEvidenceList'
 
 export default async function GuestPage(props: { params: Promise<{ token: string }> }) {
     const params = await props.params
@@ -24,9 +25,12 @@ export default async function GuestPage(props: { params: Promise<{ token: string
     if (isExpired || !link.is_active) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-                <div className="p-8 text-center bg-white rounded-lg shadow dark:bg-gray-800">
-                    <h1 className="mb-4 text-2xl font-bold text-red-600 dark:text-red-500">Access Expired</h1>
-                    <p className="text-gray-500 dark:text-gray-400">This guest link has expired or is no longer active.</p>
+                <div className="p-8 text-center bg-white rounded-lg shadow dark:bg-gray-800 max-w-md w-full">
+                    <div className="mb-4 text-red-500">
+                        <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">Access Expired</h1>
+                    <p className="text-gray-500 dark:text-gray-400 mb-6">This guest link has expired or is no longer active. Please contact the administrator for a new link.</p>
                 </div>
             </div>
         )
@@ -50,95 +54,69 @@ export default async function GuestPage(props: { params: Promise<{ token: string
     const caseData = link.cases
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
-            <div className="max-w-4xl mx-auto bg-white rounded-lg shadow dark:bg-gray-800 p-8">
-                <div className="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Guest Access Portal</h1>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                                Access granted via secure token. Expires at: {new Date(link.expires_at).toLocaleString()}
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-5xl mx-auto space-y-8">
+
+                {/* Header Card */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                    <div className="bg-blue-600 px-6 py-4">
+                        <div className="flex justify-between items-center text-white">
+                            <h1 className="text-2xl font-bold">Guest Access Portal</h1>
+                            <span className="text-sm bg-blue-500 px-3 py-1 rounded-full">
+                                Expires: {new Date(link.expires_at).toLocaleDateString()}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="p-6">
+                        <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
+                            <div>
+                                <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{caseData.title}</h2>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    Case #{caseData.case_number} • {new Date(caseData.incident_date).toLocaleDateString()} • {caseData.incident_location}
+                                </p>
+                            </div>
+                            <span className={`px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wide ${caseData.status === 'New' ? 'bg-blue-100 text-blue-800' :
+                                    caseData.status === 'Settled' ? 'bg-green-100 text-green-800' :
+                                        'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                {caseData.status}
+                            </span>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Description</h3>
+                            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                                {caseData.description}
                             </p>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${caseData.status === 'New' ? 'bg-blue-100 text-blue-800' :
-                            caseData.status === 'Settled' ? 'bg-green-100 text-green-800' :
-                                'bg-yellow-100 text-yellow-800'
-                            }`}>
-                            {caseData.status}
-                        </span>
                     </div>
                 </div>
 
-                <div className="space-y-8">
-                    {/* Case Info */}
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{caseData.title}</h2>
-                        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                            {caseData.description}
-                        </p>
-                        <p className="text-sm text-gray-500 mt-2">
-                            Incident Date: {new Date(caseData.incident_date).toLocaleString()} • {caseData.incident_location}
-                        </p>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Left Column: Evidence List */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Case Evidence</h3>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{evidence?.length || 0} items</span>
+                        </div>
+                        <GuestEvidenceList evidence={evidence || []} token={token} />
                     </div>
 
-                    {/* Evidence List */}
-                    <div>
-                        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Case Evidence</h3>
-                        {evidence && evidence.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {evidence.map((item: any) => (
-                                    <div key={item.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
-                                        {item.file_type.startsWith('image/') ? (
-                                            <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden border dark:border-gray-600 mb-2">
-                                                <img src={item.file_path} alt={item.file_name} className="object-cover w-full h-full" />
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center justify-center aspect-video bg-gray-100 rounded-lg border dark:bg-gray-600 dark:border-gray-500 mb-2">
-                                                <span className="text-gray-500 text-xs">{item.file_name}</span>
-                                            </div>
-                                        )}
-                                        {item.description && <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{item.description}</p>}
-                                        <div className="text-xs text-gray-400">
-                                            Uploaded: {new Date(item.created_at).toLocaleDateString()}
-                                        </div>
-                                    </div>
-                                ))}
+                    {/* Right Column: Upload Form */}
+                    <div className="lg:col-span-1">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow sticky top-8">
+                            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Upload New Evidence</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    Securely upload images related to this case.
+                                </p>
                             </div>
-                        ) : (
-                            <p className="text-gray-500 italic">No evidence uploaded yet.</p>
-                        )}
-                    </div>
-
-                    {/* Upload Form */}
-                    <div>
-                        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Upload New Evidence</h3>
-                        <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-100 dark:border-blue-800">
-                            <UploadForm token={token} />
+                            <div className="p-6">
+                                <GuestUploadForm token={token} />
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    )
-}
-
-function UploadForm({ token }: { token: string }) {
-    return (
-        <form action={async (formData) => {
-            'use server'
-            await uploadGuestEvidence(token, formData)
-        }} className="space-y-4">
-            <div>
-                <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white" htmlFor="file_input">Upload file (Images only)</label>
-                <input name="file" accept="image/*" className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-white dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" id="file_input" type="file" required />
-            </div>
-            <div>
-                <label htmlFor="description" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Description</label>
-                <textarea name="description" id="description" rows={2} className="block p-2.5 w-full text-sm text-gray-900 bg-white rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" placeholder="Describe this evidence..."></textarea>
-            </div>
-            <button type="submit" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
-                Secure Upload
-            </button>
-        </form>
     )
 }

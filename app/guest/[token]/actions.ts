@@ -138,3 +138,65 @@ export async function verifyGuestPin(token: string, pin: string) {
     revalidatePath(`/guest/${token}`)
     return { success: true }
 }
+
+export async function deleteGuestEvidence(token: string, evidenceId: string) {
+    const supabaseAdmin = createAdminClient()
+
+    // 1. Verify Token & PIN
+    const { data: link, error: linkError } = await supabaseAdmin
+        .from('guest_links')
+        .select('*')
+        .eq('token', token)
+        .single()
+
+    if (linkError || !link) return { error: 'Invalid token' }
+    if (new Date(link.expires_at) < new Date() || !link.is_active) return { error: 'Link expired' }
+
+    const cookieStore = await cookies()
+    const pinCookie = cookieStore.get(`guest_pin_${token}`)
+    if (!pinCookie || pinCookie.value !== link.pin) return { error: 'Invalid PIN' }
+
+    // 2. Verify Evidence belongs to Case
+    const { data: evidence, error: evidenceError } = await supabaseAdmin
+        .from('evidence')
+        .select('*')
+        .eq('id', evidenceId)
+        .eq('case_id', link.case_id)
+        .single()
+
+    if (evidenceError || !evidence) return { error: 'Evidence not found' }
+
+    // 3. Delete from Storage
+    // Extract path from URL or store path? We stored publicUrl in file_path.
+    // We need to parse the path relative to the bucket.
+    // URL: .../storage/v1/object/public/evidence/caseId/filename
+    // Path: caseId/filename
+    try {
+        const url = new URL(evidence.file_path)
+        const pathParts = url.pathname.split('/evidence/')
+        if (pathParts.length > 1) {
+            const storagePath = pathParts[1]
+            await supabaseAdmin.storage.from('evidence').remove([storagePath])
+        }
+    } catch (e) {
+        console.error('Error parsing file path for deletion:', e)
+        // Continue to delete record even if storage delete fails (orphaned file risk but better than stuck record)
+    }
+
+    // 4. Delete Record
+    const { error: deleteError } = await supabaseAdmin
+        .from('evidence')
+        .delete()
+        .eq('id', evidenceId)
+
+    if (deleteError) return { error: 'Failed to delete evidence record' }
+
+    // 5. Log Action
+    await supabaseAdmin.from('audit_logs').insert({
+        action: 'Guest Deleted Evidence',
+        details: { case_id: link.case_id, token_id: link.id, file_name: evidence.file_name },
+    })
+
+    revalidatePath(`/guest/${token}`)
+    return { success: true }
+}

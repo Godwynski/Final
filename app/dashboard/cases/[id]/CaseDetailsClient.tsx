@@ -6,6 +6,8 @@ import CopyButton from '@/components/CopyButton'
 import StatusStepper from '@/components/StatusStepper'
 import SubmitButton from '@/components/SubmitButton'
 import { updateCaseStatus, addInvolvedParty, addCaseNote, generateCaseGuestLink, toggleGuestLinkStatus, emailGuestLink, updateActionTaken } from './actions'
+import DashboardEvidenceList from '@/components/DashboardEvidenceList'
+import DashboardEvidenceUploadForm from '@/components/DashboardEvidenceUploadForm'
 
 type Tab = 'overview' | 'parties' | 'evidence' | 'notes' | 'activity'
 
@@ -32,10 +34,13 @@ export default function CaseDetailsClient({
     const [formattedDate, setFormattedDate] = useState<string>('')
     const [origin, setOrigin] = useState<string>('')
 
+    const [generatedDate, setGeneratedDate] = useState<string>('')
+
     // Format date on client only to avoid hydration mismatch
     useEffect(() => {
         setFormattedDate(new Date(caseData.incident_date).toLocaleString())
         setOrigin(window.location.origin)
+        setGeneratedDate(new Date().toLocaleString())
     }, [caseData.incident_date])
 
     return (
@@ -153,7 +158,7 @@ export default function CaseDetailsClient({
 
                 <div className="mt-8 text-center text-xs text-gray-500">
                     <p>This is a system-generated report. Not valid without official seal.</p>
-                    <p>Generated on {new Date().toLocaleString()}</p>
+                    <p>Generated on {generatedDate}</p>
                 </div>
             </div>
 
@@ -409,26 +414,14 @@ export default function CaseDetailsClient({
                             <div className="space-y-6">
                                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
                                     <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Evidence</h2>
-                                    {evidence.length === 0 ? (
-                                        <p className="text-gray-500 italic mb-4">No evidence uploaded.</p>
-                                    ) : (
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                            {evidence.map(e => (
-                                                <div key={e.id} className="relative group">
-                                                    {e.file_type.startsWith('image/') ? (
-                                                        <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden border dark:border-gray-700">
-                                                            <img src={e.file_path} alt={e.file_name} className="object-cover w-full h-full" />
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex items-center justify-center aspect-video bg-gray-100 rounded-lg border dark:bg-gray-700 dark:border-gray-600">
-                                                            <span className="text-gray-500 text-xs">{e.file_name}</span>
-                                                        </div>
-                                                    )}
-                                                    {e.description && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{e.description}</p>}
-                                                </div>
-                                            ))}
+                                    <DashboardEvidenceList evidence={evidence} caseId={caseData.id} />
+
+                                    <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                        <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Upload New Evidence</h3>
+                                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+                                            <DashboardEvidenceUploadForm caseId={caseData.id} />
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
 
                                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
