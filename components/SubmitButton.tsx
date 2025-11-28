@@ -1,14 +1,15 @@
 'use client'
 
+import { ButtonHTMLAttributes } from 'react'
 import { useFormStatus } from 'react-dom'
 
-interface SubmitButtonProps {
+interface SubmitButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     children: React.ReactNode
     className?: string
     loadingText?: string
 }
 
-export default function SubmitButton({ children, className, loadingText = 'Loading...' }: SubmitButtonProps) {
+export default function SubmitButton({ children, className, loadingText = 'Loading...', ...props }: SubmitButtonProps) {
     const { pending } = useFormStatus()
 
     return (
@@ -16,6 +17,7 @@ export default function SubmitButton({ children, className, loadingText = 'Loadi
             type="submit"
             disabled={pending}
             className={`${className} ${pending ? 'opacity-75 cursor-not-allowed' : ''}`}
+            {...props}
         >
             {pending ? (
                 <div className="flex items-center justify-center gap-2">
