@@ -44,7 +44,20 @@ export default async function AuditLogsTable() {
                                                 </div>
                                             )}
                                             {!log.details.narrative_action && (!log.details.old_status || !log.details.new_status) && (
-                                                <pre className="whitespace-pre-wrap font-sans text-gray-500 dark:text-gray-400">{JSON.stringify(log.details, null, 2)}</pre>
+                                                <div className="space-y-1">
+                                                    {Object.entries(log.details).map(([key, value]) => {
+                                                        // Skip internal keys if we decide to hide them, but for now show all
+                                                        const formattedKey = key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+                                                        return (
+                                                            <div key={key}>
+                                                                <span className="font-semibold text-gray-900 dark:text-white">{formattedKey}: </span>
+                                                                <span className="text-gray-600 dark:text-gray-300">
+                                                                    {typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)}
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
                                             )}
                                         </div>
                                     )}

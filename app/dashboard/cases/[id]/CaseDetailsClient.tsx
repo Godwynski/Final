@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import CopyButton from '@/components/CopyButton'
 import StatusStepper from '@/components/StatusStepper'
+import SubmitButton from '@/components/SubmitButton'
 import { updateCaseStatus, addInvolvedParty, addCaseNote, generateCaseGuestLink, toggleGuestLinkStatus, emailGuestLink, updateActionTaken } from './actions'
 
 type Tab = 'overview' | 'parties' | 'evidence' | 'notes' | 'activity'
@@ -194,9 +195,9 @@ export default function CaseDetailsClient({
                                         className="block p-2.5 w-full text-sm text-gray-900 bg-white rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white mb-3"
                                         placeholder="Describe the actions taken to resolve this case..."
                                     ></textarea>
-                                    <button type="submit" className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+                                    <SubmitButton className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800" loadingText="Updating...">
                                         Update Action
-                                    </button>
+                                    </SubmitButton>
                                 </form>
                             </div>
 
@@ -210,9 +211,9 @@ export default function CaseDetailsClient({
                                         <option value="Settled">Settled</option>
                                         <option value="Closed">Closed</option>
                                     </select>
-                                    <button type="submit" className="w-full text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700">
+                                    <SubmitButton className="w-full text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700" loadingText="Changing...">
                                         Change Status
-                                    </button>
+                                    </SubmitButton>
                                 </form>
                             </div>
 
@@ -294,7 +295,9 @@ export default function CaseDetailsClient({
                                             <label htmlFor="address" className="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Address</label>
                                             <input type="text" name="address" id="address" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" />
                                         </div>
-                                        <button type="submit" className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">Add Party</button>
+                                        <SubmitButton className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800" loadingText="Adding Party...">
+                                            Add Party
+                                        </SubmitButton>
                                     </form>
                                 </div>
                             </div>
@@ -334,9 +337,9 @@ export default function CaseDetailsClient({
                                 <div className="flex justify-between items-center mb-4">
                                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">Guest Upload Links</h2>
                                     <form action={generateCaseGuestLink.bind(null, caseData.id)}>
-                                        <button type="submit" className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-green-500 dark:hover:bg-green-600">
+                                        <SubmitButton className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-green-500 dark:hover:bg-green-600" loadingText="Generating...">
                                             Generate New Link
-                                        </button>
+                                        </SubmitButton>
                                     </form>
                                 </div>
 
@@ -361,9 +364,9 @@ export default function CaseDetailsClient({
                                                         <a href={`/guest/${link.token}`} target="_blank" className="text-sm text-blue-600 hover:underline dark:text-blue-400">Open</a>
                                                     )}
                                                     <form action={toggleGuestLinkStatus.bind(null, link.id, link.is_active, caseData.id)}>
-                                                        <button type="submit" className={`text-xs hover:underline ${link.is_active ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                                                        <SubmitButton className={`text-xs hover:underline ${link.is_active ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`} loadingText="...">
                                                             {link.is_active ? 'Close Link' : 'Re-open Link'}
-                                                        </button>
+                                                        </SubmitButton>
                                                     </form>
                                                 </div>
                                             </div>
@@ -373,7 +376,9 @@ export default function CaseDetailsClient({
                                                     <input type="hidden" name="pin" value={link.pin} />
                                                     <input type="hidden" name="caseId" value={caseData.id} />
                                                     <input type="email" name="email" placeholder="Recipient Email" required className="bg-white border border-gray-300 text-gray-900 text-xs rounded-lg p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white w-48" />
-                                                    <button type="submit" className="text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-lg text-xs px-3 py-1.5 dark:bg-blue-500 dark:hover:bg-blue-600">Email</button>
+                                                    <SubmitButton className="text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-lg text-xs px-3 py-1.5 dark:bg-blue-500 dark:hover:bg-blue-600" loadingText="Sending...">
+                                                        Email
+                                                    </SubmitButton>
                                                 </form>
                                             )}
                                         </div>
@@ -413,7 +418,9 @@ export default function CaseDetailsClient({
                                             <label htmlFor="content" className="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Note Content</label>
                                             <textarea name="content" id="content" rows={4} required className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"></textarea>
                                         </div>
-                                        <button type="submit" className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">Add Note</button>
+                                        <SubmitButton className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800" loadingText="Adding Note...">
+                                            Add Note
+                                        </SubmitButton>
                                     </form>
                                 </div>
                             </div>

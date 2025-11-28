@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-export async function createCase(formData: FormData) {
+export async function createCase(prevState: any, formData: FormData) {
     const supabase = await createClient()
 
     const {
@@ -30,7 +30,7 @@ export async function createCase(formData: FormData) {
     const now = new Date()
 
     if (incidentDateObj > now) {
-        redirect(`/dashboard/cases/new?error=Incident date cannot be in the future`)
+        return { error: 'Incident date cannot be in the future' }
     }
 
     const { data, error } = await supabase
@@ -51,7 +51,7 @@ export async function createCase(formData: FormData) {
 
     if (error) {
         console.error('Error creating case:', error)
-        redirect(`/dashboard/cases/new?error=${encodeURIComponent(error.message)}`)
+        return { error: error.message }
     }
 
     // Log action

@@ -136,21 +136,29 @@ export default function NotificationBell() {
                                 {notifications.map(notification => (
                                     <li key={notification.id} className={`relative group ${notification.is_read ? 'bg-white dark:bg-gray-800' : 'bg-blue-50 dark:bg-gray-700/50'}`}>
                                         <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                                            <div onClick={() => markAsRead(notification.id)}>
-                                                {notification.link ? (
-                                                    <Link href={notification.link} className="block">
-                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">{notification.title}</p>
-                                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{notification.message}</p>
-                                                        <p className="text-xs text-gray-400 mt-2">{new Date(notification.created_at).toLocaleString()}</p>
-                                                    </Link>
-                                                ) : (
-                                                    <div>
-                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">{notification.title}</p>
-                                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{notification.message}</p>
-                                                        <p className="text-xs text-gray-400 mt-2">{new Date(notification.created_at).toLocaleString()}</p>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            {notification.link ? (
+                                                <Link
+                                                    href={notification.link}
+                                                    className="block"
+                                                    onClick={() => {
+                                                        markAsRead(notification.id)
+                                                        setIsOpen(false)
+                                                    }}
+                                                >
+                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">{notification.title}</p>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{notification.message}</p>
+                                                    <p className="text-xs text-gray-400 mt-2">{new Date(notification.created_at).toLocaleString()}</p>
+                                                </Link>
+                                            ) : (
+                                                <div
+                                                    className="cursor-pointer"
+                                                    onClick={() => markAsRead(notification.id)}
+                                                >
+                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">{notification.title}</p>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{notification.message}</p>
+                                                    <p className="text-xs text-gray-400 mt-2">{new Date(notification.created_at).toLocaleString()}</p>
+                                                </div>
+                                            )}
                                             {!notification.is_read && (
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); markAsRead(notification.id); }}
