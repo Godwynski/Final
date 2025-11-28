@@ -2,7 +2,6 @@
 
 import { useState, ReactNode } from 'react'
 import { createUser } from './actions'
-import AdminSearch from './AdminSearch'
 
 type AdminClientProps = {
     usersTabContent: ReactNode
@@ -55,7 +54,6 @@ export function AdminClient({ usersTabContent, logsTabContent }: AdminClientProp
             <div>
                 {/* USERS TAB */}
                 <div className={activeTab === 'users' ? 'block' : 'hidden'}>
-                    <AdminSearch />
                     {usersTabContent}
                 </div>
 

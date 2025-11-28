@@ -1,16 +1,9 @@
 import { createClient } from '@/utils/supabase/server'
 import UserRow from './UserRow'
 
-export default async function UsersTable({ query }: { query?: string }) {
+export default async function UsersTable() {
     const supabase = await createClient()
-
-    let queryBuilder = supabase.from('profiles').select('*').order('created_at', { ascending: false })
-
-    if (query) {
-        queryBuilder = queryBuilder.or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
-    }
-
-    const { data: users } = await queryBuilder
+    const { data: users } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
 
     return (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">

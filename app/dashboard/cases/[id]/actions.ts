@@ -144,7 +144,10 @@ export async function generateCaseGuestLink(caseId: string, formData: FormData) 
 
     if (!user) throw new Error('Unauthorized')
 
-    const durationHours = parseInt(formData.get('duration') as string)
+    let durationHours = parseInt(formData.get('duration') as string)
+    if (isNaN(durationHours)) {
+        durationHours = 24
+    }
     const expiresAt = new Date()
     expiresAt.setHours(expiresAt.getHours() + durationHours)
     const token = crypto.randomUUID()
