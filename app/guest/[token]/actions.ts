@@ -40,15 +40,40 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
         return { error: 'No file uploaded.' }
     }
 
-    // Simulate file upload path
-    const filePath = `evidence/${caseId}/${Date.now()}_${file.name}`
+    // Validate File Type (Images Only)
+    if (!file.type.startsWith('image/')) {
+        return { error: 'Only image files are allowed.' }
+    }
+
+    // Upload to Supabase Storage
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${caseId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+
+    const { error: uploadError } = await supabaseAdmin
+        .storage
+        .from('evidence')
+        .upload(fileName, file, {
+            contentType: file.type,
+            upsert: false
+        })
+
+    if (uploadError) {
+        console.error('Storage upload error:', uploadError)
+        return { error: 'Failed to upload file to storage.' }
+    }
+
+    // Get Public URL
+    const { data: { publicUrl } } = supabaseAdmin
+        .storage
+        .from('evidence')
+        .getPublicUrl(fileName)
 
     // Insert into Evidence Table using Admin Client (Bypass RLS)
     const { error: insertError } = await supabaseAdmin
         .from('evidence')
         .insert({
             case_id: caseId,
-            file_path: filePath,
+            file_path: publicUrl, // Storing the full URL for easier access
             file_name: file.name,
             file_type: file.type,
             description: description,
@@ -56,7 +81,7 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
         })
 
     if (insertError) {
-        console.error('Evidence upload error:', insertError)
+        console.error('Evidence record error:', insertError)
         return { error: 'Failed to save evidence record.' }
     }
 
@@ -64,6 +89,14 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
     await supabaseAdmin.from('audit_logs').insert({
         action: 'Guest Upload',
         details: { case_id: caseId, token_id: links.id, file_name: file.name },
+    })
+
+    // Notify the creator of the link
+    await supabaseAdmin.from('notifications').insert({
+        user_id: links.created_by,
+        title: 'New Evidence Uploaded',
+        message: `A guest uploaded evidence: ${file.name}`,
+        link: `/dashboard/cases/${caseId}`,
     })
 
     revalidatePath(`/guest/${token}`)

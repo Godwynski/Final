@@ -16,16 +16,17 @@ export async function createUser(formData: FormData) {
     }
 
     const email = formData.get('email') as string
-    const password = formData.get('password') as string
+    const fullName = formData.get('full_name') as string
     const role = formData.get('role') as string
+    const defaultPassword = 'Blotter123!' // Default password
 
     const supabaseAdmin = createAdminClient()
 
     const { data: newUser, error } = await supabaseAdmin.auth.admin.createUser({
         email,
-        password,
+        password: defaultPassword,
         email_confirm: true,
-        user_metadata: { role } // Store role in metadata initially if needed, but we use profiles table
+        user_metadata: { role, full_name: fullName } // Store role and full_name in metadata
     })
 
     if (error) {
@@ -34,16 +35,18 @@ export async function createUser(formData: FormData) {
     }
 
     if (newUser.user) {
-        // Update profiles table (trigger might handle this, but we want to ensure role is set)
-        // The trigger sets default to 'staff', we update it here if needed or rely on metadata if we updated the trigger.
-        // Let's explicitly update the profile to be safe.
-        await supabaseAdmin.from('profiles').update({ role }).eq('id', newUser.user.id)
+        // Update profiles table (trigger might handle this, but we want to ensure role and flags are set)
+        await supabaseAdmin.from('profiles').update({
+            role,
+            full_name: fullName,
+            force_password_change: true
+        }).eq('id', newUser.user.id)
 
         // Log action
         await supabase.from('audit_logs').insert({
             user_id: currentUser?.id,
             action: 'Created User',
-            details: { target_user: email, role },
+            details: { target_user: email, target_name: fullName, role },
         })
     }
 
@@ -103,4 +106,88 @@ export async function updateUserRole(formData: FormData) {
     })
 
     revalidatePath('/dashboard/admin')
+}
+
+export async function updateUser(formData: FormData) {
+    const supabase = await createClient()
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+
+    if (!currentUser) redirect('/login')
+
+    const userId = formData.get('userId') as string
+    const fullName = formData.get('full_name') as string
+    const role = formData.get('role') as string
+
+    // Check permissions (only admin)
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single()
+    if (profile?.role !== 'admin') {
+        throw new Error('Unauthorized')
+    }
+
+    const supabaseAdmin = createAdminClient()
+
+    // Update Profile
+    const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .update({ full_name: fullName, role })
+        .eq('id', userId)
+
+    if (profileError) {
+        redirect(`/dashboard/admin?error=${encodeURIComponent(profileError.message)}`)
+    }
+
+    // Update Metadata (optional but good for consistency)
+    await supabaseAdmin.auth.admin.updateUserById(userId, {
+        user_metadata: { full_name: fullName, role }
+    })
+
+    await supabase.from('audit_logs').insert({
+        user_id: currentUser.id,
+        action: 'Updated User Details',
+        details: { target_user_id: userId, full_name: fullName, role },
+    })
+
+    revalidatePath('/dashboard/admin')
+}
+
+export async function adminResetPassword(formData: FormData) {
+    const supabase = await createClient()
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+
+    if (!currentUser) redirect('/login')
+
+    const userId = formData.get('userId') as string
+    const defaultPassword = 'Blotter123!'
+
+    // Check permissions
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single()
+    if (profile?.role !== 'admin') {
+        throw new Error('Unauthorized')
+    }
+
+    const supabaseAdmin = createAdminClient()
+
+    // Update Password
+    const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: defaultPassword
+    })
+
+    if (passwordError) {
+        redirect(`/dashboard/admin?error=${encodeURIComponent(passwordError.message)}`)
+    }
+
+    // Set force_password_change
+    await supabaseAdmin
+        .from('profiles')
+        .update({ force_password_change: true })
+        .eq('id', userId)
+
+    await supabase.from('audit_logs').insert({
+        user_id: currentUser.id,
+        action: 'Admin Reset Password',
+        details: { target_user_id: userId },
+    })
+
+    revalidatePath('/dashboard/admin')
+    redirect('/dashboard/admin?message=Password reset to default (Blotter123!)')
 }

@@ -3,10 +3,13 @@
 -- ==========================================
 
 -- Create a table for public profiles if it doesn't exist
+-- Create a table for public profiles if it doesn't exist
 create table if not exists profiles (
   id uuid references auth.users on delete cascade not null primary key,
   email text,
+  full_name text, -- Added full name
   role text check (role in ('admin', 'staff')) default 'staff',
+  force_password_change boolean default false, -- Added force password change
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -33,11 +36,12 @@ language plpgsql
 security definer set search_path = public
 as $$
 begin
-  insert into public.profiles (id, email, role)
+  insert into public.profiles (id, email, role, full_name)
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data->>'role', 'staff') -- Use metadata role or default to staff
+    coalesce(new.raw_user_meta_data->>'role', 'staff'), -- Use metadata role or default to staff
+    new.raw_user_meta_data->>'full_name' -- Use metadata full_name
   )
   on conflict (id) do nothing; -- Prevent error if profile already exists
   return new;
@@ -142,6 +146,32 @@ create table if not exists guest_links (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- Notifications Table
+create table if not exists notifications (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) not null,
+  title text not null,
+  message text not null,
+  link text,
+  is_read boolean default false,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Notifications RLS
+alter table notifications enable row level security;
+
+drop policy if exists "Users can view own notifications" on notifications;
+create policy "Users can view own notifications" on notifications
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "System/Admins can insert notifications" on notifications;
+create policy "System/Admins can insert notifications" on notifications
+  for insert with check (true); -- Allow system/actions to insert
+
+drop policy if exists "Users can update own notifications" on notifications;
+create policy "Users can update own notifications" on notifications
+  for update using (auth.uid() = user_id);
+
 -- Ensure columns exist (Idempotent modifications)
 do $$ begin
     -- Add case_id to guest_links if it doesn't exist
@@ -158,6 +188,16 @@ do $$ begin
     -- Add email to involved_parties
     if not exists (select 1 from information_schema.columns where table_name = 'involved_parties' and column_name = 'email') then
         alter table involved_parties add column email text;
+    end if;
+
+    -- Add full_name to profiles
+    if not exists (select 1 from information_schema.columns where table_name = 'profiles' and column_name = 'full_name') then
+        alter table profiles add column full_name text;
+    end if;
+
+    -- Add force_password_change to profiles
+    if not exists (select 1 from information_schema.columns where table_name = 'profiles' and column_name = 'force_password_change') then
+        alter table profiles add column force_password_change boolean default false;
     end if;
 end $$;
 

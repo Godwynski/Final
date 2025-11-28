@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { notFound, redirect } from 'next/navigation'
-import { updateCaseStatus, addInvolvedParty, addCaseNote, generateCaseGuestLink, toggleGuestLinkStatus } from './actions'
+import { updateCaseStatus, addInvolvedParty, addCaseNote, generateCaseGuestLink, toggleGuestLinkStatus, emailGuestLink } from './actions'
+import CopyButton from '@/components/CopyButton'
 
 export default async function CaseDetailsPage(props: { params: Promise<{ id: string }>, searchParams: Promise<{ message?: string, error?: string }> }) {
     const params = await props.params
@@ -15,7 +16,7 @@ export default async function CaseDetailsPage(props: { params: Promise<{ id: str
     const [caseRes, partiesRes, notesRes, evidenceRes, linksRes] = await Promise.all([
         supabase.from('cases').select('*').eq('id', id).single(),
         supabase.from('involved_parties').select('*').eq('case_id', id),
-        supabase.from('case_notes').select('*, profiles:created_by(email)').eq('case_id', id).order('created_at', { ascending: false }),
+        supabase.from('case_notes').select('*, profiles:created_by(email, full_name)').eq('case_id', id).order('created_at', { ascending: false }),
         supabase.from('evidence').select('*').eq('case_id', id),
         supabase.from('guest_links').select('*').eq('case_id', id).order('created_at', { ascending: false })
     ])
@@ -27,7 +28,6 @@ export default async function CaseDetailsPage(props: { params: Promise<{ id: str
     const notes = notesRes.data || []
     const evidence = evidenceRes.data || []
     const allLinks = linksRes.data || []
-    const activeLinks = allLinks.filter(l => l.is_active)
 
     return (
         <div className="p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
@@ -134,11 +134,22 @@ export default async function CaseDetailsPage(props: { params: Promise<{ id: str
                                 {evidence.length === 0 ? (
                                     <p className="text-gray-500 italic mb-4">No evidence uploaded.</p>
                                 ) : (
-                                    <ul className="list-disc pl-5 text-gray-700 dark:text-gray-300">
+                                    <div className="grid grid-cols-2 gap-4">
                                         {evidence.map(e => (
-                                            <li key={e.id}>{e.file_name} ({e.file_type})</li>
+                                            <div key={e.id} className="relative group">
+                                                {e.file_type.startsWith('image/') ? (
+                                                    <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden border dark:border-gray-700">
+                                                        <img src={e.file_path} alt={e.file_name} className="object-cover w-full h-full" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center justify-center aspect-video bg-gray-100 rounded-lg border dark:bg-gray-700 dark:border-gray-600">
+                                                        <span className="text-gray-500 text-xs">{e.file_name}</span>
+                                                    </div>
+                                                )}
+                                                {e.description && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{e.description}</p>}
+                                            </div>
                                         ))}
-                                    </ul>
+                                    </div>
                                 )}
                             </div>
 
@@ -148,23 +159,40 @@ export default async function CaseDetailsPage(props: { params: Promise<{ id: str
 
                                 <div className="space-y-2 mb-4">
                                     {allLinks.map(link => (
-                                        <div key={link.id} className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 rounded gap-2 ${link.is_active ? 'bg-blue-50 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-700 opacity-75'}`}>
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-mono text-blue-600 dark:text-blue-400">Token: ...{link.token.slice(-8)}</span>
-                                                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">PIN: {link.pin}</span>
-                                                <span className="text-xs text-gray-500">Expires: {new Date(link.expires_at).toLocaleString()}</span>
-                                                {!link.is_active && <span className="text-xs text-red-500 font-bold">INACTIVE</span>}
+                                        <div key={link.id} className="mb-4">
+                                            <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 rounded gap-2 ${link.is_active ? 'bg-blue-50 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-700 opacity-75'}`}>
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-mono text-blue-600 dark:text-blue-400">Link: ...{link.token.slice(-8)}</span>
+                                                        <CopyButton text={`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/guest/${link.token}`} label="Copy Link" />
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">PIN: {link.pin}</span>
+                                                        <CopyButton text={link.pin} label="Copy PIN" />
+                                                    </div>
+                                                    <span className="text-xs text-gray-500">Expires: {new Date(link.expires_at).toLocaleString()}</span>
+                                                    {!link.is_active && <span className="text-xs text-red-500 font-bold">INACTIVE</span>}
+                                                </div>
+                                                <div className="flex gap-3 items-center">
+                                                    {link.is_active && (
+                                                        <a href={`/guest/${link.token}`} target="_blank" className="text-sm text-blue-600 hover:underline dark:text-blue-400">Open</a>
+                                                    )}
+                                                    <form action={toggleGuestLinkStatus.bind(null, link.id, link.is_active, id)}>
+                                                        <button type="submit" className={`text-xs hover:underline ${link.is_active ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                                                            {link.is_active ? 'Close Link' : 'Re-open Link'}
+                                                        </button>
+                                                    </form>
+                                                </div>
                                             </div>
-                                            <div className="flex gap-3 items-center">
-                                                {link.is_active && (
-                                                    <a href={`/guest/${link.token}`} target="_blank" className="text-sm text-blue-600 hover:underline dark:text-blue-400">Open</a>
-                                                )}
-                                                <form action={toggleGuestLinkStatus.bind(null, link.id, link.is_active, id)}>
-                                                    <button type="submit" className={`text-xs hover:underline ${link.is_active ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                                                        {link.is_active ? 'Close Link' : 'Re-open Link'}
-                                                    </button>
+                                            {link.is_active && (
+                                                <form action={emailGuestLink} className="mt-2 flex gap-2 items-center pl-2">
+                                                    <input type="hidden" name="link" value={`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/guest/${link.token}`} />
+                                                    <input type="hidden" name="pin" value={link.pin} />
+                                                    <input type="hidden" name="caseId" value={id} />
+                                                    <input type="email" name="email" placeholder="Recipient Email" required className="bg-white border border-gray-300 text-gray-900 text-xs rounded-lg p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white w-48" />
+                                                    <button type="submit" className="text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-lg text-xs px-3 py-1.5 dark:bg-blue-500 dark:hover:bg-blue-600">Email</button>
                                                 </form>
-                                            </div>
+                                            )}
                                         </div>
                                     ))}
                                     {allLinks.length === 0 && <p className="text-sm text-gray-500 italic">No links generated yet.</p>}
@@ -192,7 +220,7 @@ export default async function CaseDetailsPage(props: { params: Promise<{ id: str
                                     <div key={note.id} className="bg-gray-50 p-3 rounded-lg dark:bg-gray-700">
                                         <p className="text-gray-800 dark:text-gray-200 text-sm mb-1">{note.content}</p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            {new Date(note.created_at).toLocaleString()} by {note.profiles?.email || 'Unknown'}
+                                            {new Date(note.created_at).toLocaleString()} by {note.profiles?.full_name || note.profiles?.email || 'Unknown'}
                                         </p>
                                     </div>
                                 ))}

@@ -20,6 +20,14 @@ export async function createCase(formData: FormData) {
     const incident_date = formData.get('incident_date') as string
     const incident_location = formData.get('incident_location') as string
 
+    // Validate Incident Date
+    const incidentDateObj = new Date(incident_date)
+    const now = new Date()
+
+    if (incidentDateObj > now) {
+        redirect(`/dashboard/cases/new?error=Incident date cannot be in the future`)
+    }
+
     const { data, error } = await supabase
         .from('cases')
         .insert({

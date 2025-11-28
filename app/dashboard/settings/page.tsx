@@ -1,0 +1,45 @@
+import { createClient } from '@/utils/supabase/server'
+import { redirect } from 'next/navigation'
+import SettingsClient from './SettingsClient'
+
+export default async function SettingsPage(props: { searchParams: Promise<{ error?: string, message?: string }> }) {
+    const searchParams = await props.searchParams
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return redirect('/login')
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+    const userData = {
+        email: user.email!,
+        full_name: profile?.full_name || null,
+        role: profile?.role || 'staff'
+    }
+
+    return (
+        <div className="p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+            <div className="max-w-3xl mx-auto space-y-8">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Account Settings</h1>
+
+                {searchParams.message && (
+                    <div className="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400" role="alert">
+                        <span className="font-medium">Success!</span> {searchParams.message}
+                    </div>
+                )}
+
+                {searchParams.error && (
+                    <div className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+                        <span className="font-medium">Error!</span> {searchParams.error}
+                    </div>
+                )}
+
+                <SettingsClient user={userData} />
+            </div>
+        </div>
+    )
+}

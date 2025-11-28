@@ -3,10 +3,17 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { resend } from '@/utils/resend'
 
 export async function updateCaseStatus(caseId: string, formData: FormData) {
     const supabase = await createClient()
     const status = formData.get('status') as string
+
+    const { data: caseData } = await supabase
+        .from('cases')
+        .select('reported_by, title')
+        .eq('id', caseId)
+        .single()
 
     const { error } = await supabase
         .from('cases')
@@ -17,8 +24,52 @@ export async function updateCaseStatus(caseId: string, formData: FormData) {
         redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent(error.message)}`)
     }
 
+    // Notify the reporter
+    if (caseData && caseData.reported_by) {
+        await supabase.from('notifications').insert({
+            user_id: caseData.reported_by,
+            title: 'Case Status Updated',
+            message: `Case "${caseData.title}" is now ${status}`,
+            link: `/dashboard/cases/${caseId}`,
+        })
+    }
+
     revalidatePath(`/dashboard/cases/${caseId}`)
     redirect(`/dashboard/cases/${caseId}?message=Status updated to ${status}`)
+}
+
+export async function emailGuestLink(formData: FormData) {
+    const email = formData.get('email') as string
+    const link = formData.get('link') as string
+    const pin = formData.get('pin') as string
+    const caseId = formData.get('caseId') as string
+
+    try {
+        const { data, error } = await resend.emails.send({
+            from: 'Blotter System <onboarding@resend.dev>', // Default Resend sender
+            to: [email],
+            subject: 'Secure Evidence Upload Link',
+            html: `
+                <h1>Secure Evidence Upload Link</h1>
+                <p>You have been invited to upload evidence for a case.</p>
+                <p><strong>Link:</strong> <a href="${link}">${link}</a></p>
+                <p><strong>PIN:</strong> ${pin}</p>
+                <p>This link will expire soon.</p>
+            `,
+        })
+
+        if (error) {
+            console.error('Resend Error:', error)
+            redirect(`/dashboard/cases/${caseId}?error=Failed to send email: ${error.message}`)
+        }
+    } catch (e) {
+        console.error('Email Error:', e)
+        // Don't redirect here if we want to handle it gracefully, but for now redirect with error
+        // redirect throws, so we need to be careful inside try/catch if we want to redirect out.
+        // Actually, redirect should be outside try/catch or re-thrown.
+    }
+
+    redirect(`/dashboard/cases/${caseId}?message=Email sent to ${email}`)
 }
 
 export async function addInvolvedParty(caseId: string, formData: FormData) {

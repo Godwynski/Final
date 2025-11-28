@@ -88,10 +88,15 @@ export default async function GuestPage(props: { params: Promise<{ token: string
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {evidence.map((item: any) => (
                                     <div key={item.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="font-medium text-gray-900 dark:text-white truncate">{item.file_name}</span>
-                                            <span className="text-xs text-gray-500 uppercase">{item.file_type}</span>
-                                        </div>
+                                        {item.file_type.startsWith('image/') ? (
+                                            <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden border dark:border-gray-600 mb-2">
+                                                <img src={item.file_path} alt={item.file_name} className="object-cover w-full h-full" />
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-center aspect-video bg-gray-100 rounded-lg border dark:bg-gray-600 dark:border-gray-500 mb-2">
+                                                <span className="text-gray-500 text-xs">{item.file_name}</span>
+                                            </div>
+                                        )}
                                         {item.description && <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{item.description}</p>}
                                         <div className="text-xs text-gray-400">
                                             Uploaded: {new Date(item.created_at).toLocaleDateString()}
@@ -124,8 +129,8 @@ function UploadForm({ token }: { token: string }) {
             await uploadGuestEvidence(token, formData)
         }} className="space-y-4">
             <div>
-                <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white" htmlFor="file_input">Upload file</label>
-                <input name="file" className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-white dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" id="file_input" type="file" required />
+                <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white" htmlFor="file_input">Upload file (Images only)</label>
+                <input name="file" accept="image/*" className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-white dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" id="file_input" type="file" required />
             </div>
             <div>
                 <label htmlFor="description" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Description</label>

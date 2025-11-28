@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
+import NotificationBell from '@/components/NotificationBell'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient()
@@ -14,11 +15,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
         .eq('id', user.id)
         .single()
 
+    if (profile?.force_password_change) {
+        redirect('/change-password')
+    }
+
     return (
         <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
             <Sidebar role={profile?.role || 'staff'} email={user.email!} />
-            <div className="flex-1 p-8 overflow-y-auto h-screen">
-                {children}
+            <div className="flex-1 flex flex-col h-screen overflow-hidden">
+                <header className="bg-white dark:bg-gray-800 shadow-sm z-10 p-4 flex justify-end items-center">
+                    <NotificationBell />
+                </header>
+                <main className="flex-1 overflow-y-auto p-8">
+                    {children}
+                </main>
             </div>
         </div>
     )
