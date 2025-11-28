@@ -1,9 +1,23 @@
 import { createClient } from '@/utils/supabase/server'
 import UserRow from './UserRow'
+import PaginationControls from '@/components/PaginationControls'
 
-export default async function UsersTable() {
+export default async function UsersTable({ page = 1 }: { page?: number }) {
     const supabase = await createClient()
-    const { data: users } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+    const limit = 10
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true })
+    const { data: users } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(from, to)
+
+    const totalPages = Math.ceil((count || 0) / limit)
+    const hasNextPage = page < totalPages
+    const hasPrevPage = page > 1
 
     return (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
@@ -26,6 +40,12 @@ export default async function UsersTable() {
                     </tbody>
                 </table>
             </div>
+            <PaginationControls
+                hasNextPage={hasNextPage}
+                hasPrevPage={hasPrevPage}
+                totalPages={totalPages}
+                currentPage={page}
+            />
         </div>
     )
 }

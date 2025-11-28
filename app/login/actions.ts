@@ -10,13 +10,28 @@ export async function login(formData: FormData) {
     const email = formData.get('email') as string
     const password = formData.get('password') as string
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: { user }, error } = await supabase.auth.signInWithPassword({
         email,
         password,
     })
 
     if (error) {
         redirect('/login?error=Could not authenticate user')
+    }
+
+    if (user) {
+        // Sync role to user_metadata
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (profile?.role && user.user_metadata?.role !== profile.role) {
+            await supabase.auth.updateUser({
+                data: { role: profile.role }
+            })
+        }
     }
 
     revalidatePath('/', 'layout')

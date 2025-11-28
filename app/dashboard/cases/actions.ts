@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { createCaseSchema } from '@/utils/validation'
 
 export async function createCase(prevState: any, formData: FormData) {
     const supabase = await createClient()
@@ -15,23 +16,25 @@ export async function createCase(prevState: any, formData: FormData) {
         redirect('/login')
     }
 
-    const title = formData.get('title') as string
-    const incident_type = formData.get('incident_type') as string
-    const narrative_facts = formData.get('narrative_facts') as string
-    const narrative_action = formData.get('narrative_action') as string
-    const incident_date = formData.get('incident_date') as string
-    const incident_location = formData.get('incident_location') as string
+    const rawData = {
+        title: formData.get('title'),
+        incident_type: formData.get('incident_type'),
+        narrative_facts: formData.get('narrative_facts'),
+        narrative_action: formData.get('narrative_action'),
+        incident_date: formData.get('incident_date'),
+        incident_location: formData.get('incident_location'),
+    }
+
+    const validationResult = createCaseSchema.safeParse(rawData)
+
+    if (!validationResult.success) {
+        return { error: validationResult.error.issues[0].message }
+    }
+
+    const { title, incident_type, narrative_facts, narrative_action, incident_date, incident_location } = validationResult.data
 
     // Legacy Description for backward compatibility
-    const description = `[${incident_type}] FACTS: ${narrative_facts}\n\nACTION TAKEN: ${narrative_action}`
-
-    // Validate Incident Date
-    const incidentDateObj = new Date(incident_date)
-    const now = new Date()
-
-    if (incidentDateObj > now) {
-        return { error: 'Incident date cannot be in the future' }
-    }
+    const description = `[${incident_type}] FACTS: ${narrative_facts}\n\nACTION TAKEN: ${narrative_action || 'None'}`
 
     const { data, error } = await supabase
         .from('cases')

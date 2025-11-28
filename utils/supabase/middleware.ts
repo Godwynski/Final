@@ -56,5 +56,22 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url)
     }
 
+    // Protect Admin Routes
+    // if (request.nextUrl.pathname.startsWith('/dashboard/admin')) {
+    //     // We need to check the user's role. 
+    //     // Since we can't easily select from the DB here without potentially creating a loop or complex logic,
+    //     // we rely on the user metadata if available, OR we accept that the page itself has a second check.
+    //     // BUT, for "Defense", we should try to block it here if possible.
+    //     // The safest way in middleware without extra DB calls is checking user_metadata if we trust it (we sync it on login/signup).
+    //     // Let's assume we sync role to metadata.
+    // 
+    //     const role = user?.user_metadata?.role
+    //     // if (role !== 'admin') {
+    //     //     const url = request.nextUrl.clone()
+    //     //     url.pathname = '/dashboard'
+    //     //     return NextResponse.redirect(url)
+    //     // }
+    // }
+
     return supabaseResponse
 }

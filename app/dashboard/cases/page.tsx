@@ -2,11 +2,20 @@ import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import SearchFilter from './search-filter'
 
-export default async function CasesPage(props: { searchParams: Promise<{ query?: string, status?: string }> }) {
+import PaginationControls from '@/components/PaginationControls'
+
+export default async function CasesPage(props: { searchParams: Promise<{ query?: string, status?: string, incident_type?: string, start_date?: string, end_date?: string, page?: string }> }) {
     const searchParams = await props.searchParams
     const supabase = await createClient()
     const query = searchParams.query
     const status = searchParams.status
+    const incidentType = searchParams.incident_type
+    const startDate = searchParams.start_date
+    const endDate = searchParams.end_date
+    const page = Number(searchParams.page) || 1
+    const limit = 10
+    const from = (page - 1) * limit
+    const to = from + limit - 1
 
     let partyCaseIds: string[] = []
 
@@ -23,6 +32,14 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
     }
 
     // 2. Fetch All Cases (We filter in memory to handle complex type matching like Dates and Numbers safely)
+    // Ideally we should filter on DB side for pagination to work perfectly with search, 
+    // but given the complex "OR" logic across tables and fields, we'll fetch all matching the basic filters first if possible, 
+    // OR we accept that "search + pagination" is hard without a dedicated search service.
+    // For now, let's keep the "fetch all then filter" approach but apply pagination AFTER filtering in memory.
+    // This is not performant for huge datasets but correct for the current logic.
+    // WAIT - if we fetch ALL then filter, we don't need `range()` in the query.
+    // We slice the array in memory.
+
     let queryBuilder = supabase
         .from('cases')
         .select('*')
@@ -31,10 +48,33 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
     const { data: allCases } = await queryBuilder
 
     // 3. Filter Cases in Memory
-    const cases = allCases?.filter(c => {
+    const filteredCases = allCases?.filter(c => {
         // Status Filter
         if (status && status !== 'All' && c.status !== status) {
             return false
+        }
+
+        // Incident Type Filter
+        if (incidentType && incidentType !== 'All' && c.incident_type !== incidentType) {
+            return false
+        }
+
+        // Date Range Filter
+        if (startDate || endDate) {
+            const caseDate = new Date(c.incident_date)
+            // Reset time part for accurate date comparison if needed, but usually incident_date is just date or we compare timestamps
+            // Assuming incident_date is ISO string.
+
+            if (startDate) {
+                const start = new Date(startDate)
+                if (caseDate < start) return false
+            }
+
+            if (endDate) {
+                const end = new Date(endDate)
+                end.setHours(23, 59, 59, 999) // Include the entire end day
+                if (caseDate > end) return false
+            }
         }
 
         // Query Filter
@@ -65,6 +105,13 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
         return true
     }) || []
 
+    // 4. Paginate in Memory
+    const totalItems = filteredCases.length
+    const totalPages = Math.ceil(totalItems / limit)
+    const cases = filteredCases.slice(from, to + 1)
+    const hasNextPage = page < totalPages
+    const hasPrevPage = page > 1
+
     return (
         <div className="max-w-6xl mx-auto">
             <div className="flex justify-between items-center mb-8">
@@ -90,7 +137,7 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
                             </tr>
                         </thead>
                         <tbody>
-                            {cases?.map((c) => (
+                            {cases.map((c) => (
                                 <tr key={c.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                                     <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                                         #{c.case_number}
@@ -113,7 +160,7 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
                                     </td>
                                 </tr>
                             ))}
-                            {(!cases || cases.length === 0) && (
+                            {cases.length === 0 && (
                                 <tr>
                                     <td colSpan={6} className="px-6 py-4 text-center">No cases found matching your criteria.</td>
                                 </tr>
@@ -121,6 +168,12 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
                         </tbody>
                     </table>
                 </div>
+                <PaginationControls
+                    hasNextPage={hasNextPage}
+                    hasPrevPage={hasPrevPage}
+                    totalPages={totalPages}
+                    currentPage={page}
+                />
             </div>
         </div>
     )

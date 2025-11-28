@@ -34,6 +34,14 @@ export default async function Dashboard() {
     const settledCases = cases?.filter(c => c.status === 'Settled').length || 0
     const closedCases = cases?.filter(c => c.status === 'Closed').length || 0
 
+    const activeCases = newCases + pendingCases
+    const resolvedCases = settledCases + closedCases
+
+    // Calculate New This Month
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const newThisMonth = cases?.filter(c => new Date(c.created_at) >= startOfMonth).length || 0
+
     // Calculate percentages for the distribution bar
     const getPercent = (count: number) => totalCases > 0 ? (count / totalCases) * 100 : 0
 
@@ -84,30 +92,7 @@ export default async function Dashboard() {
                     </div>
                 </div>
 
-                {/* New Cases */}
-                <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-                    <div className="p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <div className="rounded-md bg-indigo-500 p-3">
-                                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">New Cases</dt>
-                                    <dd>
-                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{newCases}</div>
-                                    </dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Pending Cases */}
+                {/* Active Cases */}
                 <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
                     <div className="p-5">
                         <div className="flex items-center">
@@ -120,9 +105,9 @@ export default async function Dashboard() {
                             </div>
                             <div className="ml-5 w-0 flex-1">
                                 <dl>
-                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Under Investigation</dt>
+                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Active Cases</dt>
                                     <dd>
-                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{pendingCases}</div>
+                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{activeCases}</div>
                                     </dd>
                                 </dl>
                             </div>
@@ -143,9 +128,32 @@ export default async function Dashboard() {
                             </div>
                             <div className="ml-5 w-0 flex-1">
                                 <dl>
-                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Resolved (Settled/Closed)</dt>
+                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Resolved</dt>
                                     <dd>
-                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{settledCases + closedCases}</div>
+                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{resolvedCases}</div>
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* New This Month */}
+                <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+                    <div className="p-5">
+                        <div className="flex items-center">
+                            <div className="flex-shrink-0">
+                                <div className="rounded-md bg-indigo-500 p-3">
+                                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div className="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">New This Month</dt>
+                                    <dd>
+                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{newThisMonth}</div>
                                     </dd>
                                 </dl>
                             </div>

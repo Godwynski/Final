@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 
 export async function uploadGuestEvidence(token: string, formData: FormData) {
     const supabaseAdmin = createAdminClient()
@@ -25,6 +26,14 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
     const caseId = links.case_id
     if (!caseId) {
         return { error: 'Link is not associated with a case.' }
+    }
+
+    // 2. Verify PIN from Cookie
+    const cookieStore = await cookies()
+    const pinCookie = cookieStore.get(`guest_pin_${token}`)
+
+    if (!pinCookie || pinCookie.value !== links.pin) {
+        return { error: 'Invalid or missing PIN. Please re-enter your PIN.' }
     }
 
     // 2. Handle File Upload (Mock for now, or real if bucket exists)
@@ -103,7 +112,7 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
     return { success: true }
 }
 
-import { cookies } from 'next/headers'
+
 
 export async function verifyGuestPin(token: string, pin: string) {
     const supabaseAdmin = createAdminClient()

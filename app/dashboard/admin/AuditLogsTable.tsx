@@ -1,8 +1,22 @@
 import { createClient } from '@/utils/supabase/server'
+import PaginationControls from '@/components/PaginationControls'
 
-export default async function AuditLogsTable() {
+export default async function AuditLogsTable({ page = 1 }: { page?: number }) {
     const supabase = await createClient()
-    const { data: logs } = await supabase.from('audit_logs').select('*, profiles:user_id(email, full_name)').order('created_at', { ascending: false }).limit(50)
+    const limit = 10
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    const { count } = await supabase.from('audit_logs').select('*', { count: 'exact', head: true })
+    const { data: logs } = await supabase
+        .from('audit_logs')
+        .select('*, profiles:user_id(email, full_name)')
+        .order('created_at', { ascending: false })
+        .range(from, to)
+
+    const totalPages = Math.ceil((count || 0) / limit)
+    const hasNextPage = page < totalPages
+    const hasPrevPage = page > 1
 
     return (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
@@ -67,6 +81,12 @@ export default async function AuditLogsTable() {
                     </tbody>
                 </table>
             </div>
+            <PaginationControls
+                hasNextPage={hasNextPage}
+                hasPrevPage={hasPrevPage}
+                totalPages={totalPages}
+                currentPage={page}
+            />
         </div>
     )
 }

@@ -65,6 +65,12 @@ export async function deleteUser(formData: FormData) {
         redirect('/dashboard/admin?error=You cannot delete your own account.')
     }
 
+    // Check permissions
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single()
+    if (profile?.role !== 'admin') {
+        throw new Error('Unauthorized')
+    }
+
     const supabaseAdmin = createAdminClient()
 
     const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
@@ -91,6 +97,12 @@ export async function updateUserRole(formData: FormData) {
 
     if (userId === currentUser.id) {
         redirect('/dashboard/admin?error=You cannot change your own role.')
+    }
+
+    // Check permissions
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single()
+    if (profile?.role !== 'admin') {
+        throw new Error('Unauthorized')
     }
 
     const supabaseAdmin = createAdminClient()

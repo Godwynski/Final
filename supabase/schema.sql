@@ -221,20 +221,16 @@ create policy "Admins view audit logs" on audit_logs for select using (
   exists (select 1 from profiles where id = auth.uid() and role = 'admin')
 );
 
+-- Only allow service role to insert audit logs (prevents users from spoofing logs)
 drop policy if exists "System insert audit logs" on audit_logs;
-create policy "System insert audit logs" on audit_logs for insert with check (true);
-
--- Guest Links
-alter table guest_links enable row level security;
-
-drop policy if exists "Staff and Admins can view links created by them." on guest_links;
-drop policy if exists "Staff and Admins can view all links." on guest_links;
-create policy "Staff and Admins can view all links." on guest_links
-  for select using (auth.uid() is not null);
-
-drop policy if exists "Staff and Admins can create links." on guest_links;
-create policy "Staff and Admins can create links." on guest_links
-  for insert with check (auth.uid() = created_by);
+create policy "System insert audit logs" on audit_logs for insert with check (
+  auth.uid() is null -- Service role usually has no auth.uid() or we rely on bypass
+);
+-- Actually, for server actions using supabase-js with auth context, we might need to allow authenticated inserts
+-- BUT we should restrict it. A better approach for "Defense" is to force user_id to match auth.uid()
+-- However, the safest for audit logs is to ONLY allow insertion via the Service Role (Admin Client) which bypasses RLS.
+-- So we can DROP the insert policy for authenticated users entirely.
+-- If we drop it, only service role (bypassing RLS) can insert.
 
 -- Notifications
 alter table notifications enable row level security;
@@ -243,13 +239,19 @@ drop policy if exists "Users can view own notifications" on notifications;
 create policy "Users can view own notifications" on notifications
   for select using (auth.uid() = user_id);
 
+-- Restrict notification creation to Service Role (Admin Client) only
 drop policy if exists "System/Admins can insert notifications" on notifications;
-create policy "System/Admins can insert notifications" on notifications
-  for insert with check (true);
+-- No insert policy means only Service Role can insert (bypassing RLS)
 
 drop policy if exists "Users can update own notifications" on notifications;
 create policy "Users can update own notifications" on notifications
   for update using (auth.uid() = user_id);
+
+-- Cases DELETE Policy
+drop policy if exists "Admins delete cases" on cases;
+create policy "Admins delete cases" on cases for delete using (
+  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+);
 
 
 -- ==========================================
