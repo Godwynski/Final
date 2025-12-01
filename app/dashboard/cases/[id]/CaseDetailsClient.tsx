@@ -5,11 +5,12 @@ import Link from 'next/link'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import CopyButton from '@/components/CopyButton'
-import StatusStepper from '@/components/StatusStepper'
 import SubmitButton from '@/components/SubmitButton'
-import { updateCaseStatus, addInvolvedParty, addCaseNote, deleteCaseNote, generateCaseGuestLink, toggleGuestLinkStatus, emailGuestLink, updateActionTaken } from './actions'
+import { addInvolvedParty, addCaseNote, deleteCaseNote, generateCaseGuestLink, toggleGuestLinkStatus, emailGuestLink, updateActionTaken } from './actions'
 import DashboardEvidenceList from '@/components/DashboardEvidenceList'
 import DashboardEvidenceUploadForm from '@/components/DashboardEvidenceUploadForm'
+import CaseActionHeader from '@/components/CaseActionHeader'
+import CaseTimeline from '@/components/CaseTimeline'
 
 type Tab = 'overview' | 'parties' | 'evidence' | 'notes' | 'activity'
 
@@ -230,10 +231,8 @@ export default function CaseDetailsClient({
             {/* Screen Content (Hidden on print) */}
             <div className="print:hidden">
 
-                {/* Status Stepper */}
-                <div className="mb-8 p-4 bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700">
-                    <StatusStepper status={caseData.status} />
-                </div>
+                {/* Action Header (Replaces StatusStepper) */}
+                <CaseActionHeader status={caseData.status} caseId={caseData.id} />
 
                 {/* Tabs */}
                 <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
@@ -369,21 +368,7 @@ export default function CaseDetailsClient({
                                     </form>
                                 </div>
 
-                                {/* Status Update */}
-                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
-                                    <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Update Status</h3>
-                                    <form action={updateCaseStatus.bind(null, caseData.id)} className="flex flex-col gap-3">
-                                        <select name="status" defaultValue={caseData.status} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
-                                            <option value="New">New</option>
-                                            <option value="Under Investigation">Under Investigation</option>
-                                            <option value="Settled">Settled</option>
-                                            <option value="Closed">Closed</option>
-                                        </select>
-                                        <SubmitButton className="w-full text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700" loadingText="Changing...">
-                                            Change Status
-                                        </SubmitButton>
-                                    </form>
-                                </div>
+                                {/* Status Update - REMOVED (Handled by Header) */}
 
                                 {/* Case Info Metadata */}
                                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
@@ -625,52 +610,13 @@ export default function CaseDetailsClient({
                     {
                         activeTab === 'activity' && (
                             <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
-                                <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Activity Log</h2>
-                                <div className="relative border-l border-gray-200 dark:border-gray-700 ml-3">
-                                    {auditLogs.length === 0 ? (
-                                        <p className="text-gray-500 italic ml-4 dark:text-gray-400">No activity recorded yet.</p>
-                                    ) : (
-                                        auditLogs.map((log) => (
-                                            <div key={log.id} className="mb-10 ml-6">
-                                                <span className="absolute flex items-center justify-center w-6 h-6 bg-blue-100 rounded-full -left-3 ring-8 ring-white dark:ring-gray-900 dark:bg-blue-900">
-                                                    <svg className="w-2.5 h-2.5 text-blue-800 dark:text-blue-300" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path d="M20 4a2 2 0 0 0-2-2h-2V1a1 1 0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4ZM0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm5-8h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2Z" />
-                                                    </svg>
-                                                </span>
-                                                <h3 className="flex items-center mb-1 text-lg font-semibold text-gray-900 dark:text-white">
-                                                    {log.action}
-                                                    <span className="bg-blue-100 text-blue-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300 ml-3" suppressHydrationWarning>
-                                                        {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString()}
-                                                    </span>
-                                                </h3>
-                                                <div className="mb-2 text-base font-normal text-gray-500 dark:text-gray-400">
-                                                    <span className="font-medium text-gray-900 dark:text-white">{log.profiles?.full_name || log.profiles?.email || 'System'}</span> performed this action.
-                                                </div>
-                                                {log.details && (
-                                                    <div className="p-3 text-sm text-gray-600 bg-gray-50 rounded-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
-                                                        {log.details.narrative_action && (
-                                                            <div>
-                                                                <span className="font-semibold text-gray-900 dark:text-white">Action Taken:</span>
-                                                                <p className="mt-1 whitespace-pre-wrap">{log.details.narrative_action}</p>
-                                                            </div>
-                                                        )}
-                                                        {log.details.old_status && log.details.new_status && (
-                                                            <div>
-                                                                <span className="font-semibold text-gray-900 dark:text-white">Status Change:</span>
-                                                                <p className="mt-1">
-                                                                    Changed from <span className="font-medium text-gray-800 dark:text-gray-200">{log.details.old_status}</span> to <span className="font-medium text-blue-600 dark:text-blue-400">{log.details.new_status}</span>
-                                                                </p>
-                                                            </div>
-                                                        )}
-                                                        {!log.details.narrative_action && (!log.details.old_status || !log.details.new_status) && (
-                                                            <pre className="whitespace-pre-wrap font-sans text-xs">{JSON.stringify(log.details, null, 2)}</pre>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
+                                <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Case Timeline</h2>
+                                <CaseTimeline
+                                    caseData={caseData}
+                                    notes={notes}
+                                    auditLogs={auditLogs}
+                                    evidence={evidence}
+                                />
                             </div>
                         )
                     }

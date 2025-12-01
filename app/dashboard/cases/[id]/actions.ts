@@ -395,3 +395,109 @@ export async function deleteEvidence(caseId: string, evidenceId: string) {
     revalidatePath(`/dashboard/cases/${caseId}`)
     return { success: true }
 }
+
+export async function performCaseAction(caseId: string, action: string, input?: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: 'Unauthorized' }
+
+    // Import workflow definition (we need to replicate logic or import it if shared, 
+    // but since this is server side, we can just define the logic here or import the constant if it's pure JS/TS)
+    // For now, I'll implement the switch logic directly to map actions to DB updates.
+
+    let newStatus = null;
+    let narrativeUpdate = '';
+    let logAction = '';
+
+    switch (action) {
+        case 'accept_case':
+            newStatus = 'Under Investigation';
+            logAction = 'Accepted Case';
+            narrativeUpdate = `Case accepted for investigation by ${user.email}.`;
+            break;
+        case 'refer_case':
+            newStatus = 'Referred';
+            logAction = 'Referred Case';
+            narrativeUpdate = `Case referred to: ${input}.`;
+            break;
+        case 'dismiss_case':
+            newStatus = 'Dismissed';
+            logAction = 'Dismissed Case';
+            narrativeUpdate = `Case dismissed. Reason: ${input}.`;
+            break;
+        case 'schedule_hearing':
+            newStatus = 'Hearing Scheduled';
+            logAction = 'Scheduled Hearing';
+            narrativeUpdate = `Hearing scheduled for: ${input}.`;
+            // TODO: We might want to save the hearing date in a specific field if we had one.
+            // For now, we'll append it to the narrative action.
+            break;
+        case 'issue_summon':
+            // No status change, just log
+            logAction = 'Issued Summon';
+            narrativeUpdate = `Summon issued.`;
+            break;
+        case 'settle_case':
+            newStatus = 'Settled';
+            logAction = 'Settled Case';
+            narrativeUpdate = `Case settled. Terms: ${input}.`;
+            break;
+        case 'reschedule_hearing':
+            newStatus = 'Hearing Scheduled'; // Stays same
+            logAction = 'Rescheduled Hearing';
+            narrativeUpdate = `Hearing rescheduled to: ${input}.`;
+            break;
+        case 'issue_cfa':
+            newStatus = 'Closed';
+            logAction = 'Issued CFA';
+            narrativeUpdate = `Certificate to File Action (CFA) issued. Reason: ${input}.`;
+            break;
+        case 'reopen_case':
+            newStatus = 'Under Investigation';
+            logAction = 'Re-opened Case';
+            narrativeUpdate = `Case re-opened. Reason: ${input}.`;
+            break;
+        default:
+            return { error: 'Invalid action' };
+    }
+
+    // Update Case Status if needed
+    if (newStatus) {
+        const { error: statusError } = await supabase
+            .from('cases')
+            .update({ status: newStatus, updated_at: new Date().toISOString() })
+            .eq('id', caseId)
+
+        if (statusError) return { error: statusError.message }
+    }
+
+    // Append to Narrative Action (Action Taken)
+    // We fetch the current narrative first
+    const { data: caseData } = await supabase.from('cases').select('narrative_action').eq('id', caseId).single();
+    const currentNarrative = caseData?.narrative_action || '';
+    const timestamp = new Date().toLocaleString();
+    const newNarrative = `${currentNarrative ? currentNarrative + '\n' : ''}[${timestamp}] ${narrativeUpdate}`;
+
+    const { error: narrativeError } = await supabase
+        .from('cases')
+        .update({ narrative_action: newNarrative })
+        .eq('id', caseId)
+
+    if (narrativeError) return { error: narrativeError.message }
+
+    // Log to Audit Logs
+    await supabase.from('audit_logs').insert({
+        user_id: user.id,
+        action: logAction,
+        details: {
+            action_key: action,
+            input: input,
+            new_status: newStatus
+        },
+        case_id: caseId
+    })
+
+    revalidatePath(`/dashboard/cases/${caseId}`)
+    return { success: true, message: `Action "${logAction}" completed.` }
+}

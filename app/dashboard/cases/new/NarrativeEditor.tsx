@@ -11,53 +11,6 @@ const TEMPLATES = {
 
 export default function NarrativeEditor() {
     const [facts, setFacts] = useState('')
-    const [isListening, setIsListening] = useState(false)
-    const recognitionRef = useRef<any>(null)
-
-    useEffect(() => {
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-            recognitionRef.current = new SpeechRecognition()
-            recognitionRef.current.continuous = true
-            recognitionRef.current.interimResults = true
-
-            recognitionRef.current.onresult = (event: any) => {
-                let interimTranscript = ''
-                let finalTranscript = ''
-
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript
-                    } else {
-                        interimTranscript += event.results[i][0].transcript
-                    }
-                }
-
-                if (finalTranscript) {
-                    setFacts(prev => prev + (prev ? ' ' : '') + finalTranscript)
-                }
-            }
-
-            recognitionRef.current.onerror = (event: any) => {
-                console.error('Speech recognition error', event.error)
-                setIsListening(false)
-            }
-
-            recognitionRef.current.onend = () => {
-                setIsListening(false)
-            }
-        }
-    }, [])
-
-    const toggleListening = () => {
-        if (isListening) {
-            recognitionRef.current?.stop()
-            setIsListening(false)
-        } else {
-            recognitionRef.current?.start()
-            setIsListening(true)
-        }
-    }
 
     const applyTemplate = (type: keyof typeof TEMPLATES) => {
         if (confirm('This will replace the current text. Continue?')) {
@@ -82,15 +35,6 @@ export default function NarrativeEditor() {
                 <label htmlFor="narrative_facts" className="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Facts of the Case</label>
                 <div className="flex justify-between items-center mb-2">
                     <p className="text-xs text-gray-500 dark:text-gray-400">Describe the sequence of events in detail.</p>
-                    {recognitionRef.current && (
-                        <button
-                            type="button"
-                            onClick={toggleListening}
-                            className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${isListening ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                        >
-                            {isListening ? '🔴 Listening...' : '🎙️ Dictate'}
-                        </button>
-                    )}
                 </div>
                 <textarea
                     name="narrative_facts"

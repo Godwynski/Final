@@ -61,7 +61,7 @@ create trigger on_auth_user_created
 -- Enum for Case Status
 do $$ begin
     if not exists (select 1 from pg_type where typname = 'case_status') then
-        create type case_status as enum ('New', 'Under Investigation', 'Settled', 'Closed');
+        create type case_status as enum ('New', 'Under Investigation', 'Hearing Scheduled', 'Settled', 'Closed', 'Dismissed', 'Referred');
     end if;
 end $$;
 
