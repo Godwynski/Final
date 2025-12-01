@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { getSettings } from './actions'
 import SettingsClient from './SettingsClient'
 
 export default async function SettingsPage(props: { searchParams: Promise<{ error?: string, message?: string }> }) {
@@ -14,6 +15,8 @@ export default async function SettingsPage(props: { searchParams: Promise<{ erro
         .select('*')
         .eq('id', user.id)
         .single()
+
+    const settings = await getSettings()
 
     const userData = {
         email: user.email!,
@@ -38,7 +41,7 @@ export default async function SettingsPage(props: { searchParams: Promise<{ erro
                     </div>
                 )}
 
-                <SettingsClient user={userData} />
+                <SettingsClient user={userData} settings={settings} />
             </div>
         </div>
     )

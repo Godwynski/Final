@@ -31,84 +31,59 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
         }
     }
 
-    // 2. Fetch All Cases (We filter in memory to handle complex type matching like Dates and Numbers safely)
-    // Ideally we should filter on DB side for pagination to work perfectly with search, 
-    // but given the complex "OR" logic across tables and fields, we'll fetch all matching the basic filters first if possible, 
-    // OR we accept that "search + pagination" is hard without a dedicated search service.
-    // For now, let's keep the "fetch all then filter" approach but apply pagination AFTER filtering in memory.
-    // This is not performant for huge datasets but correct for the current logic.
-    // WAIT - if we fetch ALL then filter, we don't need `range()` in the query.
-    // We slice the array in memory.
-
+    // 2. Build Main Query with DB-side Pagination and Filtering
     let queryBuilder = supabase
         .from('cases')
-        .select('*')
+        .select('id, case_number, title, incident_date, incident_location, status', { count: 'exact' })
         .order('created_at', { ascending: false })
+        .range(from, to)
 
-    const { data: allCases } = await queryBuilder
+    // Apply Filters
+    if (status && status !== 'All') {
+        queryBuilder = queryBuilder.eq('status', status)
+    }
 
-    // 3. Filter Cases in Memory
-    const filteredCases = allCases?.filter(c => {
-        // Status Filter
-        if (status && status !== 'All' && c.status !== status) {
-            return false
+    if (incidentType && incidentType !== 'All') {
+        queryBuilder = queryBuilder.eq('incident_type', incidentType)
+    }
+
+    if (startDate) {
+        queryBuilder = queryBuilder.gte('incident_date', new Date(startDate).toISOString())
+    }
+
+    if (endDate) {
+        // Set to end of day
+        const end = new Date(endDate)
+        end.setHours(23, 59, 59, 999)
+        queryBuilder = queryBuilder.lte('incident_date', end.toISOString())
+    }
+
+    // Apply Search
+    if (query) {
+        const orConditions = [
+            `title.ilike.%${query}%`,
+            `description.ilike.%${query}%`,
+            `incident_location.ilike.%${query}%`
+        ]
+
+        // Add party matches if any
+        if (partyCaseIds.length > 0) {
+            orConditions.push(`id.in.(${partyCaseIds.join(',')})`)
         }
 
-        // Incident Type Filter
-        if (incidentType && incidentType !== 'All' && c.incident_type !== incidentType) {
-            return false
+        // Try to match case number if query is numeric
+        if (!isNaN(Number(query))) {
+            orConditions.push(`case_number.eq.${query}`)
         }
 
-        // Date Range Filter
-        if (startDate || endDate) {
-            const caseDate = new Date(c.incident_date)
-            // Reset time part for accurate date comparison if needed, but usually incident_date is just date or we compare timestamps
-            // Assuming incident_date is ISO string.
+        queryBuilder = queryBuilder.or(orConditions.join(','))
+    }
 
-            if (startDate) {
-                const start = new Date(startDate)
-                if (caseDate < start) return false
-            }
+    const { data: cases, count } = await queryBuilder
 
-            if (endDate) {
-                const end = new Date(endDate)
-                end.setHours(23, 59, 59, 999) // Include the entire end day
-                if (caseDate > end) return false
-            }
-        }
-
-        // Query Filter
-        if (query) {
-            const q = query.toLowerCase()
-
-            // Check if case matches party search
-            if (partyCaseIds.includes(c.id)) return true
-
-            // Check text fields
-            if (c.title?.toLowerCase().includes(q)) return true
-            if (c.description?.toLowerCase().includes(q)) return true
-            if (c.incident_location?.toLowerCase().includes(q)) return true
-
-            // Check number (convert to string)
-            if (c.case_number?.toString().includes(q)) return true
-
-            // Check date (convert to string)
-            // We check multiple formats to be helpful
-            const dateStr = new Date(c.incident_date).toLocaleDateString().toLowerCase()
-            const fullDateStr = c.incident_date.toLowerCase() // ISO string usually
-            if (dateStr.includes(q)) return true
-            if (fullDateStr.includes(q)) return true
-
-            return false
-        }
-
-        return true
-    }) || []
-
-    // 4. Paginate in Memory
-    const totalItems = filteredCases.length
+    // 3. Pagination Calculations
+    const totalItems = count || 0
     const totalPages = Math.ceil(totalItems / limit)
-    const cases = filteredCases.slice(from, to + 1)
     const hasNextPage = page < totalPages
     const hasPrevPage = page > 1
 
@@ -138,7 +113,7 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
                             </tr>
                         </thead>
                         <tbody>
-                            {cases.map((c) => (
+                            {(cases || []).map((c) => (
                                 <tr key={c.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                                     <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                                         #{c.case_number}
@@ -162,7 +137,7 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
                                     </td>
                                 </tr>
                             ))}
-                            {cases.length === 0 && (
+                            {(cases || []).length === 0 && (
                                 <tr>
                                     <td colSpan={6} className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">No cases found matching your criteria.</td>
                                 </tr>

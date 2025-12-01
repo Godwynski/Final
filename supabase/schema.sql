@@ -104,6 +104,7 @@ create table if not exists cases (
   incident_type incident_type default 'Other', -- From migration 002
   narrative_facts text, -- From migration 002
   narrative_action text, -- From migration 002
+  resolution_details jsonb, -- From migration 004
   reported_by uuid references profiles(id),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
@@ -266,3 +267,121 @@ security definer
 as $$
   select * from guest_links where token = token_input;
 $$;
+
+
+-- ==========================================
+-- 6. BARANGAY SETTINGS
+-- ==========================================
+
+-- Create barangay_settings table
+CREATE TABLE IF NOT EXISTS barangay_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    province TEXT NOT NULL DEFAULT '',
+    city_municipality TEXT NOT NULL DEFAULT '',
+    barangay_name TEXT NOT NULL DEFAULT '',
+    punong_barangay TEXT NOT NULL DEFAULT '',
+    barangay_secretary TEXT NOT NULL DEFAULT '',
+    logo_barangay_url TEXT,
+    logo_city_url TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE barangay_settings ENABLE ROW LEVEL SECURITY;
+
+-- Create policy for viewing settings (all authenticated users)
+DROP POLICY IF EXISTS "Allow read access for authenticated users" ON barangay_settings;
+CREATE POLICY "Allow read access for authenticated users" ON barangay_settings
+    FOR SELECT
+    TO authenticated
+    USING (true);
+
+-- Create policy for updating settings (admin only)
+DROP POLICY IF EXISTS "Allow update for authenticated users" ON barangay_settings;
+CREATE POLICY "Allow update for authenticated users" ON barangay_settings
+    FOR UPDATE
+    TO authenticated
+    USING (true)
+    WITH CHECK (true);
+
+-- Insert default row if not exists
+INSERT INTO barangay_settings (province, city_municipality, barangay_name, punong_barangay, barangay_secretary)
+SELECT '[Province Name]', '[City Name]', '[Barangay Name]', '[Punong Barangay Name]', '[Secretary Name]'
+WHERE NOT EXISTS (SELECT 1 FROM barangay_settings);
+
+
+-- ==========================================
+-- 7. HEARINGS
+-- ==========================================
+
+-- Create hearings table
+CREATE TABLE IF NOT EXISTS hearings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  case_id UUID REFERENCES cases(id) ON DELETE CASCADE NOT NULL,
+  hearing_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  hearing_type TEXT NOT NULL CHECK (hearing_type IN ('Mediation', 'Conciliation', 'Arbitration')),
+  status TEXT NOT NULL DEFAULT 'Scheduled' CHECK (status IN ('Scheduled', 'Completed', 'No Show', 'Rescheduled', 'Settled')),
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS
+ALTER TABLE hearings ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON hearings;
+CREATE POLICY "Enable read access for authenticated users" ON hearings
+    FOR SELECT
+    TO authenticated
+    USING (true);
+
+DROP POLICY IF EXISTS "Enable insert access for authenticated users" ON hearings;
+CREATE POLICY "Enable insert access for authenticated users" ON hearings
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Enable update access for authenticated users" ON hearings;
+CREATE POLICY "Enable update access for authenticated users" ON hearings
+    FOR UPDATE
+    TO authenticated
+    USING (true);
+
+DROP POLICY IF EXISTS "Enable delete access for authenticated users" ON hearings;
+CREATE POLICY "Enable delete access for authenticated users" ON hearings
+    FOR DELETE
+    TO authenticated
+    USING (true);
+
+
+-- ==========================================
+-- 8. INDEXES
+-- ==========================================
+
+-- Cases
+CREATE INDEX IF NOT EXISTS idx_cases_reported_by ON cases(reported_by);
+
+-- Involved Parties
+CREATE INDEX IF NOT EXISTS idx_involved_parties_case_id ON involved_parties(case_id);
+
+-- Case Notes
+CREATE INDEX IF NOT EXISTS idx_case_notes_case_id ON case_notes(case_id);
+CREATE INDEX IF NOT EXISTS idx_case_notes_created_by ON case_notes(created_by);
+
+-- Evidence
+CREATE INDEX IF NOT EXISTS idx_evidence_case_id ON evidence(case_id);
+CREATE INDEX IF NOT EXISTS idx_evidence_uploaded_by ON evidence(uploaded_by);
+
+-- Audit Logs
+CREATE INDEX IF NOT EXISTS idx_audit_logs_case_id ON audit_logs(case_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+
+-- Guest Links
+CREATE INDEX IF NOT EXISTS idx_guest_links_case_id ON guest_links(case_id);
+CREATE INDEX IF NOT EXISTS idx_guest_links_created_by ON guest_links(created_by);
+
+-- Hearings
+CREATE INDEX IF NOT EXISTS idx_hearings_case_id ON hearings(case_id);
+
+-- Notifications
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);

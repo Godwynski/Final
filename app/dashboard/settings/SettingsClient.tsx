@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { updateProfile, changePassword } from './actions'
+import { updateProfile, changePassword, updateSettings } from './actions'
 
 type User = {
     email: string
@@ -9,9 +9,10 @@ type User = {
     role: string
 }
 
-export default function SettingsClient({ user }: { user: User }) {
+export default function SettingsClient({ user, settings }: { user: User, settings: any }) {
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
 
     return (
         <div className="space-y-8">
@@ -44,6 +45,47 @@ export default function SettingsClient({ user }: { user: User }) {
                     </div>
                 </div>
             </div>
+
+            {/* System Settings Card (Admin Only) */}
+            {user.role === 'admin' && (
+                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
+                    <div className="flex justify-between items-start mb-6">
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">System Settings</h2>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure global settings for print documents and reports.</p>
+                        </div>
+                        <button
+                            onClick={() => setIsSettingsModalOpen(true)}
+                            className="text-sm text-blue-600 hover:underline dark:text-blue-400 font-medium"
+                        >
+                            Edit Settings
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Province</p>
+                            <p className="text-lg font-medium text-gray-900 dark:text-white">{settings?.province || 'Not set'}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">City / Municipality</p>
+                            <p className="text-lg font-medium text-gray-900 dark:text-white">{settings?.city_municipality || 'Not set'}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Barangay Name</p>
+                            <p className="text-lg font-medium text-gray-900 dark:text-white">{settings?.barangay_name || 'Not set'}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Punong Barangay</p>
+                            <p className="text-lg font-medium text-gray-900 dark:text-white">{settings?.punong_barangay || 'Not set'}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Barangay Secretary</p>
+                            <p className="text-lg font-medium text-gray-900 dark:text-white">{settings?.barangay_secretary || 'Not set'}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Security & Preferences */}
             <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
@@ -99,6 +141,87 @@ export default function SettingsClient({ user }: { user: User }) {
                                     className="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                                 >
                                     Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* System Settings Modal */}
+            {isSettingsModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md relative max-h-[90vh] overflow-y-auto">
+                        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Edit System Settings</h3>
+                        </div>
+                        <form action={async (formData) => {
+                            await updateSettings(formData)
+                            setIsSettingsModalOpen(false)
+                        }} className="p-6 space-y-4">
+                            <div>
+                                <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Province</label>
+                                <input
+                                    type="text"
+                                    name="province"
+                                    defaultValue={settings?.province || ''}
+                                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                                    placeholder="e.g. Metro Manila"
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">City / Municipality</label>
+                                <input
+                                    type="text"
+                                    name="city_municipality"
+                                    defaultValue={settings?.city_municipality || ''}
+                                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                                    placeholder="e.g. Quezon City"
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Barangay Name</label>
+                                <input
+                                    type="text"
+                                    name="barangay_name"
+                                    defaultValue={settings?.barangay_name || ''}
+                                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                                    placeholder="e.g. Barangay 123"
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Punong Barangay</label>
+                                <input
+                                    type="text"
+                                    name="punong_barangay"
+                                    defaultValue={settings?.punong_barangay || ''}
+                                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                                    placeholder="Full Name"
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Barangay Secretary</label>
+                                <input
+                                    type="text"
+                                    name="barangay_secretary"
+                                    defaultValue={settings?.barangay_secretary || ''}
+                                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                                    placeholder="Full Name"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsSettingsModalOpen(false)}
+                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:hover:bg-gray-600"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                                >
+                                    Save Settings
                                 </button>
                             </div>
                         </form>

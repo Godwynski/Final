@@ -11,6 +11,8 @@ import DashboardEvidenceList from '@/components/DashboardEvidenceList'
 import DashboardEvidenceUploadForm from '@/components/DashboardEvidenceUploadForm'
 import CaseActionHeader from '@/components/CaseActionHeader'
 import CaseTimeline from '@/components/CaseTimeline'
+import ResolutionBanner from '@/components/ResolutionBanner'
+import ProceedingsTracker from '@/components/ProceedingsTracker'
 
 type Tab = 'overview' | 'parties' | 'evidence' | 'notes' | 'activity'
 
@@ -22,7 +24,9 @@ export default function CaseDetailsClient({
     auditLogs,
     guestLinks,
     userRole,
-    userId
+    userId,
+    hearings = [],
+    settings = null
 }: {
     caseData: any,
     involvedParties: any[],
@@ -31,7 +35,9 @@ export default function CaseDetailsClient({
     auditLogs: any[],
     guestLinks: any[],
     userRole: string,
-    userId: string
+    userId: string,
+    hearings?: any[],
+    settings?: any
 }) {
     const searchParams = useSearchParams()
     const router = useRouter()
@@ -45,6 +51,10 @@ export default function CaseDetailsClient({
         params.set('tab', tab)
         router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     }
+
+    // Determine if case is in a read-only state
+    const isReadOnly = ['Dismissed', 'Referred', 'Settled', 'Closed'].includes(caseData.status)
+
     const [formattedDate, setFormattedDate] = useState<string>('')
     const [origin, setOrigin] = useState<string>('')
 
@@ -56,30 +66,6 @@ export default function CaseDetailsClient({
         setOrigin(window.location.origin)
         setGeneratedDate(new Date().toLocaleString())
     }, [caseData.incident_date])
-
-    // Realtime Subscription for Evidence
-    useEffect(() => {
-        const supabase = createClient()
-        const channel = supabase
-            .channel('realtime-evidence')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'evidence',
-                    filter: `case_id=eq.${caseData.id}`
-                },
-                () => {
-                    router.refresh()
-                }
-            )
-            .subscribe()
-
-        return () => {
-            supabase.removeChannel(channel)
-        }
-    }, [caseData.id, router])
 
     return (
         <div className="p-4">
@@ -100,14 +86,24 @@ export default function CaseDetailsClient({
                 </div>
                 <div className="flex gap-2 print:hidden">
                     <button
-                        onClick={() => window.print()}
+                        onClick={(e) => {
+                            e.preventDefault()
+                            window.print()
+                        }}
                         className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700"
                     >
                         🖨️ Print Abstract
                     </button>
-                    <Link href={`/dashboard/cases/${caseData.id}/edit`} className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700">
-                        Edit Case
-                    </Link>
+                    {!isReadOnly && (
+                        <Link href={`/dashboard/cases/${caseData.id}/edit`} className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700">
+                            Edit Case
+                        </Link>
+                    )}
+                    {isReadOnly && (
+                        <span className="flex items-center gap-2 text-gray-500 bg-gray-100 px-4 py-2 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 cursor-not-allowed" title="Case is closed. Re-open to edit.">
+                            🔒 Read Only
+                        </span>
+                    )}
                 </div>
             </div>
 
@@ -120,9 +116,9 @@ export default function CaseDetailsClient({
                     </div>
                     <div className="text-center flex-1">
                         <h1 className="text-xl font-bold uppercase tracking-wide">Republic of the Philippines</h1>
-                        <p className="text-sm uppercase">Province of [Province Name]</p>
-                        <p className="text-sm uppercase">City/Municipality of [City Name]</p>
-                        <h2 className="text-2xl font-black uppercase mt-2">Barangay [Barangay Name]</h2>
+                        <p className="text-sm uppercase">Province of {settings?.province || '[Province Name]'}</p>
+                        <p className="text-sm uppercase">City/Municipality of {settings?.city_municipality || '[City Name]'}</p>
+                        <h2 className="text-2xl font-black uppercase mt-2">Barangay {settings?.barangay_name || '[Barangay Name]'}</h2>
                         <h3 className="text-lg font-bold uppercase mt-4 border-2 border-black inline-block px-4 py-1">Blotter Extract</h3>
                     </div>
                     <div className="w-24 h-24 flex items-center justify-center border border-gray-300 rounded-full">
@@ -215,7 +211,7 @@ export default function CaseDetailsClient({
                     <div className="text-center">
                         <div className="border-b border-black mb-2"></div>
                         <p className="text-xs font-bold uppercase">Certified Correct By:</p>
-                        <p className="text-sm font-semibold mt-4">[Name of Desk Officer]</p>
+                        <p className="text-sm font-semibold mt-4">{settings?.barangay_secretary || '[Name of Desk Officer]'}</p>
                         <p className="text-xs">Barangay Secretary / Desk Officer</p>
                     </div>
                 </div>
@@ -231,7 +227,14 @@ export default function CaseDetailsClient({
             {/* Screen Content (Hidden on print) */}
             <div className="print:hidden">
 
-                {/* Action Header (Replaces StatusStepper) */}
+                {/* Resolution Banner (For Closed/Resolved Cases) */}
+                <ResolutionBanner
+                    status={caseData.status}
+                    resolutionDetails={caseData.resolution_details}
+                    caseId={caseData.id}
+                />
+
+                {/* Action Header */}
                 <CaseActionHeader status={caseData.status} caseId={caseData.id} />
 
                 {/* Tabs */}
@@ -299,76 +302,13 @@ export default function CaseDetailsClient({
                                 </div>
                             </div>
 
-                            {/* Right Column: Action & Status (The "Last Right") */}
+                            {/* Right Column: Proceedings Tracker */}
                             <div className="space-y-6">
-                                {/* Action Taken - Editable */}
-                                <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-100 dark:border-blue-800">
-                                    <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-                                        Action Taken
-                                    </h2>
-
-                                    {/* Quick Actions */}
-                                    <div className="flex flex-wrap gap-2 mb-4">
-                                        <button
-                                            onClick={() => {
-                                                const textarea = document.querySelector('textarea[name="narrative_action"]') as HTMLTextAreaElement
-                                                if (textarea) {
-                                                    const timestamp = new Date().toLocaleString()
-                                                    const template = `\n[${timestamp}] Hearing scheduled for [Date/Time]. Parties notified.`
-                                                    textarea.value += (textarea.value ? '\n' : '') + template
-                                                    textarea.focus()
-                                                }
-                                            }}
-                                            className="text-xs bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 px-2 py-1 rounded shadow-sm dark:bg-gray-800 dark:border-gray-600 dark:text-blue-400 dark:hover:bg-gray-700"
-                                        >
-                                            📅 Schedule Hearing
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                const textarea = document.querySelector('textarea[name="narrative_action"]') as HTMLTextAreaElement
-                                                if (textarea) {
-                                                    const timestamp = new Date().toLocaleString()
-                                                    const template = `\n[${timestamp}] Amicable settlement reached. Agreement signed by both parties.`
-                                                    textarea.value += (textarea.value ? '\n' : '') + template
-                                                    textarea.focus()
-                                                }
-                                            }}
-                                            className="text-xs bg-white border border-green-200 text-green-700 hover:bg-green-50 px-2 py-1 rounded shadow-sm dark:bg-gray-800 dark:border-gray-600 dark:text-green-400 dark:hover:bg-gray-700"
-                                        >
-                                            🤝 Record Settlement
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                const textarea = document.querySelector('textarea[name="narrative_action"]') as HTMLTextAreaElement
-                                                if (textarea) {
-                                                    const timestamp = new Date().toLocaleString()
-                                                    const template = `\n[${timestamp}] Mediation failed. Certification to File Action (CFA) issued.`
-                                                    textarea.value += (textarea.value ? '\n' : '') + template
-                                                    textarea.focus()
-                                                }
-                                            }}
-                                            className="text-xs bg-white border border-red-200 text-red-700 hover:bg-red-50 px-2 py-1 rounded shadow-sm dark:bg-gray-800 dark:border-gray-600 dark:text-red-400 dark:hover:bg-gray-700"
-                                        >
-                                            ⚖️ Issue CFA
-                                        </button>
-                                    </div>
-
-                                    <form action={updateActionTaken.bind(null, caseData.id)}>
-                                        <textarea
-                                            name="narrative_action"
-                                            rows={6}
-                                            defaultValue={caseData.narrative_action}
-                                            className="block p-2.5 w-full text-sm text-gray-900 bg-white rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 mb-3"
-                                            placeholder="Describe the actions taken to resolve this case..."
-                                        ></textarea>
-                                        <SubmitButton className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800" loadingText="Updating...">
-                                            Update Action
-                                        </SubmitButton>
-                                    </form>
-                                </div>
-
-                                {/* Status Update - REMOVED (Handled by Header) */}
+                                <ProceedingsTracker
+                                    caseId={caseData.id}
+                                    hearings={hearings}
+                                    isReadOnly={isReadOnly}
+                                />
 
                                 {/* Case Info Metadata */}
                                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
@@ -393,36 +333,38 @@ export default function CaseDetailsClient({
                     )}
 
                     {/* PARTIES TAB */}
-                    {
-                        activeTab === 'parties' && (
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <div className="lg:col-span-2">
-                                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
-                                        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Involved Parties</h2>
-                                        {involvedParties.length === 0 ? (
-                                            <p className="text-gray-500 italic dark:text-gray-400">No parties added yet.</p>
-                                        ) : (
-                                            <ul className="space-y-4">
-                                                {involvedParties.map(party => (
-                                                    <li key={party.id} className="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-0 last:pb-0">
-                                                        <div className="flex justify-between items-start">
-                                                            <div>
-                                                                <p className="font-medium text-gray-900 dark:text-white">{party.name}</p>
-                                                                <p className="text-sm text-gray-500 dark:text-gray-400">{party.type}</p>
-                                                                {party.contact_number && <p className="text-sm text-gray-500 dark:text-gray-400">📞 {party.contact_number}</p>}
-                                                                {party.email && <p className="text-sm text-gray-500 dark:text-gray-400">✉️ {party.email}</p>}
-                                                                {party.address && <p className="text-sm text-gray-500 dark:text-gray-400">🏠 {party.address}</p>}
-                                                            </div>
+                    {activeTab === 'parties' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="lg:col-span-2">
+                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
+                                    <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Involved Parties</h2>
+                                    {involvedParties.length === 0 ? (
+                                        <p className="text-gray-500 italic dark:text-gray-400">No parties added yet.</p>
+                                    ) : (
+                                        <ul className="space-y-4">
+                                            {involvedParties.map(party => (
+                                                <li key={party.id} className="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-0 last:pb-0">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <p className="font-medium text-gray-900 dark:text-white">{party.name}</p>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">{party.type}</p>
+                                                            {party.contact_number && <p className="text-sm text-gray-500 dark:text-gray-400">📞 {party.contact_number}</p>}
+                                                            {party.email && <p className="text-sm text-gray-500 dark:text-gray-400">✉️ {party.email}</p>}
+                                                            {party.address && <p className="text-sm text-gray-500 dark:text-gray-400">🏠 {party.address}</p>}
                                                         </div>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        )}
-                                    </div>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
                                 </div>
-                                <div>
-                                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
-                                        <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Add Party</h3>
+                            </div>
+                            <div>
+                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
+                                    <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Add Party</h3>
+                                    {isReadOnly ? (
+                                        <p className="text-sm text-gray-500 italic">Case is closed. Re-open to add parties.</p>
+                                    ) : (
                                         <form action={addInvolvedParty.bind(null, caseData.id)} className="space-y-4">
                                             <div>
                                                 <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Name</label>
@@ -452,31 +394,35 @@ export default function CaseDetailsClient({
                                                 Add Party
                                             </SubmitButton>
                                         </form>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
-                        )
-                    }
+                        </div>
+                    )}
 
                     {/* EVIDENCE TAB */}
-                    {
-                        activeTab === 'evidence' && (
-                            <div className="space-y-6">
-                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
-                                    <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Evidence</h2>
-                                    <DashboardEvidenceList evidence={evidence} caseId={caseData.id} />
+                    {activeTab === 'evidence' && (
+                        <div className="space-y-6">
+                            <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
+                                <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Evidence</h2>
+                                <DashboardEvidenceList evidence={evidence} caseId={caseData.id} />
 
-                                    <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                                        <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Upload New Evidence</h3>
+                                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Upload New Evidence</h3>
+                                    {isReadOnly ? (
+                                        <p className="text-sm text-gray-500 italic">Case is closed. Re-open to upload evidence.</p>
+                                    ) : (
                                         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
                                             <DashboardEvidenceUploadForm caseId={caseData.id} />
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
+                            </div>
 
-                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Guest Upload Links</h2>
+                            <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Guest Upload Links</h2>
+                                    {!isReadOnly && (
                                         <form action={async (formData) => {
                                             const result = await generateCaseGuestLink(caseData.id, formData)
                                             if (result?.error) {
@@ -489,95 +435,97 @@ export default function CaseDetailsClient({
                                                 Generate New Link
                                             </SubmitButton>
                                         </form>
-                                    </div>
+                                    )}
+                                </div>
 
-                                    <div className="space-y-4">
-                                        {guestLinks.map(link => (
-                                            <div key={link.id} className="mb-4">
-                                                <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 rounded-lg gap-2 border ${link.is_active ? 'bg-blue-50 border-blue-100 dark:bg-blue-900/30 dark:border-blue-800' : 'bg-gray-100 border-gray-200 dark:bg-gray-700 dark:border-gray-600 opacity-75'}`}>
-                                                    <div className="flex flex-col gap-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-sm font-mono text-blue-600 dark:text-blue-400">Link: ...{link.token.slice(-8)}</span>
-                                                            <CopyButton text={`/guest/${link.token}`} label="Copy Link" />
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">PIN: {link.pin}</span>
-                                                            <CopyButton text={link.pin} label="Copy PIN" />
-                                                        </div>
-                                                        <span className="text-xs text-gray-500 dark:text-gray-400">Expires: <span suppressHydrationWarning>{new Date(link.expires_at).toLocaleString()}</span></span>
-                                                        {!link.is_active && <span className="text-xs text-red-500 font-bold">INACTIVE</span>}
+                                <div className="space-y-4">
+                                    {guestLinks.map(link => (
+                                        <div key={link.id} className="mb-4">
+                                            <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 rounded-lg gap-2 border ${link.is_active ? 'bg-blue-50 border-blue-100 dark:bg-blue-900/30 dark:border-blue-800' : 'bg-gray-100 border-gray-200 dark:bg-gray-700 dark:border-gray-600 opacity-75'}`}>
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-mono text-blue-600 dark:text-blue-400">Link: ...{link.token.slice(-8)}</span>
+                                                        <CopyButton text={`/guest/${link.token}`} label="Copy Link" />
                                                     </div>
-                                                    <div className="flex gap-3 items-center">
-                                                        {link.is_active && (
-                                                            <a href={`/guest/${link.token}`} target="_blank" className="text-sm text-blue-600 hover:underline dark:text-blue-400">Open</a>
-                                                        )}
-                                                        <form action={async () => {
-                                                            const result = await toggleGuestLinkStatus(link.id, link.is_active, caseData.id)
-                                                            if (result?.error) alert(result.error)
-                                                        }}>
-                                                            <SubmitButton className={`text-xs hover:underline ${link.is_active ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`} loadingText="...">
-                                                                {link.is_active ? 'Close Link' : 'Re-open Link'}
-                                                            </SubmitButton>
-                                                        </form>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">PIN: {link.pin}</span>
+                                                        <CopyButton text={link.pin} label="Copy PIN" />
                                                     </div>
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400">Expires: <span suppressHydrationWarning>{new Date(link.expires_at).toLocaleString()}</span></span>
+                                                    {!link.is_active && <span className="text-xs text-red-500 font-bold">INACTIVE</span>}
                                                 </div>
-                                                {link.is_active && (
-                                                    <form action={emailGuestLink} className="mt-2 flex gap-2 items-center pl-2">
-                                                        <input type="hidden" name="link" value={`${origin}/guest/${link.token}`} />
-                                                        <input type="hidden" name="pin" value={link.pin} />
-                                                        <input type="hidden" name="caseId" value={caseData.id} />
-                                                        <input type="email" name="email" placeholder="Recipient Email" required className="bg-gray-50 border border-gray-300 text-gray-900 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-48 p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
-                                                        <SubmitButton className="text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-lg text-xs px-3 py-1.5 dark:bg-blue-500 dark:hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-800" loadingText="Sending...">
-                                                            Email
+                                                <div className="flex gap-3 items-center">
+                                                    {link.is_active && (
+                                                        <a href={`/guest/${link.token}`} target="_blank" className="text-sm text-blue-600 hover:underline dark:text-blue-400">Open</a>
+                                                    )}
+                                                    <form action={async () => {
+                                                        const result = await toggleGuestLinkStatus(link.id, link.is_active, caseData.id)
+                                                        if (result?.error) alert(result.error)
+                                                    }}>
+                                                        <SubmitButton className={`text-xs hover:underline ${link.is_active ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`} loadingText="...">
+                                                            {link.is_active ? 'Close Link' : 'Re-open Link'}
                                                         </SubmitButton>
                                                     </form>
-                                                )}
+                                                </div>
+                                            </div>
+                                            {link.is_active && (
+                                                <form action={emailGuestLink} className="mt-2 flex gap-2 items-center pl-2">
+                                                    <input type="hidden" name="link" value={`${origin}/guest/${link.token}`} />
+                                                    <input type="hidden" name="pin" value={link.pin} />
+                                                    <input type="hidden" name="caseId" value={caseData.id} />
+                                                    <input type="email" name="email" placeholder="Recipient Email" required className="bg-gray-50 border border-gray-300 text-gray-900 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-48 p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
+                                                    <SubmitButton className="text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-lg text-xs px-3 py-1.5 dark:bg-blue-500 dark:hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-800" loadingText="Sending...">
+                                                        Email
+                                                    </SubmitButton>
+                                                </form>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {guestLinks.length === 0 && <p className="text-sm text-gray-500 italic dark:text-gray-400">No links generated yet.</p>}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* NOTES TAB */}
+                    {activeTab === 'notes' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="lg:col-span-2">
+                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
+                                    <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Case Notes & Timeline</h2>
+                                    <div className="space-y-6">
+                                        {notes.map(note => (
+                                            <div key={note.id} className="border-l-4 border-blue-500 pl-4 py-1 group relative">
+                                                <div className="flex justify-between items-start">
+                                                    <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap flex-1">{note.content}</p>
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (confirm('Are you sure you want to delete this note?')) {
+                                                                const result = await deleteCaseNote(caseData.id, note.id)
+                                                                if (result?.error) alert(result.error)
+                                                            }
+                                                        }}
+                                                        className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 ml-2"
+                                                        title="Delete Note"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                    </button>
+                                                </div>
+                                                <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">
+                                                    By {note.profiles?.full_name || note.profiles?.email || 'Unknown'} on <span suppressHydrationWarning>{new Date(note.created_at).toLocaleString()}</span>
+                                                </p>
                                             </div>
                                         ))}
-                                        {guestLinks.length === 0 && <p className="text-sm text-gray-500 italic dark:text-gray-400">No links generated yet.</p>}
+                                        {notes.length === 0 && <p className="text-gray-500 italic dark:text-gray-400">No notes added yet.</p>}
                                     </div>
                                 </div>
                             </div>
-                        )
-                    }
-
-                    {/* NOTES TAB */}
-                    {
-                        activeTab === 'notes' && (
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <div className="lg:col-span-2">
-                                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
-                                        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Case Notes & Timeline</h2>
-                                        <div className="space-y-6">
-                                            {notes.map(note => (
-                                                <div key={note.id} className="border-l-4 border-blue-500 pl-4 py-1 group relative">
-                                                    <div className="flex justify-between items-start">
-                                                        <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap flex-1">{note.content}</p>
-                                                        <button
-                                                            onClick={async () => {
-                                                                if (confirm('Are you sure you want to delete this note?')) {
-                                                                    const result = await deleteCaseNote(caseData.id, note.id)
-                                                                    if (result?.error) alert(result.error)
-                                                                }
-                                                            }}
-                                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 ml-2"
-                                                            title="Delete Note"
-                                                        >
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                                        </button>
-                                                    </div>
-                                                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">
-                                                        By {note.profiles?.full_name || note.profiles?.email || 'Unknown'} on <span suppressHydrationWarning>{new Date(note.created_at).toLocaleString()}</span>
-                                                    </p>
-                                                </div>
-                                            ))}
-                                            {notes.length === 0 && <p className="text-gray-500 italic dark:text-gray-400">No notes added yet.</p>}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
-                                        <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Add Note</h3>
+                            <div>
+                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
+                                    <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Add Note</h3>
+                                    {isReadOnly ? (
+                                        <p className="text-sm text-gray-500 italic">Case is closed. Re-open to add notes.</p>
+                                    ) : (
                                         <form
                                             action={async (formData) => {
                                                 const result = await addCaseNote(caseData.id, formData)
@@ -600,26 +548,24 @@ export default function CaseDetailsClient({
                                                 Add Note
                                             </SubmitButton>
                                         </form>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
-                        )
-                    }
+                        </div>
+                    )}
 
                     {/* ACTIVITY TAB */}
-                    {
-                        activeTab === 'activity' && (
-                            <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
-                                <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Case Timeline</h2>
-                                <CaseTimeline
-                                    caseData={caseData}
-                                    notes={notes}
-                                    auditLogs={auditLogs}
-                                    evidence={evidence}
-                                />
-                            </div>
-                        )
-                    }
+                    {activeTab === 'activity' && (
+                        <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
+                            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Case Timeline</h2>
+                            <CaseTimeline
+                                caseData={caseData}
+                                notes={notes}
+                                auditLogs={auditLogs}
+                                evidence={evidence}
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

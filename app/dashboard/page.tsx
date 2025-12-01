@@ -19,31 +19,34 @@ export default async function Dashboard() {
         .eq('id', user.id)
         .single()
 
-    const { data: cases, error } = await supabase
-        .from('cases')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-    if (error) {
-        console.error('Error fetching cases:', error)
-    }
-
-    const totalCases = cases?.length || 0
-    const newCases = cases?.filter(c => c.status === 'New').length || 0
-    const pendingCases = cases?.filter(c => c.status === 'Under Investigation').length || 0
-    const settledCases = cases?.filter(c => c.status === 'Settled').length || 0
-    const closedCases = cases?.filter(c => c.status === 'Closed').length || 0
-
-    const activeCases = newCases + pendingCases
-    const resolvedCases = settledCases + closedCases
-
-    // Calculate New This Month
+    // Parallelize count queries for performance
     const now = new Date()
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    const newThisMonth = cases?.filter(c => new Date(c.created_at) >= startOfMonth).length || 0
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+
+    const [
+        { count: totalCases },
+        { count: newCases },
+        { count: pendingCases },
+        { count: settledCases },
+        { count: closedCases },
+        { count: newThisMonth },
+        { data: recentCases }
+    ] = await Promise.all([
+        supabase.from('cases').select('*', { count: 'exact', head: true }),
+        supabase.from('cases').select('*', { count: 'exact', head: true }).eq('status', 'New'),
+        supabase.from('cases').select('*', { count: 'exact', head: true }).eq('status', 'Under Investigation'),
+        supabase.from('cases').select('*', { count: 'exact', head: true }).eq('status', 'Settled'),
+        supabase.from('cases').select('*', { count: 'exact', head: true }).eq('status', 'Closed'),
+        supabase.from('cases').select('*', { count: 'exact', head: true }).gte('created_at', startOfMonth),
+        supabase.from('cases').select('id, case_number, title, status, created_at').order('created_at', { ascending: false }).limit(5)
+    ])
+
+    const activeCases = (newCases || 0) + (pendingCases || 0)
+    const resolvedCases = (settledCases || 0) + (closedCases || 0)
 
     // Calculate percentages for the distribution bar
-    const getPercent = (count: number) => totalCases > 0 ? (count / totalCases) * 100 : 0
+    const total = totalCases || 0
+    const getPercent = (count: number | null) => total > 0 ? ((count || 0) / total) * 100 : 0
 
     return (
         <div className="p-4">
@@ -129,7 +132,7 @@ export default async function Dashboard() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {cases?.slice(0, 5).map((c) => (
+                                {recentCases?.map((c) => (
                                     <tr key={c.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                                         <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                                             #{c.case_number}
@@ -156,7 +159,7 @@ export default async function Dashboard() {
                                         </td>
                                     </tr>
                                 ))}
-                                {(!cases || cases.length === 0) && (
+                                {(!recentCases || recentCases.length === 0) && (
                                     <tr>
                                         <td colSpan={5} className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
                                             No cases found.

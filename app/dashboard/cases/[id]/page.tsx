@@ -12,13 +12,15 @@ export default async function CaseDetailsPage(props: { params: Promise<{ id: str
     if (!user) return redirect('/login')
 
     // Fetch all case data in parallel
-    const [caseRes, partiesRes, notesRes, evidenceRes, linksRes, logsRes] = await Promise.all([
+    const [caseRes, partiesRes, notesRes, evidenceRes, linksRes, logsRes, hearingsRes, settingsRes] = await Promise.all([
         supabase.from('cases').select('*').eq('id', id).single(),
         supabase.from('involved_parties').select('*').eq('case_id', id),
-        supabase.from('case_notes').select('*, profiles:created_by(email, full_name)').eq('case_id', id).order('created_at', { ascending: false }),
+        supabase.from('case_notes').select('*, profiles:created_by(email, full_name)').eq('case_id', id).order('created_at', { ascending: false }).limit(50),
         supabase.from('evidence').select('*').eq('case_id', id),
-        supabase.from('guest_links').select('*').eq('case_id', id).order('created_at', { ascending: false }),
-        supabase.from('audit_logs').select('*, profiles:user_id(email, full_name)').eq('case_id', id).order('created_at', { ascending: false })
+        supabase.from('guest_links').select('*').eq('case_id', id).order('created_at', { ascending: false }).limit(20),
+        supabase.from('audit_logs').select('*, profiles:user_id(email, full_name)').eq('case_id', id).order('created_at', { ascending: false }).limit(50),
+        supabase.from('hearings').select('*').eq('case_id', id).order('hearing_date', { ascending: true }),
+        supabase.from('barangay_settings').select('*').single()
     ])
 
     if (caseRes.error || !caseRes.data) return notFound()
@@ -29,6 +31,8 @@ export default async function CaseDetailsPage(props: { params: Promise<{ id: str
     const evidence = evidenceRes.data || []
     const allLinks = linksRes.data || []
     const logs = logsRes.data || []
+    const hearings = hearingsRes.data || []
+    const settings = settingsRes.data || null
     const userRole = user?.user_metadata?.role || 'staff'
 
     return (
@@ -41,6 +45,8 @@ export default async function CaseDetailsPage(props: { params: Promise<{ id: str
             guestLinks={allLinks}
             userRole={userRole}
             userId={user?.id || ''}
+            hearings={hearings}
+            settings={settings}
         />
     )
 }

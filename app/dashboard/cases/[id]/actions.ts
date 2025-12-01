@@ -399,42 +399,49 @@ export async function deleteEvidence(caseId: string, evidenceId: string) {
 export async function performCaseAction(caseId: string, action: string, input?: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
+    const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', user?.id).single()
 
     if (!user) return { error: 'Unauthorized' }
-
-    // Import workflow definition (we need to replicate logic or import it if shared, 
-    // but since this is server side, we can just define the logic here or import the constant if it's pure JS/TS)
-    // For now, I'll implement the switch logic directly to map actions to DB updates.
 
     let newStatus = null;
     let narrativeUpdate = '';
     let logAction = '';
+    let resolutionDetails: any = null;
 
     switch (action) {
         case 'accept_case':
             newStatus = 'Under Investigation';
             logAction = 'Accepted Case';
-            narrativeUpdate = `Case accepted for investigation by ${user.email}.`;
+            narrativeUpdate = `Case accepted for investigation by ${profile?.full_name || user.email}.`;
             break;
         case 'refer_case':
             newStatus = 'Referred';
             logAction = 'Referred Case';
             narrativeUpdate = `Case referred to: ${input}.`;
+            resolutionDetails = {
+                type: 'Referred',
+                agency: input,
+                date: new Date().toISOString(),
+                officer: profile?.full_name || user.email
+            };
             break;
         case 'dismiss_case':
             newStatus = 'Dismissed';
             logAction = 'Dismissed Case';
             narrativeUpdate = `Case dismissed. Reason: ${input}.`;
+            resolutionDetails = {
+                type: 'Dismissed',
+                reason: input,
+                date: new Date().toISOString(),
+                officer: profile?.full_name || user.email
+            };
             break;
         case 'schedule_hearing':
             newStatus = 'Hearing Scheduled';
             logAction = 'Scheduled Hearing';
             narrativeUpdate = `Hearing scheduled for: ${input}.`;
-            // TODO: We might want to save the hearing date in a specific field if we had one.
-            // For now, we'll append it to the narrative action.
             break;
         case 'issue_summon':
-            // No status change, just log
             logAction = 'Issued Summon';
             narrativeUpdate = `Summon issued.`;
             break;
@@ -442,9 +449,15 @@ export async function performCaseAction(caseId: string, action: string, input?: 
             newStatus = 'Settled';
             logAction = 'Settled Case';
             narrativeUpdate = `Case settled. Terms: ${input}.`;
+            resolutionDetails = {
+                type: 'Settled',
+                terms: input,
+                date: new Date().toISOString(),
+                officer: profile?.full_name || user.email
+            };
             break;
         case 'reschedule_hearing':
-            newStatus = 'Hearing Scheduled'; // Stays same
+            newStatus = 'Hearing Scheduled';
             logAction = 'Rescheduled Hearing';
             narrativeUpdate = `Hearing rescheduled to: ${input}.`;
             break;
@@ -452,28 +465,39 @@ export async function performCaseAction(caseId: string, action: string, input?: 
             newStatus = 'Closed';
             logAction = 'Issued CFA';
             narrativeUpdate = `Certificate to File Action (CFA) issued. Reason: ${input}.`;
+            resolutionDetails = {
+                type: 'Closed',
+                reason: input,
+                date: new Date().toISOString(),
+                officer: profile?.full_name || user.email
+            };
             break;
         case 'reopen_case':
             newStatus = 'Under Investigation';
             logAction = 'Re-opened Case';
             narrativeUpdate = `Case re-opened. Reason: ${input}.`;
+            // Clear resolution details on re-open
+            resolutionDetails = null;
             break;
         default:
             return { error: 'Invalid action' };
     }
 
-    // Update Case Status if needed
-    if (newStatus) {
+    // Update Case Status and Resolution Details
+    if (newStatus || resolutionDetails !== undefined) {
+        const updateData: any = { updated_at: new Date().toISOString() };
+        if (newStatus) updateData.status = newStatus;
+        if (resolutionDetails !== undefined) updateData.resolution_details = resolutionDetails;
+
         const { error: statusError } = await supabase
             .from('cases')
-            .update({ status: newStatus, updated_at: new Date().toISOString() })
+            .update(updateData)
             .eq('id', caseId)
 
         if (statusError) return { error: statusError.message }
     }
 
     // Append to Narrative Action (Action Taken)
-    // We fetch the current narrative first
     const { data: caseData } = await supabase.from('cases').select('narrative_action').eq('id', caseId).single();
     const currentNarrative = caseData?.narrative_action || '';
     const timestamp = new Date().toLocaleString();
@@ -493,11 +517,100 @@ export async function performCaseAction(caseId: string, action: string, input?: 
         details: {
             action_key: action,
             input: input,
-            new_status: newStatus
+            new_status: newStatus,
+            resolution: resolutionDetails
         },
         case_id: caseId
     })
 
     revalidatePath(`/dashboard/cases/${caseId}`)
     return { success: true, message: `Action "${logAction}" completed.` }
+}
+
+// --- Hearing Management Actions ---
+
+export async function scheduleHearing(caseId: string, date: string, type: string, notes: string) {
+    const supabase = await createClient()
+
+    // 1. Insert Hearing
+    const { error } = await supabase.from('hearings').insert({
+        case_id: caseId,
+        hearing_date: date,
+        hearing_type: type,
+        notes: notes,
+        status: 'Scheduled'
+    })
+
+    if (error) {
+        console.error('Error scheduling hearing:', error)
+        return { error: 'Failed to schedule hearing.' }
+    }
+
+    // 2. Update Case Status if needed
+    await supabase.from('cases').update({ status: 'Hearing Scheduled' }).eq('id', caseId)
+
+    // 3. Log to Narrative
+    const timestamp = new Date().toLocaleString()
+    const narrativeEntry = `\n[${timestamp}] ${type} scheduled for ${new Date(date).toLocaleString()}. ${notes}`
+
+    // Fetch current narrative to append
+    const { data: caseData } = await supabase.from('cases').select('narrative_action').eq('id', caseId).single()
+    const currentNarrative = caseData?.narrative_action || ''
+
+    await supabase.from('cases').update({
+        narrative_action: currentNarrative + narrativeEntry
+    }).eq('id', caseId)
+
+    // 4. Audit Log
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase.from('audit_logs').insert({
+        case_id: caseId,
+        action: 'Schedule Hearing',
+        performed_by: user?.id,
+        details: { date, type, notes }
+    })
+
+    revalidatePath(`/dashboard/cases/${caseId}`)
+    return { success: true, message: 'Hearing scheduled successfully.' }
+}
+
+export async function updateHearingStatus(hearingId: string, caseId: string, status: string, outcomeNotes: string) {
+    const supabase = await createClient()
+
+    // 1. Update Hearing
+    const { error } = await supabase.from('hearings').update({
+        status: status,
+        notes: outcomeNotes // Append or replace notes? Let's just update for now, or maybe append in UI.
+    }).eq('id', hearingId)
+
+    if (error) {
+        return { error: 'Failed to update hearing.' }
+    }
+
+    // 2. Log to Narrative
+    const timestamp = new Date().toLocaleString()
+    const narrativeEntry = `\n[${timestamp}] Hearing marked as ${status}. ${outcomeNotes}`
+
+    const { data: caseData } = await supabase.from('cases').select('narrative_action').eq('id', caseId).single()
+    const currentNarrative = caseData?.narrative_action || ''
+
+    await supabase.from('cases').update({
+        narrative_action: currentNarrative + narrativeEntry
+    }).eq('id', caseId)
+
+    revalidatePath(`/dashboard/cases/${caseId}`)
+    return { success: true, message: `Hearing marked as ${status}.` }
+}
+
+export async function deleteHearing(hearingId: string, caseId: string) {
+    const supabase = await createClient()
+
+    const { error } = await supabase.from('hearings').delete().eq('id', hearingId)
+
+    if (error) {
+        return { error: 'Failed to delete hearing.' }
+    }
+
+    revalidatePath(`/dashboard/cases/${caseId}`)
+    return { success: true, message: 'Hearing deleted.' }
 }

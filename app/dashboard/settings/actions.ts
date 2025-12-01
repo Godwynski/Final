@@ -86,3 +86,60 @@ export async function changePassword(formData: FormData) {
 
     redirect('/dashboard/settings?message=Password changed successfully')
 }
+
+export async function getSettings() {
+    const supabase = await createClient()
+    const { data, error } = await supabase.from('barangay_settings').select('*').single()
+
+    if (error) {
+        // If table doesn't exist or is empty, return null or default
+        // console.error('Error fetching settings:', error)
+        return null
+    }
+    return data
+}
+
+export async function updateSettings(formData: FormData) {
+    const supabase = await createClient()
+
+    const province = formData.get('province') as string
+    const city_municipality = formData.get('city_municipality') as string
+    const barangay_name = formData.get('barangay_name') as string
+    const punong_barangay = formData.get('punong_barangay') as string
+    const barangay_secretary = formData.get('barangay_secretary') as string
+
+    // Fetch ID first or insert if not exists
+    const { data: currentSettings } = await supabase.from('barangay_settings').select('id').single()
+
+    if (currentSettings) {
+        const { error: updateError } = await supabase.from('barangay_settings').update({
+            province,
+            city_municipality,
+            barangay_name,
+            punong_barangay,
+            barangay_secretary,
+            updated_at: new Date().toISOString()
+        }).eq('id', currentSettings.id)
+
+        if (updateError) {
+            return { error: 'Failed to update settings: ' + updateError.message }
+        }
+    } else {
+        // Insert if not exists
+        const { error: insertError } = await supabase.from('barangay_settings').insert({
+            province,
+            city_municipality,
+            barangay_name,
+            punong_barangay,
+            barangay_secretary
+        })
+
+        if (insertError) {
+            return { error: 'Failed to create settings: ' + insertError.message }
+        }
+    }
+
+    revalidatePath('/dashboard/settings')
+    revalidatePath('/dashboard/cases')
+    return { success: true, message: 'System settings updated successfully.' }
+}
