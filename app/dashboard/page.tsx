@@ -45,7 +45,7 @@ export default async function Dashboard() {
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Overview</h1>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        Welcome back, <span className="font-semibold text-gray-900 dark:text-white">{profile?.email}</span>
+                        Welcome back, <span className="font-semibold text-gray-900 dark:text-white">{profile?.full_name || profile?.email}</span>
                     </p>
                 </div>
                 <div className="mt-4 sm:mt-0">
@@ -92,9 +92,13 @@ export default async function Dashboard() {
                 </div>
 
                 <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm dark:border-gray-700 sm:p-6 dark:bg-gray-800">
-                    <Link href="/dashboard/cases" className="mt-2 inline-block text-xs font-medium text-blue-600 hover:underline dark:text-blue-500">
-                        Go to Cases &rarr;
-                    </Link>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-base font-normal text-gray-500 dark:text-gray-400">New This Month</h3>
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900">
+                            <svg className="w-4 h-4 text-purple-600 dark:text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{newThisMonth}</div>
                 </div>
             </div>
             {/* Recent Cases & Status Chart Row */}
@@ -109,7 +113,7 @@ export default async function Dashboard() {
                         <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                             <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                                 <tr>
-                                    <th scope="col" className="px-4 py-3">Case ID</th>
+                                    <th scope="col" className="px-4 py-3">#</th>
                                     <th scope="col" className="px-4 py-3">Title</th>
                                     <th scope="col" className="px-4 py-3">Status</th>
                                     <th scope="col" className="px-4 py-3">Date</th>
@@ -122,7 +126,7 @@ export default async function Dashboard() {
                                 {recentCases?.map((c) => (
                                     <tr key={c.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                                         <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                                            #{c.case_number}
+                                            {c.case_number}
                                         </td>
                                         <td className="px-4 py-3">
                                             {c.title}

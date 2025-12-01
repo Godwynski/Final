@@ -93,7 +93,7 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Blotter Cases</h1>
                 <Link href="/dashboard/cases/new" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 inline-flex items-center">
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-                    New Report
+                    New Case
                 </Link>
             </div>
 

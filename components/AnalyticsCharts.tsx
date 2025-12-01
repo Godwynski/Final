@@ -44,7 +44,6 @@ export function StatusChart({ data }: ChartProps) {
                             ))}
                         </Pie>
                         <Tooltip />
-                        <Legend />
                     </PieChart>
                 </ResponsiveContainer>
             </div>
@@ -67,7 +66,6 @@ export function TypeChart({ data }: ChartProps) {
                         <XAxis type="number" />
                         <YAxis dataKey="name" type="category" width={100} />
                         <Tooltip />
-                        <Legend />
                         <Bar dataKey="value" name="Cases" fill="#8884d8" />
                     </BarChart>
                 </ResponsiveContainer>
@@ -90,7 +88,8 @@ export function TrendChart({ data }: ChartProps) {
                         <XAxis dataKey="name" />
                         <YAxis />
                         <Tooltip />
-                        <Area type="monotone" dataKey="cases" stroke="#82ca9d" fill="#82ca9d" />
+                        <Legend />
+                        <Area type="monotone" dataKey="cases" name="Cases" stroke="#82ca9d" fill="#82ca9d" />
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
