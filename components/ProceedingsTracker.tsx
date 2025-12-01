@@ -22,17 +22,23 @@ export default function ProceedingsTracker({
 }) {
     const [isScheduling, setIsScheduling] = useState(false)
     const [newDate, setNewDate] = useState('')
+    const [newTime, setNewTime] = useState('10:00')
     const [newType, setNewType] = useState('Mediation')
     const [newNotes, setNewNotes] = useState('')
     const [loading, setLoading] = useState(false)
 
+    // Get today's date in YYYY-MM-DD format for min attribute
+    const today = new Date().toISOString().split('T')[0]
+
     const handleSchedule = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
-        await scheduleHearing(caseId, newDate, newType, newNotes)
+        const dateTimeString = `${newDate}T${newTime}`
+        await scheduleHearing(caseId, dateTimeString, newType, newNotes)
         setLoading(false)
         setIsScheduling(false)
         setNewDate('')
+        setNewTime('10:00')
         setNewNotes('')
     }
 
@@ -76,14 +82,25 @@ export default function ProceedingsTracker({
             {/* Schedule Form */}
             {isScheduling && (
                 <form onSubmit={handleSchedule} className="mb-6 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800 animate-in fade-in slide-in-from-top-2">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Date & Time</label>
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
                             <input
-                                type="datetime-local"
+                                type="date"
                                 required
+                                min={today}
                                 value={newDate}
                                 onChange={e => setNewDate(e.target.value)}
+                                className="w-full rounded-md border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Time</label>
+                            <input
+                                type="time"
+                                required
+                                value={newTime}
+                                onChange={e => setNewTime(e.target.value)}
                                 className="w-full rounded-md border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                             />
                         </div>
@@ -138,17 +155,17 @@ export default function ProceedingsTracker({
                         <div
                             key={hearing.id}
                             className={`p-4 rounded-lg border ${hearing.status === 'Scheduled'
-                                    ? 'bg-white border-blue-200 shadow-sm dark:bg-gray-700 dark:border-blue-800'
-                                    : 'bg-gray-50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-700'
+                                ? 'bg-white border-blue-200 shadow-sm dark:bg-gray-700 dark:border-blue-800'
+                                : 'bg-gray-50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-700'
                                 }`}
                         >
                             <div className="flex justify-between items-start">
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
                                         <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide ${hearing.status === 'Scheduled' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                                                hearing.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                                                    hearing.status === 'No Show' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                                                        'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-300'
+                                            hearing.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                                hearing.status === 'No Show' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                                    'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-300'
                                             }`}>
                                             {hearing.status}
                                         </span>

@@ -195,7 +195,7 @@ export async function generateCaseGuestLink(caseId: string, formData: FormData) 
     if (!user) throw new Error('Unauthorized')
 
     const durationStr = formData.get('duration') as string
-    const durationHours = parseInt(durationStr)
+    const durationHours = durationStr ? parseInt(durationStr) : 72 // Default 3 days
 
     // Validate duration
     const validation = guestLinkDurationSchema.safeParse(durationHours)

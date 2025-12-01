@@ -90,9 +90,12 @@ export default function CaseDetailsClient({
                             e.preventDefault()
                             window.print()
                         }}
-                        className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700"
+                        className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700 inline-flex items-center gap-2"
                     >
-                        🖨️ Print Abstract
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        Print Abstract
                     </button>
                     {!isReadOnly && (
                         <Link href={`/dashboard/cases/${caseData.id}/edit`} className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700">
@@ -241,28 +244,53 @@ export default function CaseDetailsClient({
                 <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
                     <ul className="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-500 dark:text-gray-400">
                         <li className="me-2">
-                            <button onClick={() => changeTab('overview')} className={`inline-block p-4 border-b-2 rounded-t-lg ${activeTab === 'overview' ? 'text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
+                            <button onClick={() => changeTab('overview')} className={`inline-flex items-center gap-2 p-4 border-b-2 rounded-t-lg transition-colors ${activeTab === 'overview' ? 'text-blue-600 border-blue-600 bg-blue-50 dark:text-blue-500 dark:border-blue-500 dark:bg-blue-900/20' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
                                 Overview
                             </button>
                         </li>
                         <li className="me-2">
-                            <button onClick={() => changeTab('parties')} className={`inline-block p-4 border-b-2 rounded-t-lg ${activeTab === 'parties' ? 'text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
+                            <button onClick={() => changeTab('parties')} className={`inline-flex items-center gap-2 p-4 border-b-2 rounded-t-lg transition-colors ${activeTab === 'parties' ? 'text-blue-600 border-blue-600 bg-blue-50 dark:text-blue-500 dark:border-blue-500 dark:bg-blue-900/20' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
                                 Involved Parties
                             </button>
                         </li>
                         <li className="me-2">
-                            <button onClick={() => changeTab('evidence')} className={`inline-block p-4 border-b-2 rounded-t-lg ${activeTab === 'evidence' ? 'text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
-                                Evidence & Links
+                            <button onClick={() => changeTab('evidence')} className={`inline-flex items-center gap-2 p-4 border-b-2 rounded-t-lg transition-colors ${activeTab === 'evidence' ? 'text-blue-600 border-blue-600 bg-blue-50 dark:text-blue-500 dark:border-blue-500 dark:bg-blue-900/20' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                </svg>
+                                Evidence
+                                {evidence.length > 0 && (
+                                    <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-blue-800 bg-blue-200 rounded-full dark:bg-blue-900 dark:text-blue-200">
+                                        {evidence.length}
+                                    </span>
+                                )}
                             </button>
                         </li>
                         <li className="me-2">
-                            <button onClick={() => changeTab('notes')} className={`inline-block p-4 border-b-2 rounded-t-lg ${activeTab === 'notes' ? 'text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
-                                Notes & Timeline
+                            <button onClick={() => changeTab('notes')} className={`inline-flex items-center gap-2 p-4 border-b-2 rounded-t-lg transition-colors ${activeTab === 'notes' ? 'text-blue-600 border-blue-600 bg-blue-50 dark:text-blue-500 dark:border-blue-500 dark:bg-blue-900/20' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Notes
+                                {notes.length > 0 && (
+                                    <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-blue-800 bg-blue-200 rounded-full dark:bg-blue-900 dark:text-blue-200">
+                                        {notes.length}
+                                    </span>
+                                )}
                             </button>
                         </li>
                         <li className="me-2">
-                            <button onClick={() => changeTab('activity')} className={`inline-block p-4 border-b-2 rounded-t-lg ${activeTab === 'activity' ? 'text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
-                                Activity Log
+                            <button onClick={() => changeTab('activity')} className={`inline-flex items-center gap-2 p-4 border-b-2 rounded-t-lg transition-colors ${activeTab === 'activity' ? 'text-blue-600 border-blue-600 bg-blue-50 dark:text-blue-500 dark:border-blue-500 dark:bg-blue-900/20' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                                Activity
                             </button>
                         </li>
                     </ul>
@@ -281,25 +309,6 @@ export default function CaseDetailsClient({
                                         <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{caseData.narrative_facts || caseData.description}</p>
                                     </div>
                                 </div>
-
-                                {/* Quick Summary of Parties */}
-                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Involved Parties</h3>
-                                        <button onClick={() => changeTab('parties')} className="text-sm text-blue-600 hover:underline dark:text-blue-500">View All</button>
-                                    </div>
-                                    {involvedParties.length > 0 ? (
-                                        <div className="flex flex-wrap gap-2">
-                                            {involvedParties.map(p => (
-                                                <span key={p.id} className="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-gray-300">
-                                                    {p.name} ({p.type})
-                                                </span>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <p className="text-gray-500 italic text-sm dark:text-gray-400">No parties listed.</p>
-                                    )}
-                                </div>
                             </div>
 
                             {/* Right Column: Proceedings Tracker */}
@@ -312,19 +321,52 @@ export default function CaseDetailsClient({
 
                                 {/* Case Info Metadata */}
                                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
-                                    <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Case Info</h3>
-                                    <dl className="space-y-2 text-sm">
-                                        <div className="flex justify-between">
-                                            <dt className="text-gray-500 dark:text-gray-400">Reported By:</dt>
-                                            <dd className="font-medium text-gray-900 dark:text-white">{caseData.reported_by?.full_name || caseData.reported_by?.email || 'Unknown'}</dd>
+                                    <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+                                        <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Case Statistics
+                                    </h3>
+                                    <dl className="space-y-3 text-sm">
+                                        <div className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                                            <dt className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                                </svg>
+                                                Parties
+                                            </dt>
+                                            <dd className="font-bold text-gray-900 dark:text-white">{involvedParties.length}</dd>
                                         </div>
-                                        <div className="flex justify-between">
-                                            <dt className="text-gray-500 dark:text-gray-400">Created At:</dt>
-                                            <dd className="font-medium text-gray-900 dark:text-white" suppressHydrationWarning>{new Date(caseData.created_at).toLocaleDateString()}</dd>
+                                        <div className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                                            <dt className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                                </svg>
+                                                Evidence
+                                            </dt>
+                                            <dd className="font-bold text-gray-900 dark:text-white">{evidence.length}</dd>
                                         </div>
-                                        <div className="flex justify-between">
-                                            <dt className="text-gray-500 dark:text-gray-400">Last Updated:</dt>
-                                            <dd className="font-medium text-gray-900 dark:text-white" suppressHydrationWarning>{new Date(caseData.updated_at).toLocaleDateString()}</dd>
+                                        <div className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                                            <dt className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Hearings
+                                            </dt>
+                                            <dd className="font-bold text-gray-900 dark:text-white">{hearings.length}</dd>
+                                        </div>
+                                        <div className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                                            <dt className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                                Notes
+                                            </dt>
+                                            <dd className="font-bold text-gray-900 dark:text-white">{notes.length}</dd>
+                                        </div>
+                                        <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+                                            <dt className="text-xs text-gray-500 dark:text-gray-400 mb-1">Last Updated</dt>
+                                            <dd className="font-medium text-gray-900 dark:text-white text-sm" suppressHydrationWarning>{new Date(caseData.updated_at).toLocaleString()}</dd>
                                         </div>
                                     </dl>
                                 </div>
