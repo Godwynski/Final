@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { updateProfile, changePassword, updateSettings } from './actions'
+import { createClient } from '@/utils/supabase/client'
 
 type User = {
     email: string
@@ -13,6 +14,7 @@ export default function SettingsClient({ user, settings }: { user: User, setting
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
+    const supabase = createClient()
 
     return (
         <div className="space-y-8">
@@ -46,46 +48,45 @@ export default function SettingsClient({ user, settings }: { user: User, setting
                 </div>
             </div>
 
-            {/* System Settings Card (Admin Only) */}
-            {user.role === 'admin' && (
-                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
-                    <div className="flex justify-between items-start mb-6">
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">System Settings</h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure global settings for print documents and reports.</p>
-                        </div>
-                        <button
-                            onClick={() => setIsSettingsModalOpen(true)}
-                            className="text-sm text-blue-600 hover:underline dark:text-blue-400 font-medium"
-                        >
-                            Edit Settings
-                        </button>
+            {/* System Settings Card */}
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
+                <div className="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">System Settings</h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure global settings for print documents and reports.</p>
                     </div>
+                    <button
+                        onClick={() => setIsSettingsModalOpen(true)}
+                        className="text-sm text-blue-600 hover:underline dark:text-blue-400 font-medium"
+                    >
+                        Edit Settings
+                    </button>
+                </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Province</p>
-                            <p className="text-lg font-medium text-gray-900 dark:text-white">{settings?.province || 'Not set'}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">City / Municipality</p>
-                            <p className="text-lg font-medium text-gray-900 dark:text-white">{settings?.city_municipality || 'Not set'}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Barangay Name</p>
-                            <p className="text-lg font-medium text-gray-900 dark:text-white">{settings?.barangay_name || 'Not set'}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Punong Barangay</p>
-                            <p className="text-lg font-medium text-gray-900 dark:text-white">{settings?.punong_barangay || 'Not set'}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Barangay Secretary</p>
-                            <p className="text-lg font-medium text-gray-900 dark:text-white">{settings?.barangay_secretary || 'Not set'}</p>
-                        </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Province</p>
+                        <p className="text-lg font-medium text-gray-900 dark:text-white">{settings?.province || 'Not set'}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">City / Municipality</p>
+                        <p className="text-lg font-medium text-gray-900 dark:text-white">{settings?.city_municipality || 'Not set'}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Barangay Name</p>
+                        <p className="text-lg font-medium text-gray-900 dark:text-white">{settings?.barangay_name || 'Not set'}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Punong Barangay</p>
+                        <p className="text-lg font-medium text-gray-900 dark:text-white">{settings?.punong_barangay || 'Not set'}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Barangay Secretary</p>
+                        <p className="text-lg font-medium text-gray-900 dark:text-white">{settings?.barangay_secretary || 'Not set'}</p>
                     </div>
                 </div>
-            )}
+            </div>
+
 
             {/* Security & Preferences */}
             <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
@@ -156,6 +157,40 @@ export default function SettingsClient({ user, settings }: { user: User, setting
                             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Edit System Settings</h3>
                         </div>
                         <form action={async (formData) => {
+                            // Handle Logo Uploads
+                            const uploadLogo = async (file: File, name: string) => {
+                                if (!file || file.size === 0) return null
+                                const fileExt = file.name.split('.').pop()
+                                const fileName = `${name}-${Date.now()}.${fileExt}`
+                                const { error: uploadError } = await supabase.storage
+                                    .from('branding')
+                                    .upload(fileName, file)
+
+                                if (uploadError) {
+                                    console.error('Error uploading logo:', uploadError)
+                                    return null
+                                }
+
+                                const { data: { publicUrl } } = supabase.storage
+                                    .from('branding')
+                                    .getPublicUrl(fileName)
+
+                                return publicUrl
+                            }
+
+                            const barangayLogoFile = formData.get('barangay_logo_file') as File
+                            const cityLogoFile = formData.get('city_logo_file') as File
+
+                            if (barangayLogoFile && barangayLogoFile.size > 0) {
+                                const url = await uploadLogo(barangayLogoFile, 'barangay-logo')
+                                if (url) formData.set('logo_barangay_url', url)
+                            }
+
+                            if (cityLogoFile && cityLogoFile.size > 0) {
+                                const url = await uploadLogo(cityLogoFile, 'city-logo')
+                                if (url) formData.set('logo_city_url', url)
+                            }
+
                             await updateSettings(formData)
                             setIsSettingsModalOpen(false)
                         }} className="p-6 space-y-4">
@@ -188,6 +223,67 @@ export default function SettingsClient({ user, settings }: { user: User, setting
                                     className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                                     placeholder="e.g. Barangay 123"
                                 />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Barangay Logo</label>
+                                    <div className="flex items-center gap-4 mb-2">
+                                        {settings?.logo_barangay_url && (
+                                            <div className="relative w-16 h-16 border rounded-lg overflow-hidden group">
+                                                <img src={settings.logo_barangay_url} alt="Barangay Logo" className="w-full h-full object-contain" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const input = document.querySelector('input[name="logo_barangay_url"]') as HTMLInputElement
+                                                        if (input) input.value = ''
+                                                        // Force re-render or visual update (hacky but works for simple form)
+                                                        input.parentElement?.querySelector('img')?.remove()
+                                                        input.parentElement?.querySelector('button')?.remove()
+                                                    }}
+                                                    className="absolute inset-0 bg-black/50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <span className="text-xs">Remove</span>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <input
+                                        type="file"
+                                        name="barangay_logo_file"
+                                        accept="image/*"
+                                        className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
+                                    />
+                                    <input type="hidden" name="logo_barangay_url" defaultValue={settings?.logo_barangay_url || ''} />
+                                </div>
+                                <div>
+                                    <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">City Logo</label>
+                                    <div className="flex items-center gap-4 mb-2">
+                                        {settings?.logo_city_url && (
+                                            <div className="relative w-16 h-16 border rounded-lg overflow-hidden group">
+                                                <img src={settings.logo_city_url} alt="City Logo" className="w-full h-full object-contain" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const input = document.querySelector('input[name="logo_city_url"]') as HTMLInputElement
+                                                        if (input) input.value = ''
+                                                        input.parentElement?.querySelector('img')?.remove()
+                                                        input.parentElement?.querySelector('button')?.remove()
+                                                    }}
+                                                    className="absolute inset-0 bg-black/50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <span className="text-xs">Remove</span>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <input
+                                        type="file"
+                                        name="city_logo_file"
+                                        accept="image/*"
+                                        className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
+                                    />
+                                    <input type="hidden" name="logo_city_url" defaultValue={settings?.logo_city_url || ''} />
+                                </div>
                             </div>
                             <div>
                                 <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Punong Barangay</label>

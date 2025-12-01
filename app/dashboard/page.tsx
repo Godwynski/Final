@@ -1,6 +1,8 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { StatusChart, TypeChart, TrendChart } from '@/components/AnalyticsCharts'
+import { getAnalyticsData } from './actions'
 
 export default async function Dashboard() {
     const supabase = await createClient()
@@ -19,34 +21,23 @@ export default async function Dashboard() {
         .eq('id', user.id)
         .single()
 
-    // Parallelize count queries for performance
-    const now = new Date()
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-
+    // Parallelize queries for performance
     const [
-        { count: totalCases },
-        { count: newCases },
-        { count: pendingCases },
-        { count: settledCases },
-        { count: closedCases },
-        { count: newThisMonth },
-        { data: recentCases }
+        { data: stats },
+        { data: recentCases },
+        analyticsData
     ] = await Promise.all([
-        supabase.from('cases').select('*', { count: 'exact', head: true }),
-        supabase.from('cases').select('*', { count: 'exact', head: true }).eq('status', 'New'),
-        supabase.from('cases').select('*', { count: 'exact', head: true }).eq('status', 'Under Investigation'),
-        supabase.from('cases').select('*', { count: 'exact', head: true }).eq('status', 'Settled'),
-        supabase.from('cases').select('*', { count: 'exact', head: true }).eq('status', 'Closed'),
-        supabase.from('cases').select('*', { count: 'exact', head: true }).gte('created_at', startOfMonth),
-        supabase.from('cases').select('id, case_number, title, status, created_at').order('created_at', { ascending: false }).limit(5)
+        supabase.rpc('get_dashboard_stats'),
+        supabase.from('cases').select('id, case_number, title, status, created_at').order('created_at', { ascending: false }).limit(5),
+        getAnalyticsData()
     ])
 
-    const activeCases = (newCases || 0) + (pendingCases || 0)
-    const resolvedCases = (settledCases || 0) + (closedCases || 0)
-
-    // Calculate percentages for the distribution bar
-    const total = totalCases || 0
-    const getPercent = (count: number | null) => total > 0 ? ((count || 0) / total) * 100 : 0
+    const { totalCases, activeCases, resolvedCases, newThisMonth } = (stats as any) || {
+        totalCases: 0,
+        activeCases: 0,
+        resolvedCases: 0,
+        newThisMonth: 0
+    }
 
     return (
         <div className="p-4">
@@ -101,24 +92,20 @@ export default async function Dashboard() {
                 </div>
 
                 <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm dark:border-gray-700 sm:p-6 dark:bg-gray-800">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-base font-normal text-gray-500 dark:text-gray-400">New This Month</h3>
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900">
-                            <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-                        </div>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{newThisMonth}</div>
+                    <Link href="/dashboard/cases" className="mt-2 inline-block text-xs font-medium text-blue-600 hover:underline dark:text-blue-500">
+                        Go to Cases &rarr;
+                    </Link>
                 </div>
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Recent Cases Table */}
-                <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            {/* Recent Cases & Status Chart Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                {/* Recent Cases Table - Takes up 2 columns */}
+                <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg shadow-sm dark:border-gray-700 dark:bg-gray-800 flex flex-col">
                     <div className="px-4 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Cases</h3>
                         <Link href="/dashboard/cases" className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-500">View all</Link>
                     </div>
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto flex-grow">
                         <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                             <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                                 <tr>
@@ -171,59 +158,18 @@ export default async function Dashboard() {
                     </div>
                 </div>
 
-                {/* Case Distribution */}
-                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 sm:p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Case Distribution</h3>
-                    <div className="space-y-4">
-                        <div>
-                            <div className="flex justify-between mb-1">
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">New</span>
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">{Math.round(getPercent(newCases))}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                                <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${getPercent(newCases)}%` }}></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div className="flex justify-between mb-1">
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">Under Investigation</span>
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">{Math.round(getPercent(pendingCases))}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                                <div className="bg-yellow-400 h-2.5 rounded-full" style={{ width: `${getPercent(pendingCases)}%` }}></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div className="flex justify-between mb-1">
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">Settled</span>
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">{Math.round(getPercent(settledCases))}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                                <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${getPercent(settledCases)}%` }}></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div className="flex justify-between mb-1">
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">Closed</span>
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">{Math.round(getPercent(closedCases))}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                                <div className="bg-gray-500 h-2.5 rounded-full" style={{ width: `${getPercent(closedCases)}%` }}></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-6 p-4 bg-blue-50 rounded-lg dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
-                        <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">Did you know?</h4>
-                        <p className="text-xs text-blue-700 dark:text-blue-400">
-                            You can generate secure upload links for guests to upload evidence directly to a case without logging in.
-                        </p>
-                        <Link href="/dashboard/cases" className="mt-2 inline-block text-xs font-medium text-blue-600 hover:underline dark:text-blue-500">
-                            Go to Cases &rarr;
-                        </Link>
-                    </div>
+                {/* Status Chart - Takes up 1 column */}
+                <div className="lg:col-span-1">
+                    <StatusChart data={analyticsData.statusData} />
                 </div>
             </div>
+
+            {/* Bottom Row: Types and Trends */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <TypeChart data={analyticsData.typeData} />
+                <TrendChart data={analyticsData.trendData} />
+            </div>
         </div>
+
     )
 }

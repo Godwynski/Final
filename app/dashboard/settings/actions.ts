@@ -107,17 +107,42 @@ export async function updateSettings(formData: FormData) {
     const barangay_name = formData.get('barangay_name') as string
     const punong_barangay = formData.get('punong_barangay') as string
     const barangay_secretary = formData.get('barangay_secretary') as string
+    const logo_barangay_url = formData.get('logo_barangay_url') as string
+    const logo_city_url = formData.get('logo_city_url') as string
 
     // Fetch ID first or insert if not exists
     const { data: currentSettings } = await supabase.from('barangay_settings').select('id').single()
 
     if (currentSettings) {
+        // Fetch current data to compare URLs
+        const { data: oldData } = await supabase.from('barangay_settings').select('logo_barangay_url, logo_city_url').eq('id', currentSettings.id).single()
+
+        const deleteOldLogo = async (oldUrl: string | null, newUrl: string) => {
+            if (oldUrl && oldUrl !== newUrl) {
+                try {
+                    const fileName = oldUrl.split('/').pop()
+                    if (fileName) {
+                        await supabase.storage.from('branding').remove([fileName])
+                    }
+                } catch (e) {
+                    console.error('Error deleting old logo:', e)
+                }
+            }
+        }
+
+        if (oldData) {
+            await deleteOldLogo(oldData.logo_barangay_url, logo_barangay_url)
+            await deleteOldLogo(oldData.logo_city_url, logo_city_url)
+        }
+
         const { error: updateError } = await supabase.from('barangay_settings').update({
             province,
             city_municipality,
             barangay_name,
             punong_barangay,
             barangay_secretary,
+            logo_barangay_url,
+            logo_city_url,
             updated_at: new Date().toISOString()
         }).eq('id', currentSettings.id)
 
@@ -131,7 +156,9 @@ export async function updateSettings(formData: FormData) {
             city_municipality,
             barangay_name,
             punong_barangay,
-            barangay_secretary
+            barangay_secretary,
+            logo_barangay_url,
+            logo_city_url
         })
 
         if (insertError) {

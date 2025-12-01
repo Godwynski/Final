@@ -385,3 +385,125 @@ CREATE INDEX IF NOT EXISTS idx_hearings_case_id ON hearings(case_id);
 
 -- Notifications
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+
+
+-- ==========================================
+-- 9. STORAGE BUCKETS
+-- ==========================================
+
+-- Create a new storage bucket for branding (logos)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('branding', 'branding', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Policy: Allow authenticated users (staff/admin) to upload logos
+CREATE POLICY "Allow authenticated uploads"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'branding');
+
+-- Policy: Allow public view
+CREATE POLICY "Allow public view"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'branding');
+
+-- Policy: Allow authenticated update
+CREATE POLICY "Allow authenticated update"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (bucket_id = 'branding');
+
+CREATE POLICY "Allow authenticated delete"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (bucket_id = 'branding');
+
+
+-- ==========================================
+-- 10. DASHBOARD ANALYTICS FUNCTIONS
+-- ==========================================
+
+-- Function to get dashboard counts in a single query
+create or replace function get_dashboard_stats()
+returns json
+language plpgsql
+security definer
+as $$
+declare
+  total_count integer;
+  active_count integer;
+  resolved_count integer;
+  new_this_month_count integer;
+  start_of_month timestamp with time zone;
+begin
+  -- Calculate start of month
+  start_of_month := date_trunc('month', now());
+
+  -- Calculate counts based on RLS (using standard select)
+  -- Note: We use COUNT(*) FILTER (...) to do it in one pass
+  select
+    count(*),
+    count(*) filter (where status in ('New', 'Under Investigation')),
+    count(*) filter (where status in ('Settled', 'Closed')),
+    count(*) filter (where created_at >= start_of_month)
+  into
+    total_count,
+    active_count,
+    resolved_count,
+    new_this_month_count
+  from cases;
+
+  return json_build_object(
+    'totalCases', total_count,
+    'activeCases', active_count,
+    'resolvedCases', resolved_count,
+    'newThisMonth', new_this_month_count
+  );
+end;
+$$;
+
+-- Function to get analytics data (charts) in a single query
+create or replace function get_analytics_summary()
+returns json
+language plpgsql
+security definer
+as $$
+declare
+  status_data json;
+  type_data json;
+  trend_data json;
+begin
+  -- Status Distribution
+  select json_agg(t) into status_data from (
+    select status as name, count(*) as value
+    from cases
+    group by status
+  ) t;
+
+  -- Incident Types
+  select json_agg(t) into type_data from (
+    select incident_type as name, count(*) as value
+    from cases
+    group by incident_type
+  ) t;
+
+  -- Monthly Trends (Last 12 months)
+  select json_agg(t) into trend_data from (
+    select
+      to_char(created_at, 'Mon') as name,
+      count(*) as cases,
+      date_trunc('month', created_at) as m_date
+    from cases
+    where created_at >= date_trunc('month', now() - interval '11 months')
+    group by 1, 3
+    order by 3
+  ) t;
+
+  return json_build_object(
+    'statusData', coalesce(status_data, '[]'::json),
+    'typeData', coalesce(type_data, '[]'::json),
+    'trendData', coalesce(trend_data, '[]'::json)
+  );
+end;
+$$;

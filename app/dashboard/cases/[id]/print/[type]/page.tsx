@@ -37,10 +37,12 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
     // Document Configuration based on Type
     let docTitle = ''
     let docBody = ''
+    let kpFormNo = ''
 
     switch (type) {
         case 'referral':
             docTitle = 'REFERRAL LETTER'
+            kpFormNo = '23' // KP Form No. 23: Referral
             docBody = `
                 <div class="space-y-6">
                     <p><strong>TO: ${details.agency || '[AGENCY NAME]'}</strong></p>
@@ -60,6 +62,7 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
 
         case 'dismissal':
             docTitle = 'ORDER OF DISMISSAL'
+            kpFormNo = '16' // KP Form No. 16: Order of Dismissal
             docBody = `
                 <div class="space-y-6">
                     <p class="indent-8 text-justify">
@@ -78,6 +81,7 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
 
         case 'settlement':
             docTitle = 'AMICABLE SETTLEMENT'
+            kpFormNo = '7' // KP Form No. 7: Amicable Settlement
             docBody = `
                 <div class="space-y-6">
                     <p class="indent-8 text-justify">
@@ -95,6 +99,7 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
 
         case 'cfa':
             docTitle = 'CERTIFICATE TO FILE ACTION'
+            kpFormNo = '20' // KP Form No. 20: Certificate to File Action
             docBody = `
                 <div class="space-y-6">
                     <p class="indent-8 text-justify">
@@ -117,6 +122,7 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
 
         default:
             docTitle = 'CASE RECORD'
+            kpFormNo = ''
             docBody = `
                 <div class="space-y-4">
                     <p><strong>Status:</strong> ${caseData.status}</p>
@@ -132,7 +138,7 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
             caseData={caseData}
             complainants={complainants}
             respondents={respondents}
-            details={details}
+            details={{ ...details, kp_form_no: kpFormNo }}
             initialTitle={docTitle}
             initialBody={docBody}
             officerName={caseData.profiles?.full_name || '____________________'}

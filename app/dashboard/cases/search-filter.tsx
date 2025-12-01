@@ -90,8 +90,11 @@ export default function SearchFilter() {
                         <option value="All">All Statuses</option>
                         <option value="New">New</option>
                         <option value="Under Investigation">Under Investigation</option>
+                        <option value="Hearing Scheduled">Hearing Scheduled</option>
                         <option value="Settled">Settled</option>
                         <option value="Closed">Closed</option>
+                        <option value="Dismissed">Dismissed</option>
+                        <option value="Referred">Referred</option>
                     </select>
                 </div>
 
@@ -106,10 +109,11 @@ export default function SearchFilter() {
                     >
                         <option value="All">All Types</option>
                         <option value="Theft">Theft</option>
+                        <option value="Harassment">Harassment</option>
+                        <option value="Vandalism">Vandalism</option>
                         <option value="Physical Injury">Physical Injury</option>
                         <option value="Property Damage">Property Damage</option>
-                        <option value="Noise Complaint">Noise Complaint</option>
-                        <option value="Dispute">Dispute</option>
+                        <option value="Public Disturbance">Public Disturbance</option>
                         <option value="Other">Other</option>
                     </select>
                 </div>

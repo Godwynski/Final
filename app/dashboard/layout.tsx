@@ -1,7 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import Sidebar from '@/components/Sidebar'
-import Navbar from '@/components/Navbar'
+import DashboardShell from '@/components/DashboardShell'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient()
@@ -19,17 +18,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
         redirect('/change-password')
     }
 
+    const { count: newCasesCount } = await supabase
+        .from('cases')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'New')
+
+    const userProfile = {
+        full_name: profile?.full_name || null,
+        email: user.email!,
+        role: profile?.role || 'staff',
+        newCasesCount: newCasesCount || 0
+    }
+
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <div className="print:hidden">
-                <Navbar name={profile?.full_name || user.email!} />
-                <Sidebar role={profile?.role || 'staff'} email={user.email!} />
-            </div>
-            <div className="p-4 sm:ml-64 pt-20 print:ml-0 print:pt-0 print:p-0">
-                <main className="print:p-0 print:overflow-visible">
-                    {children}
-                </main>
-            </div>
-        </div>
+        <DashboardShell userProfile={userProfile}>
+            {children}
+        </DashboardShell>
     )
 }
