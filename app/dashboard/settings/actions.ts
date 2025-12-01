@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { passwordSchema } from '@/utils/validation'
 
 export async function updateProfile(formData: FormData) {
     const supabase = await createClient()
@@ -54,8 +55,10 @@ export async function changePassword(formData: FormData) {
         redirect('/dashboard/settings?error=Passwords do not match')
     }
 
-    if (password.length < 6) {
-        redirect('/dashboard/settings?error=Password must be at least 6 characters')
+    // Validate password strength using passwordSchema
+    const validation = passwordSchema.safeParse(password)
+    if (!validation.success) {
+        redirect(`/dashboard/settings?error=${encodeURIComponent(validation.error.issues[0].message)}`)
     }
 
     // Verify current password by attempting to sign in

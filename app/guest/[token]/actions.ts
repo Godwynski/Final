@@ -4,6 +4,14 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
+import { RateLimiterMemory } from 'rate-limiter-flexible'
+import { CONFIG } from '@/constants/config'
+
+// Rate limiter for PIN verification
+const pinLimiter = new RateLimiterMemory({
+    points: CONFIG.RATE_LIMIT.PIN_VERIFICATION.POINTS,
+    duration: CONFIG.RATE_LIMIT.PIN_VERIFICATION.DURATION,
+})
 
 export async function uploadGuestEvidence(token: string, formData: FormData) {
     const supabaseAdmin = createAdminClient()
@@ -49,9 +57,14 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
         return { error: 'No file uploaded.' }
     }
 
-    // Validate File Type (Images Only)
-    if (!file.type.startsWith('image/')) {
-        return { error: 'Only image files are allowed.' }
+    // Validate file size
+    if (file.size > CONFIG.FILE_UPLOAD.MAX_SIZE) {
+        return { error: `File size must be less than ${CONFIG.FILE_UPLOAD.MAX_SIZE_MB}MB` }
+    }
+
+    // Validate file type
+    if (!CONFIG.FILE_UPLOAD.ALLOWED_TYPES.includes(file.type as any)) {
+        return { error: `Only ${CONFIG.FILE_UPLOAD.ALLOWED_TYPES.join(', ')} files are allowed` }
     }
 
     // Upload to Supabase Storage
@@ -67,7 +80,6 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
         })
 
     if (uploadError) {
-        console.error('Storage upload error:', uploadError)
         return { error: 'Failed to upload file to storage.' }
     }
 
@@ -115,6 +127,13 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
 
 
 export async function verifyGuestPin(token: string, pin: string) {
+    // Rate limiting
+    try {
+        await pinLimiter.consume(token)
+    } catch {
+        return { error: 'Too many attempts. Please try again in 10 minutes.' }
+    }
+
     const supabaseAdmin = createAdminClient()
 
     const { data: link, error } = await supabaseAdmin

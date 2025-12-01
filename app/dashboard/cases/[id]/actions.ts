@@ -4,6 +4,10 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { resend } from '@/utils/resend'
+import { addInvolvedPartySchema, addCaseNoteSchema, updateCaseDetailsSchema, updateActionTakenSchema, guestLinkDurationSchema } from '@/utils/validation'
+import { generateSecurePIN, canModifyResource } from '@/utils/auth'
+import { CONFIG } from '@/constants/config'
+import { createAdminClient } from '@/utils/supabase/admin'
 
 export async function updateCaseStatus(caseId: string, formData: FormData) {
     const supabase = await createClient()
@@ -58,29 +62,25 @@ export async function emailGuestLink(formData: FormData) {
     const pin = formData.get('pin') as string
     const caseId = formData.get('caseId') as string
 
-    try {
-        const { data, error } = await resend.emails.send({
-            from: 'Blotter System <onboarding@resend.dev>', // Default Resend sender
-            to: [email],
-            subject: 'Secure Evidence Upload Link',
-            html: `
-                <h1>Secure Evidence Upload Link</h1>
-                <p>You have been invited to upload evidence for a case.</p>
-                <p><strong>Link:</strong> <a href="${link}">${link}</a></p>
-                <p><strong>PIN:</strong> ${pin}</p>
-                <p>This link will expire soon.</p>
-            `,
-        })
+    const from = process.env.SMTP_FROM && process.env.SMTP_FROM_NAME
+        ? `${process.env.SMTP_FROM_NAME} <${process.env.SMTP_FROM}>`
+        : 'Blotter System <onboarding@resend.dev>'
 
-        if (error) {
-            console.error('Resend Error:', error)
-            redirect(`/dashboard/cases/${caseId}?error=Failed to send email: ${error.message}`)
-        }
-    } catch (e) {
-        console.error('Email Error:', e)
-        // Don't redirect here if we want to handle it gracefully, but for now redirect with error
-        // redirect throws, so we need to be careful inside try/catch if we want to redirect out.
-        // Actually, redirect should be outside try/catch or re-thrown.
+    const { data, error } = await resend.emails.send({
+        from,
+        to: [email],
+        subject: 'Secure Evidence Upload Link',
+        html: `
+            <h1>Secure Evidence Upload Link</h1>
+            <p>You have been invited to upload evidence for a case.</p>
+            <p><strong>Link:</strong> <a href="${link}">${link}</a></p>
+            <p><strong>PIN:</strong> ${pin}</p>
+            <p>This link will expire soon.</p>
+        `,
+    })
+
+    if (error) {
+        redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent('Failed to send email: ' + error.message)}`)
     }
 
     redirect(`/dashboard/cases/${caseId}?message=Email sent to ${email}`)
@@ -94,6 +94,15 @@ export async function addInvolvedParty(caseId: string, formData: FormData) {
     const contact_number = formData.get('contact_number') as string
     const email = formData.get('email') as string
     const address = formData.get('address') as string
+
+    // Validate input
+    const validation = addInvolvedPartySchema.safeParse({
+        name, type, contact_number, email, address
+    })
+
+    if (!validation.success) {
+        redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent(validation.error.issues[0].message)}`)
+    }
 
     const { error } = await supabase
         .from('involved_parties')
@@ -122,6 +131,12 @@ export async function addCaseNote(caseId: string, formData: FormData) {
 
     const content = formData.get('content') as string
 
+    // Validate input
+    const validation = addCaseNoteSchema.safeParse({ content })
+    if (!validation.success) {
+        return { error: validation.error.issues[0].message }
+    }
+
     const { error } = await supabase
         .from('case_notes')
         .insert({
@@ -144,6 +159,22 @@ export async function deleteCaseNote(caseId: string, noteId: string) {
 
     if (!user) return { error: 'Unauthorized' }
 
+    // Check authorization: must be creator or admin
+    const { data: note } = await supabase
+        .from('case_notes')
+        .select('created_by')
+        .eq('id', noteId)
+        .single()
+
+    if (!note) {
+        return { error: 'Note not found' }
+    }
+
+    const canModify = await canModifyResource(supabase, user.id, note.created_by)
+    if (!canModify) {
+        return { error: 'Unauthorized: You can only delete your own notes' }
+    }
+
     const { error } = await supabase
         .from('case_notes')
         .delete()
@@ -163,16 +194,21 @@ export async function generateCaseGuestLink(caseId: string, formData: FormData) 
 
     if (!user) throw new Error('Unauthorized')
 
-    let durationHours = parseInt(formData.get('duration') as string)
-    if (isNaN(durationHours)) {
-        durationHours = 24
+    const durationStr = formData.get('duration') as string
+    const durationHours = parseInt(durationStr)
+
+    // Validate duration
+    const validation = guestLinkDurationSchema.safeParse(durationHours)
+    if (!validation.success) {
+        return { error: validation.error.issues[0].message }
     }
+
     const expiresAt = new Date()
     expiresAt.setHours(expiresAt.getHours() + durationHours)
     const token = crypto.randomUUID()
 
-    // Generate 6-digit PIN
-    const pin = Math.floor(100000 + Math.random() * 900000).toString()
+    // Generate secure 6-digit PIN
+    const pin = generateSecurePIN()
 
     const { error } = await supabase
         .from('guest_links')
@@ -188,9 +224,6 @@ export async function generateCaseGuestLink(caseId: string, formData: FormData) 
     if (error) {
         return { error: error.message }
     }
-
-    // Mock Email Sending
-    console.log(`[MOCK EMAIL] To Complainant: Access your case evidence portal here: ${process.env.NEXT_PUBLIC_BASE_URL}/guest/${token}. PIN: ${pin}`)
 
     revalidatePath(`/dashboard/cases/${caseId}`)
     return { success: true, pin, message: `Secure link generated. PIN: ${pin}` }
@@ -221,6 +254,15 @@ export async function updateCaseDetails(caseId: string, formData: FormData) {
     const incident_type = formData.get('incident_type') as string
     const narrative_facts = formData.get('narrative_facts') as string
     const narrative_action = formData.get('narrative_action') as string
+
+    // Validate input
+    const validation = updateCaseDetailsSchema.safeParse({
+        title, incident_date, incident_location, incident_type, narrative_facts, narrative_action
+    })
+
+    if (!validation.success) {
+        redirect(`/dashboard/cases/${caseId}/edit?error=${encodeURIComponent(validation.error.issues[0].message)}`)
+    }
 
     const { error } = await supabase
         .from('cases')
@@ -264,6 +306,12 @@ export async function updateActionTaken(caseId: string, formData: FormData) {
     const supabase = await createClient()
     const narrative_action = formData.get('narrative_action') as string
 
+    // Validate input
+    const validation = updateActionTakenSchema.safeParse({ narrative_action })
+    if (!validation.success) {
+        redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent(validation.error.issues[0].message)}`)
+    }
+
     const { error } = await supabase
         .from('cases')
         .update({
@@ -291,8 +339,6 @@ export async function updateActionTaken(caseId: string, formData: FormData) {
     redirect(`/dashboard/cases/${caseId}?message=Action taken updated successfully`)
 }
 
-import { createAdminClient } from '@/utils/supabase/admin'
-
 export async function uploadEvidence(caseId: string, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -305,9 +351,14 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
 
     if (!file) return { error: 'No file uploaded' }
 
-    // Validate File Type (Images Only for now, but could be expanded)
-    if (!file.type.startsWith('image/')) {
-        return { error: 'Only image files are allowed' }
+    // Validate file size
+    if (file.size > CONFIG.FILE_UPLOAD.MAX_SIZE) {
+        return { error: `File size must be less than ${CONFIG.FILE_UPLOAD.MAX_SIZE_MB}MB` }
+    }
+
+    // Validate file type
+    if (!CONFIG.FILE_UPLOAD.ALLOWED_TYPES.includes(file.type as any)) {
+        return { error: `Only ${CONFIG.FILE_UPLOAD.ALLOWED_TYPES.join(', ')} files are allowed` }
     }
 
     // Upload to Storage
@@ -359,7 +410,7 @@ export async function deleteEvidence(caseId: string, evidenceId: string) {
 
     const supabaseAdmin = createAdminClient()
 
-    // Get evidence to find file path
+    // Get evidence to find file path and check authorization
     const { data: evidence, error: fetchError } = await supabaseAdmin
         .from('evidence')
         .select('*')
@@ -368,6 +419,12 @@ export async function deleteEvidence(caseId: string, evidenceId: string) {
 
     if (fetchError || !evidence) {
         return { error: 'Evidence not found' }
+    }
+
+    // Check authorization: must be uploader or admin
+    const canDelete = await canModifyResource(supabase, user.id, evidence.uploaded_by || '')
+    if (!canDelete) {
+        return { error: 'Unauthorized: You can only delete evidence you uploaded' }
     }
 
     // Delete from Storage
@@ -379,7 +436,7 @@ export async function deleteEvidence(caseId: string, evidenceId: string) {
             await supabaseAdmin.storage.from('evidence').remove([storagePath])
         }
     } catch (e) {
-        console.error('Error parsing file path:', e)
+        // Continue to delete record even if storage delete fails
     }
 
     // Delete Record

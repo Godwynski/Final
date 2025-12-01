@@ -4,21 +4,21 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { requireAdmin } from '@/utils/auth'
 
 export async function createUser(formData: FormData) {
     const supabase = await createClient()
     const { data: { user: currentUser } } = await supabase.auth.getUser()
 
+    if (!currentUser) redirect('/login')
+
     // Check if current user is admin
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', currentUser?.id).single()
-    if (profile?.role !== 'admin') {
-        throw new Error('Unauthorized')
-    }
+    await requireAdmin(supabase, currentUser.id)
 
     const email = formData.get('email') as string
     const fullName = formData.get('full_name') as string
     const role = formData.get('role') as string
-    const defaultPassword = 'Blotter123!' // Default password
+    const defaultPassword = 'Blotter123!' // Default password that users will change on first login
 
     const supabaseAdmin = createAdminClient()
 
@@ -30,7 +30,6 @@ export async function createUser(formData: FormData) {
     })
 
     if (error) {
-        console.error('Error creating user:', error)
         redirect(`/dashboard/admin?error=${encodeURIComponent(error.message)}`)
     }
 
@@ -66,10 +65,7 @@ export async function deleteUser(formData: FormData) {
     }
 
     // Check permissions
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single()
-    if (profile?.role !== 'admin') {
-        throw new Error('Unauthorized')
-    }
+    await requireAdmin(supabase, currentUser.id)
 
     const supabaseAdmin = createAdminClient()
 
@@ -100,10 +96,7 @@ export async function updateUserRole(formData: FormData) {
     }
 
     // Check permissions
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single()
-    if (profile?.role !== 'admin') {
-        throw new Error('Unauthorized')
-    }
+    await requireAdmin(supabase, currentUser.id)
 
     const supabaseAdmin = createAdminClient()
 
@@ -131,10 +124,7 @@ export async function updateUser(formData: FormData) {
     const role = formData.get('role') as string
 
     // Check permissions (only admin)
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single()
-    if (profile?.role !== 'admin') {
-        throw new Error('Unauthorized')
-    }
+    await requireAdmin(supabase, currentUser.id)
 
     const supabaseAdmin = createAdminClient()
 
@@ -169,13 +159,10 @@ export async function adminResetPassword(formData: FormData) {
     if (!currentUser) redirect('/login')
 
     const userId = formData.get('userId') as string
-    const defaultPassword = 'Blotter123!'
+    const defaultPassword = 'Blotter123!' // Default password that users will change
 
     // Check permissions
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single()
-    if (profile?.role !== 'admin') {
-        throw new Error('Unauthorized')
-    }
+    await requireAdmin(supabase, currentUser.id)
 
     const supabaseAdmin = createAdminClient()
 
@@ -201,5 +188,5 @@ export async function adminResetPassword(formData: FormData) {
     })
 
     revalidatePath('/dashboard/admin')
-    redirect('/dashboard/admin?message=Password reset to default (Blotter123!)')
+    redirect(`/dashboard/admin?message=Password has been reset to: ${defaultPassword}`)
 }

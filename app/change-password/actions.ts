@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
+import { passwordSchema } from '@/utils/validation'
 
 export async function updatePassword(formData: FormData) {
     const supabase = await createClient()
@@ -19,8 +20,10 @@ export async function updatePassword(formData: FormData) {
         redirect('/change-password?error=Passwords do not match')
     }
 
-    if (password.length < 6) {
-        redirect('/change-password?error=Password must be at least 6 characters')
+    // Validate password strength
+    const validation = passwordSchema.safeParse(password)
+    if (!validation.success) {
+        redirect(`/change-password?error=${encodeURIComponent(validation.error.issues[0].message)}`)
     }
 
     const supabaseAdmin = createAdminClient()
@@ -41,7 +44,6 @@ export async function updatePassword(formData: FormData) {
         .eq('id', user.id)
 
     if (profileError) {
-        console.error('Error updating profile:', profileError)
         // We still redirect to dashboard as password was changed, but log the error
     }
 
