@@ -1,7 +1,10 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState, useEffect } from 'react'
 import { createCase } from '../actions'
+import IncidentDetails from './IncidentDetails'
+import PartyManager, { Party } from './PartyManager'
+import NarrativeEditor from './NarrativeEditor'
 
 const initialState = {
     error: '',
@@ -9,60 +12,44 @@ const initialState = {
 
 export default function CreateCaseForm() {
     const [state, formAction, isPending] = useActionState(createCase, initialState)
+    const [parties, setParties] = useState<Party[]>([])
+
+    // Auto-save parties to localStorage
+    useEffect(() => {
+        const savedParties = localStorage.getItem('draft_case_parties')
+        if (savedParties) {
+            try {
+                setParties(JSON.parse(savedParties))
+            } catch (e) {
+                console.error('Error parsing saved draft:', e)
+            }
+        }
+    }, [])
+
+    useEffect(() => {
+        localStorage.setItem('draft_case_parties', JSON.stringify(parties))
+    }, [parties])
 
     return (
-        <form action={formAction} className="space-y-8">
+        <form action={(formData) => {
+            // Clear draft before submitting
+            localStorage.removeItem('draft_case_parties')
+            formAction(formData)
+        }} className="space-y-8">
             {state?.error && (
                 <div className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
                     <span className="font-medium">Error!</span> {state.error}
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="md:col-span-2">
-                    <label htmlFor="title" className="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Incident Title</label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Give this report a short, descriptive name (e.g., "Theft at Barangay Hall").</p>
-                    <input type="text" name="title" id="title" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="e.g., Theft at Barangay Hall" required />
-                </div>
+            {/* Hidden input to pass parties data to server action */}
+            <input type="hidden" name="involved_parties" value={JSON.stringify(parties)} />
 
-                <div>
-                    <label htmlFor="incident_date" className="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Date & Time of Incident</label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">When did the incident happen?</p>
-                    <input type="datetime-local" name="incident_date" id="incident_date" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
-                </div>
+            <IncidentDetails />
 
-                <div>
-                    <label htmlFor="incident_location" className="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Location</label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Where did the incident take place?</p>
-                    <input type="text" name="incident_location" id="incident_location" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="e.g., Purok 3, Main Street" required />
-                </div>
+            <PartyManager parties={parties} setParties={setParties} />
 
-                <div className="md:col-span-2">
-                    <label htmlFor="incident_type" className="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Incident Type</label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">How would you categorize this incident?</p>
-                    <select name="incident_type" id="incident_type" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
-                        <option value="Theft">Theft</option>
-                        <option value="Harassment">Harassment</option>
-                        <option value="Vandalism">Vandalism</option>
-                        <option value="Physical Injury">Physical Injury</option>
-                        <option value="Property Damage">Property Damage</option>
-                        <option value="Public Disturbance">Public Disturbance</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-
-                <div className="md:col-span-2">
-                    <label htmlFor="narrative_facts" className="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Facts of the Case</label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Describe the sequence of events in detail. Who, what, where, when, and how?</p>
-                    <textarea name="narrative_facts" id="narrative_facts" rows={6} className="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="Detail the sequence of events..." required></textarea>
-                </div>
-
-                <div className="md:col-span-2">
-                    <label htmlFor="narrative_action" className="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Action Taken</label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">What did the responding officer do? Was it resolved, referred, or is it under investigation?</p>
-                    <textarea name="narrative_action" id="narrative_action" rows={4} className="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="Describe the actions taken by the officer..." required></textarea>
-                </div>
-            </div>
+            <NarrativeEditor />
 
             <div className="flex justify-end gap-4 pt-4 border-t dark:border-gray-700">
                 <a href="/dashboard" className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700">

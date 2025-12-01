@@ -186,14 +186,14 @@ export async function generateCaseGuestLink(caseId: string, formData: FormData) 
         })
 
     if (error) {
-        redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent(error.message)}`)
+        return { error: error.message }
     }
 
     // Mock Email Sending
     console.log(`[MOCK EMAIL] To Complainant: Access your case evidence portal here: ${process.env.NEXT_PUBLIC_BASE_URL}/guest/${token}. PIN: ${pin}`)
 
     revalidatePath(`/dashboard/cases/${caseId}`)
-    redirect(`/dashboard/cases/${caseId}?message=Secure link generated. PIN: ${pin}`)
+    return { success: true, pin, message: `Secure link generated. PIN: ${pin}` }
 }
 
 export async function toggleGuestLinkStatus(linkId: string, currentStatus: boolean, caseId: string) {
@@ -205,10 +205,11 @@ export async function toggleGuestLinkStatus(linkId: string, currentStatus: boole
         .eq('id', linkId)
 
     if (error) {
-        redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent(error.message)}`)
+        return { error: error.message }
     }
 
     revalidatePath(`/dashboard/cases/${caseId}`)
+    return { success: true }
 }
 
 export async function updateCaseDetails(caseId: string, formData: FormData) {

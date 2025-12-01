@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
+import { createClient } from '@/utils/supabase/client'
 import CopyButton from '@/components/CopyButton'
 import StatusStepper from '@/components/StatusStepper'
 import SubmitButton from '@/components/SubmitButton'
@@ -32,8 +33,17 @@ export default function CaseDetailsClient({
     userId: string
 }) {
     const searchParams = useSearchParams()
-    const initialTab = (searchParams.get('tab') as Tab) || 'overview'
-    const [activeTab, setActiveTab] = useState<Tab>(initialTab)
+    const router = useRouter()
+    const pathname = usePathname()
+
+    const tabParam = searchParams.get('tab') as Tab
+    const activeTab = ['overview', 'parties', 'evidence', 'notes', 'activity'].includes(tabParam) ? tabParam : 'overview'
+
+    const changeTab = (tab: Tab) => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('tab', tab)
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    }
     const [formattedDate, setFormattedDate] = useState<string>('')
     const [origin, setOrigin] = useState<string>('')
 
@@ -45,6 +55,30 @@ export default function CaseDetailsClient({
         setOrigin(window.location.origin)
         setGeneratedDate(new Date().toLocaleString())
     }, [caseData.incident_date])
+
+    // Realtime Subscription for Evidence
+    useEffect(() => {
+        const supabase = createClient()
+        const channel = supabase
+            .channel('realtime-evidence')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'evidence',
+                    filter: `case_id=eq.${caseData.id}`
+                },
+                () => {
+                    router.refresh()
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [caseData.id, router])
 
     return (
         <div className="p-4">
@@ -205,27 +239,27 @@ export default function CaseDetailsClient({
                 <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
                     <ul className="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-500 dark:text-gray-400">
                         <li className="me-2">
-                            <button onClick={() => setActiveTab('overview')} className={`inline-block p-4 border-b-2 rounded-t-lg ${activeTab === 'overview' ? 'text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
+                            <button onClick={() => changeTab('overview')} className={`inline-block p-4 border-b-2 rounded-t-lg ${activeTab === 'overview' ? 'text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
                                 Overview
                             </button>
                         </li>
                         <li className="me-2">
-                            <button onClick={() => setActiveTab('parties')} className={`inline-block p-4 border-b-2 rounded-t-lg ${activeTab === 'parties' ? 'text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
+                            <button onClick={() => changeTab('parties')} className={`inline-block p-4 border-b-2 rounded-t-lg ${activeTab === 'parties' ? 'text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
                                 Involved Parties
                             </button>
                         </li>
                         <li className="me-2">
-                            <button onClick={() => setActiveTab('evidence')} className={`inline-block p-4 border-b-2 rounded-t-lg ${activeTab === 'evidence' ? 'text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
+                            <button onClick={() => changeTab('evidence')} className={`inline-block p-4 border-b-2 rounded-t-lg ${activeTab === 'evidence' ? 'text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
                                 Evidence & Links
                             </button>
                         </li>
                         <li className="me-2">
-                            <button onClick={() => setActiveTab('notes')} className={`inline-block p-4 border-b-2 rounded-t-lg ${activeTab === 'notes' ? 'text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
+                            <button onClick={() => changeTab('notes')} className={`inline-block p-4 border-b-2 rounded-t-lg ${activeTab === 'notes' ? 'text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
                                 Notes & Timeline
                             </button>
                         </li>
                         <li className="me-2">
-                            <button onClick={() => setActiveTab('activity')} className={`inline-block p-4 border-b-2 rounded-t-lg ${activeTab === 'activity' ? 'text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
+                            <button onClick={() => changeTab('activity')} className={`inline-block p-4 border-b-2 rounded-t-lg ${activeTab === 'activity' ? 'text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500' : 'border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}`}>
                                 Activity Log
                             </button>
                         </li>
@@ -250,7 +284,7 @@ export default function CaseDetailsClient({
                                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
                                     <div className="flex justify-between items-center mb-4">
                                         <h3 className="text-lg font-bold text-gray-900 dark:text-white">Involved Parties</h3>
-                                        <button onClick={() => setActiveTab('parties')} className="text-sm text-blue-600 hover:underline dark:text-blue-500">View All</button>
+                                        <button onClick={() => changeTab('parties')} className="text-sm text-blue-600 hover:underline dark:text-blue-500">View All</button>
                                     </div>
                                     {involvedParties.length > 0 ? (
                                         <div className="flex flex-wrap gap-2">
@@ -458,7 +492,14 @@ export default function CaseDetailsClient({
                                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
                                     <div className="flex justify-between items-center mb-4">
                                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">Guest Upload Links</h2>
-                                        <form action={generateCaseGuestLink.bind(null, caseData.id)}>
+                                        <form action={async (formData) => {
+                                            const result = await generateCaseGuestLink(caseData.id, formData)
+                                            if (result?.error) {
+                                                alert(result.error)
+                                            } else if (result?.success) {
+                                                alert(result.message)
+                                            }
+                                        }}>
                                             <SubmitButton className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-green-500 dark:hover:bg-green-600 dark:focus:ring-green-800" loadingText="Generating...">
                                                 Generate New Link
                                             </SubmitButton>
@@ -485,7 +526,10 @@ export default function CaseDetailsClient({
                                                         {link.is_active && (
                                                             <a href={`/guest/${link.token}`} target="_blank" className="text-sm text-blue-600 hover:underline dark:text-blue-400">Open</a>
                                                         )}
-                                                        <form action={toggleGuestLinkStatus.bind(null, link.id, link.is_active, caseData.id)}>
+                                                        <form action={async () => {
+                                                            const result = await toggleGuestLinkStatus(link.id, link.is_active, caseData.id)
+                                                            if (result?.error) alert(result.error)
+                                                        }}>
                                                             <SubmitButton className={`text-xs hover:underline ${link.is_active ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`} loadingText="...">
                                                                 {link.is_active ? 'Close Link' : 'Re-open Link'}
                                                             </SubmitButton>

@@ -2,13 +2,28 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useDebouncedCallback } from 'use-debounce'
+import { useState, useEffect, useRef } from 'react'
 
 export default function SearchFilter() {
     const searchParams = useSearchParams()
     const router = useRouter()
+    const [searchTerm, setSearchTerm] = useState(searchParams.get('query')?.toString() || '')
+
+    // Keep a ref to searchParams to avoid stale closures in the debounced callback
+    const paramsRef = useRef(searchParams)
+
+    // Update ref when searchParams changes
+    useEffect(() => {
+        paramsRef.current = searchParams
+        // Sync local state with URL params (e.g. on Reset)
+        const query = searchParams.get('query')?.toString() || ''
+        if (query !== searchTerm) {
+            setSearchTerm(query)
+        }
+    }, [searchParams])
 
     const handleSearch = useDebouncedCallback((term: string) => {
-        const params = new URLSearchParams(searchParams)
+        const params = new URLSearchParams(paramsRef.current)
         if (term) {
             params.set('query', term)
         } else {
@@ -16,6 +31,12 @@ export default function SearchFilter() {
         }
         router.replace(`/dashboard/cases?${params.toString()}`)
     }, 300)
+
+    const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value
+        setSearchTerm(value)
+        handleSearch(value)
+    }
 
     const handleFilterChange = (key: string, value: string) => {
         const params = new URLSearchParams(searchParams)
@@ -27,10 +48,18 @@ export default function SearchFilter() {
         router.replace(`/dashboard/cases?${params.toString()}`)
     }
 
+    const handleReset = () => {
+        router.replace('/dashboard/cases')
+        setSearchTerm('') // Clear local state immediately for better UX
+    }
+
+    const hasFilters = searchParams.toString().length > 0
+
     return (
-        <div className="flex flex-col gap-4 mb-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
+        <div className="p-4 mb-6 bg-white border border-gray-200 rounded-lg shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-4 md:grid-cols-2">
+                {/* Search Input */}
+                <div className="lg:col-span-4">
                     <label htmlFor="search" className="sr-only">Search</label>
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -43,12 +72,15 @@ export default function SearchFilter() {
                             id="search"
                             className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                             placeholder="Search cases, parties, or case #..."
-                            defaultValue={searchParams.get('query')?.toString()}
-                            onChange={(e) => handleSearch(e.target.value)}
+                            value={searchTerm}
+                            onChange={onInputChange}
                         />
                     </div>
                 </div>
-                <div className="w-full md:w-48">
+
+                {/* Status Filter */}
+                <div>
+                    <label htmlFor="status" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Status</label>
                     <select
                         id="status"
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
@@ -62,10 +94,9 @@ export default function SearchFilter() {
                         <option value="Closed">Closed</option>
                     </select>
                 </div>
-            </div>
 
-            <div className="flex flex-col md:flex-row gap-4 border-t border-gray-200 pt-4 dark:border-gray-700">
-                <div className="w-full md:w-48">
+                {/* Incident Type Filter */}
+                <div>
                     <label htmlFor="incident_type" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Incident Type</label>
                     <select
                         id="incident_type"
@@ -82,7 +113,9 @@ export default function SearchFilter() {
                         <option value="Other">Other</option>
                     </select>
                 </div>
-                <div className="w-full md:w-48">
+
+                {/* Start Date Filter */}
+                <div>
                     <label htmlFor="start_date" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Start Date</label>
                     <input
                         type="date"
@@ -92,7 +125,9 @@ export default function SearchFilter() {
                         onChange={(e) => handleFilterChange('start_date', e.target.value)}
                     />
                 </div>
-                <div className="w-full md:w-48">
+
+                {/* End Date Filter */}
+                <div>
                     <label htmlFor="end_date" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">End Date</label>
                     <input
                         type="date"
@@ -103,6 +138,17 @@ export default function SearchFilter() {
                     />
                 </div>
             </div>
+
+            {hasFilters && (
+                <div className="flex justify-end mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                        onClick={handleReset}
+                        className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
+                    >
+                        Reset Filters
+                    </button>
+                </div>
+            )}
         </div>
     )
 }

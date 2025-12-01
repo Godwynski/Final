@@ -21,9 +21,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <Navbar name={profile?.full_name || user.email!} />
-            <Sidebar role={profile?.role || 'staff'} email={user.email!} />
-            <div className="p-4 sm:ml-64 pt-20">
+            <div className="print:hidden">
+                <Navbar name={profile?.full_name || user.email!} />
+                <Sidebar role={profile?.role || 'staff'} email={user.email!} />
+            </div>
+            <div className="p-4 sm:ml-64 pt-20 print:ml-0 print:pt-0 print:p-0">
                 <main className="print:p-0 print:overflow-visible">
                     {children}
                 </main>
