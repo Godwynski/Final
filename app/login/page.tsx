@@ -1,8 +1,18 @@
 import Link from 'next/link'
 import { LoginForm } from './login-form'
+import { createClient } from '@/utils/supabase/server'
+import { redirect } from 'next/navigation'
 
 export default async function LoginPage(props: { searchParams: Promise<{ message?: string, error?: string }> }) {
     const searchParams = await props.searchParams
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (user) {
+        redirect('/dashboard')
+    }
+
     return (
         <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0 bg-gray-50 dark:bg-gray-900">
             <Link href="/" className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">

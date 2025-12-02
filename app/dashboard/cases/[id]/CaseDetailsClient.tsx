@@ -127,8 +127,8 @@ export default function CaseDetailsClient({
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8 border-b-2 border-black pb-4">
                     <div className="w-24 h-24 flex items-center justify-center border border-gray-300 rounded-full overflow-hidden relative">
-                        {settings?.logo_url ? (
-                            <img src={settings.logo_url} alt="Barangay Logo" className="w-full h-full object-contain" />
+                        {settings?.logo_barangay_url ? (
+                            <img src={settings.logo_barangay_url} alt="Barangay Logo" className="w-full h-full object-contain" />
                         ) : (
                             <span className="text-xs text-center text-gray-500">Barangay Logo</span>
                         )}
@@ -141,7 +141,11 @@ export default function CaseDetailsClient({
                         <h3 className="text-lg font-bold uppercase mt-4 border-2 border-black inline-block px-4 py-1">Blotter Extract</h3>
                     </div>
                     <div className="w-24 h-24 flex items-center justify-center border border-gray-300 rounded-full overflow-hidden relative">
-                        <span className="text-xs text-center text-gray-500">City/Muni Logo</span>
+                        {settings?.logo_city_url ? (
+                            <img src={settings.logo_city_url} alt="City/Muni Logo" className="w-full h-full object-contain" />
+                        ) : (
+                            <span className="text-xs text-center text-gray-500">City/Muni Logo</span>
+                        )}
                     </div>
                 </div>
 
