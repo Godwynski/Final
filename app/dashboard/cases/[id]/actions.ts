@@ -3,7 +3,8 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { resend } from '@/utils/resend'
+import { mailersend } from '@/utils/mailersend'
+import { EmailParams, Sender, Recipient } from "mailersend";
 import { addInvolvedPartySchema, addCaseNoteSchema, updateCaseDetailsSchema, updateActionTakenSchema, guestLinkDurationSchema } from '@/utils/validation'
 import { generateSecurePIN, canModifyResource } from '@/utils/auth'
 import { CONFIG } from '@/constants/config'
@@ -62,25 +63,31 @@ export async function emailGuestLink(formData: FormData) {
     const pin = formData.get('pin') as string
     const caseId = formData.get('caseId') as string
 
-    const from = process.env.SMTP_FROM && process.env.SMTP_FROM_NAME
-        ? `${process.env.SMTP_FROM_NAME} <${process.env.SMTP_FROM}>`
-        : 'Blotter System <onboarding@resend.dev>'
+    const fromEmail = process.env.MAILERSEND_FROM_EMAIL || 'info@trial-z3m5jgr209zgdpyo.mlsender.net';
+    const fromName = process.env.MAILERSEND_FROM_NAME || 'Blotter System';
 
-    const { data, error } = await resend.emails.send({
-        from,
-        to: [email],
-        subject: 'Secure Evidence Upload Link',
-        html: `
+    const sentFrom = new Sender(fromEmail, fromName);
+    const recipients = [
+        new Recipient(email, "Guest")
+    ];
+
+    const emailParams = new EmailParams()
+        .setFrom(sentFrom)
+        .setTo(recipients)
+        .setSubject('Secure Evidence Upload Link')
+        .setHtml(`
             <h1>Secure Evidence Upload Link</h1>
             <p>You have been invited to upload evidence for a case.</p>
             <p><strong>Link:</strong> <a href="${link}">${link}</a></p>
             <p><strong>PIN:</strong> ${pin}</p>
             <p>This link will expire soon.</p>
-        `,
-    })
+        `)
+        .setText(`Secure Evidence Upload Link\n\nYou have been invited to upload evidence for a case.\n\nLink: ${link}\nPIN: ${pin}\n\nThis link will expire soon.`);
 
-    if (error) {
-        redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent('Failed to send email: ' + error.message)}`)
+    try {
+        await mailersend.email.send(emailParams);
+    } catch (error: any) {
+        redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent('Failed to send email: ' + (error.message || error))}`)
     }
 
     redirect(`/dashboard/cases/${caseId}?message=Email sent to ${email}`)
