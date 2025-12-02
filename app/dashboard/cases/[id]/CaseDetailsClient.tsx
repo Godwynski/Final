@@ -85,6 +85,18 @@ export default function CaseDetailsClient({
                     </p>
                 </div>
                 <div className="flex gap-2 print:hidden">
+                    <div className="relative group">
+                        <button className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700 inline-flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            Generate Document
+                            <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden group-hover:block border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                            <a href={`/dashboard/cases/${caseData.id}/print?form=summons`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Summons</a>
+                            <a href={`/dashboard/cases/${caseData.id}/print?form=hearing`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Notice of Hearing</a>
+                            <a href={`/dashboard/cases/${caseData.id}/print?form=cfa`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Certificate to File Action</a>
+                        </div>
+                    </div>
                     <button
                         onClick={(e) => {
                             e.preventDefault()
@@ -388,7 +400,9 @@ export default function CaseDetailsClient({
                                                 <li key={party.id} className="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-0 last:pb-0">
                                                     <div className="flex justify-between items-start">
                                                         <div>
-                                                            <p className="font-medium text-gray-900 dark:text-white">{party.name}</p>
+                                                            <Link href={`/dashboard/people/${encodeURIComponent(party.name)}`} className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                                                                {party.name}
+                                                            </Link>
                                                             <p className="text-sm text-gray-500 dark:text-gray-400">{party.type}</p>
                                                             {party.contact_number && <p className="text-sm text-gray-500 dark:text-gray-400">📞 {party.contact_number}</p>}
                                                             {party.email && <p className="text-sm text-gray-500 dark:text-gray-400">✉️ {party.email}</p>}

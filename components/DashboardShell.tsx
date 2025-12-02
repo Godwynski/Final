@@ -28,8 +28,8 @@ export default function DashboardShell({
                     newCasesCount={userProfile.newCasesCount}
                 />
             </div>
-            <div className="p-4 sm:ml-64 pt-20 print:ml-0 print:pt-0 print:p-0">
-                <main className="print:p-0 print:overflow-visible">
+            <div className="p-4 sm:ml-64 pt-20 print:ml-0 print:pt-0 print:p-0 overflow-x-hidden">
+                <main className="print:p-0 print:overflow-visible w-full max-w-full">
                     {children}
                 </main>
             </div>

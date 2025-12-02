@@ -6,10 +6,12 @@ import UsersTable from './UsersTable'
 import AuditLogsTable from './AuditLogsTable'
 import TableSkeleton from './TableSkeleton'
 
-export default async function AdminPage(props: { searchParams: Promise<{ error?: string, message?: string, page?: string }> }) {
+export default async function AdminPage(props: { searchParams: Promise<{ error?: string, message?: string, page?: string, sort?: string, order?: string }> }) {
     const searchParams = await props.searchParams
     const supabase = await createClient()
     const page = Number(searchParams.page) || 1
+    const sort = searchParams.sort
+    const order = searchParams.order
 
     const {
         data: { user },
@@ -43,15 +45,15 @@ export default async function AdminPage(props: { searchParams: Promise<{ error?:
         <div className="p-4 md:p-6">
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-start gap-4">
-                    <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                        <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-4 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center justify-center w-14 h-14 rounded-full bg-purple-100 dark:bg-purple-900/30 shrink-0">
+                        <svg className="w-7 h-7 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                         </svg>
                     </div>
                     <div className="flex-1">
                         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Admin Panel</h1>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage users, monitor system activity, and configure access permissions</p>
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 max-w-2xl">Manage users, monitor system activity, and configure access permissions. Use the tabs below to switch between management views.</p>
                     </div>
                 </div>
 
@@ -80,12 +82,12 @@ export default async function AdminPage(props: { searchParams: Promise<{ error?:
                 <AdminClient
                     usersTabContent={
                         <Suspense fallback={<TableSkeleton />}>
-                            <UsersTable page={page} />
+                            <UsersTable page={page} sort={sort} order={order} />
                         </Suspense>
                     }
                     logsTabContent={
                         <Suspense fallback={<TableSkeleton />}>
-                            <AuditLogsTable page={page} />
+                            <AuditLogsTable page={page} sort={sort} order={order} />
                         </Suspense>
                     }
                 />

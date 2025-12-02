@@ -1,17 +1,17 @@
 import { createClient } from '@/utils/supabase/server'
 import PaginationControls from '@/components/PaginationControls'
+import SortableColumn from '@/components/SortableColumn'
 
-export default async function AuditLogsTable({ page = 1 }: { page?: number }) {
+export default async function AuditLogsTable({ page, sort = 'created_at', order = 'desc' }: { page: number, sort?: string, order?: string }) {
     const supabase = await createClient()
     const limit = 10
     const from = (page - 1) * limit
     const to = from + limit - 1
 
-    const { count } = await supabase.from('audit_logs').select('*', { count: 'exact', head: true })
-    const { data: logs } = await supabase
+    const { data: logs, count } = await supabase
         .from('audit_logs')
-        .select('*, profiles:user_id(email, full_name)')
-        .order('created_at', { ascending: false })
+        .select('*, profiles:user_id(email, full_name)', { count: 'exact' })
+        .order(sort, { ascending: order === 'asc' })
         .range(from, to)
 
     const totalPages = Math.ceil((count || 0) / limit)
@@ -19,16 +19,15 @@ export default async function AuditLogsTable({ page = 1 }: { page?: number }) {
     const hasPrevPage = page > 1
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <h2 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">System Audit Logs</h2>
-            <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:border-gray-700 dark:bg-gray-800 overflow-hidden">
+            <div className="relative overflow-x-auto">
                 <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                     <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                         <tr>
-                            <th scope="col" className="px-6 py-3">Date & Time</th>
-                            <th scope="col" className="px-6 py-3">User</th>
-                            <th scope="col" className="px-6 py-3">Action</th>
-                            <th scope="col" className="px-6 py-3">Details</th>
+                            <SortableColumn label="Date & Time" sortKey="created_at" />
+                            <SortableColumn label="User" sortKey="user_id" />
+                            <SortableColumn label="Action" sortKey="action" />
+                            <SortableColumn label="Details" sortKey="details" />
                         </tr>
                     </thead>
                     <tbody>
@@ -60,7 +59,6 @@ export default async function AuditLogsTable({ page = 1 }: { page?: number }) {
                                             {!log.details.narrative_action && (!log.details.old_status || !log.details.new_status) && (
                                                 <div className="space-y-1">
                                                     {Object.entries(log.details).map(([key, value]) => {
-                                                        // Skip internal keys if we decide to hide them, but for now show all
                                                         const formattedKey = key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
                                                         return (
                                                             <div key={key}>

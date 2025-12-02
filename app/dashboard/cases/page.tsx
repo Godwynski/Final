@@ -1,115 +1,128 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
-import SearchFilter from './search-filter'
-
 import PaginationControls from '@/components/PaginationControls'
+import DateRangePicker from '@/components/DateRangePicker'
+import FilterDropdown from '@/components/FilterDropdown'
+import SearchInput from '@/components/SearchInput'
+import SortableColumn from '@/components/SortableColumn'
 
-export default async function CasesPage(props: { searchParams: Promise<{ query?: string, status?: string, incident_type?: string, start_date?: string, end_date?: string, page?: string }> }) {
+export default async function CasesPage(props: { searchParams: Promise<{ query?: string, status?: string, type?: string, range?: string, page?: string, sort?: string, order?: string }> }) {
     const searchParams = await props.searchParams
-    const supabase = await createClient()
-    const query = searchParams.query
-    const status = searchParams.status
-    const incidentType = searchParams.incident_type
-    const startDate = searchParams.start_date
-    const endDate = searchParams.end_date
+    const query = searchParams.query || ''
+    const status = searchParams.status || ''
+    const type = searchParams.type || ''
+    const range = searchParams.range || '30d'
     const page = Number(searchParams.page) || 1
+    const sort = searchParams.sort || 'created_at'
+    const order = searchParams.order || 'desc'
     const limit = 10
     const from = (page - 1) * limit
     const to = from + limit - 1
 
-    let partyCaseIds: string[] = []
+    const supabase = await createClient()
 
-    // 1. Search Involved Parties (DB Side - Text fields only)
-    if (query) {
-        const { data: partyData } = await supabase
-            .from('involved_parties')
-            .select('case_id')
-            .or(`name.ilike.%${query}%,contact_number.ilike.%${query}%,address.ilike.%${query}%`)
+    // Calculate Date Range
+    const now = new Date()
+    let startDate = new Date()
 
-        if (partyData) {
-            partyCaseIds = partyData.map(p => p.case_id)
-        }
+    switch (range) {
+        case 'this_week':
+            const day = now.getDay()
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1) // adjust when day is sunday
+            startDate = new Date(now.setDate(diff))
+            startDate.setHours(0, 0, 0, 0)
+            break
+        case 'this_month':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+            break
+        case 'last_month':
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+            break
+        case 'this_quarter':
+            const quarter = Math.floor((now.getMonth() + 3) / 3)
+            startDate = new Date(now.getFullYear(), (quarter - 1) * 3, 1)
+            break
+        case 'ytd':
+            startDate = new Date(now.getFullYear(), 0, 1)
+            break
+        case '7d':
+            startDate.setDate(now.getDate() - 7)
+            break
+        case '30d':
+            startDate.setDate(now.getDate() - 30)
+            break
+        case 'all':
+            startDate = new Date(0)
+            break
     }
 
-    // 2. Build Main Query with DB-side Pagination and Filtering
     let queryBuilder = supabase
         .from('cases')
-        .select('id, case_number, title, incident_date, incident_location, status', { count: 'exact' })
-        .order('created_at', { ascending: false })
+        .select('*, involved_parties(name)', { count: 'exact' })
+        .order(sort, { ascending: order === 'asc' })
         .range(from, to)
 
-    // Apply Filters
-    if (status && status !== 'All') {
-        queryBuilder = queryBuilder.eq('status', status)
+    if (range !== 'all') {
+        queryBuilder = queryBuilder.gte('created_at', startDate.toISOString())
     }
 
-    if (incidentType && incidentType !== 'All') {
-        queryBuilder = queryBuilder.eq('incident_type', incidentType)
-    }
-
-    if (startDate) {
-        queryBuilder = queryBuilder.gte('incident_date', new Date(startDate).toISOString())
-    }
-
-    if (endDate) {
-        // Set to end of day
-        const end = new Date(endDate)
-        end.setHours(23, 59, 59, 999)
-        queryBuilder = queryBuilder.lte('incident_date', end.toISOString())
-    }
-
-    // Apply Search
-    if (query) {
-        const orConditions = [
-            `title.ilike.%${query}%`,
-            `description.ilike.%${query}%`,
-            `incident_location.ilike.%${query}%`
-        ]
-
-        // Add party matches if any
-        if (partyCaseIds.length > 0) {
-            orConditions.push(`id.in.(${partyCaseIds.join(',')})`)
-        }
-
-        // Try to match case number if query is numeric
-        if (!isNaN(Number(query))) {
-            orConditions.push(`case_number.eq.${query}`)
-        }
-
-        queryBuilder = queryBuilder.or(orConditions.join(','))
-    }
+    if (status) queryBuilder = queryBuilder.eq('status', status)
+    if (type) queryBuilder = queryBuilder.eq('incident_type', type)
+    if (query) queryBuilder = queryBuilder.ilike('title', `%${query}%`)
 
     const { data: cases, count } = await queryBuilder
 
-    // 3. Pagination Calculations
-    const totalItems = count || 0
-    const totalPages = Math.ceil(totalItems / limit)
+    const totalPages = count ? Math.ceil(count / limit) : 1
     const hasNextPage = page < totalPages
     const hasPrevPage = page > 1
 
     return (
-        <div className="p-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div className="p-4 space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Blotter Cases</h1>
-                <Link href="/dashboard/cases/new" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 inline-flex items-center">
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+                <Link
+                    href="/dashboard/cases/new"
+                    className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 flex items-center gap-2"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
                     New Case
                 </Link>
             </div>
 
-            <SearchFilter />
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1">
+                        <SearchInput />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <DateRangePicker />
+                        <FilterDropdown
+                            label="Status"
+                            paramName="status"
+                            options={['New', 'Under Investigation', 'Settled', 'Closed', 'Dismissed']}
+                        />
+                        <FilterDropdown
+                            label="Type"
+                            paramName="type"
+                            options={['Theft', 'Harassment', 'Vandalism', 'Physical Injury', 'Property Damage', 'Public Disturbance', 'Other']}
+                        />
+                    </div>
+                </div>
+            </div>
 
             <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:border-gray-700 dark:bg-gray-800 overflow-hidden">
                 <div className="relative overflow-x-auto">
                     <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                         <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                             <tr>
-                                <th scope="col" className="px-4 py-3">Case #</th>
-                                <th scope="col" className="px-4 py-3">Title</th>
-                                <th scope="col" className="px-4 py-3">Date</th>
-                                <th scope="col" className="px-4 py-3">Location</th>
-                                <th scope="col" className="px-4 py-3">Status</th>
-                                <th scope="col" className="px-4 py-3">Action</th>
+                                <SortableColumn label="Case #" sortKey="case_number" />
+                                <SortableColumn label="Title" sortKey="title" />
+                                <SortableColumn label="Status" sortKey="status" />
+                                <SortableColumn label="Incident Date" sortKey="incident_date" />
+                                <SortableColumn label="Created At" sortKey="created_at" />
+                                <th scope="col" className="px-4 py-3">
+                                    <span className="sr-only">Actions</span>
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -119,8 +132,6 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
                                         #{c.case_number}
                                     </td>
                                     <td className="px-4 py-3">{c.title}</td>
-                                    <td className="px-4 py-3">{new Date(c.incident_date).toLocaleDateString()}</td>
-                                    <td className="px-4 py-3">{c.incident_location}</td>
                                     <td className="px-4 py-3">
                                         <span className={`px-2 py-1 rounded text-xs font-medium ${c.status === 'New' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300' :
                                             c.status === 'Under Investigation' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' :
@@ -130,6 +141,8 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
                                             {c.status}
                                         </span>
                                     </td>
+                                    <td className="px-4 py-3">{new Date(c.incident_date).toLocaleDateString()}</td>
+                                    <td className="px-4 py-3">{new Date(c.created_at).toLocaleDateString()}</td>
                                     <td className="px-4 py-3">
                                         <Link href={`/dashboard/cases/${c.id}`} className="font-medium text-blue-600 dark:text-blue-500 hover:underline">
                                             Manage
