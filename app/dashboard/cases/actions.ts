@@ -3,7 +3,8 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { createCaseSchema } from '@/utils/validation'
+import { createCaseSchema, addInvolvedPartySchema } from '@/utils/validation'
+import { z } from 'zod'
 
 export async function createCase(prevState: any, formData: FormData) {
     const supabase = await createClient()
@@ -33,15 +34,26 @@ export async function createCase(prevState: any, formData: FormData) {
 
     const { title, incident_type, narrative_facts, narrative_action, incident_date, incident_location } = validationResult.data
 
-    // Parse parties
-    let parties = []
+    // Parse and Validate parties
+    let parties: z.infer<typeof addInvolvedPartySchema>[] = []
     try {
         const partiesJson = formData.get('involved_parties') as string
         if (partiesJson) {
-            parties = JSON.parse(partiesJson)
+            const rawParties = JSON.parse(partiesJson)
+
+            // Validate using Zod schema
+            const partiesSchema = z.array(addInvolvedPartySchema)
+            const validation = partiesSchema.safeParse(rawParties)
+
+            if (!validation.success) {
+                return { error: `Invalid party data: ${validation.error.issues[0].message}` }
+            }
+
+            parties = validation.data
         }
     } catch (e) {
         console.error('Error parsing parties:', e)
+        return { error: 'Invalid party data format' }
     }
 
     // Legacy Description for backward compatibility
