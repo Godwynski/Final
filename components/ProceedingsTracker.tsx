@@ -173,7 +173,7 @@ export default function ProceedingsTracker({
                                             {hearing.hearing_type}
                                         </span>
                                     </div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                                    <p className="text-sm text-gray-600 dark:text-gray-300" suppressHydrationWarning>
                                         {new Date(hearing.hearing_date).toLocaleString(undefined, {
                                             weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
                                         })}

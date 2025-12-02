@@ -21,19 +21,18 @@ export default function ResolutionBanner({
     resolutionDetails: ResolutionDetails | null,
     caseId: string
 }) {
-    const router = useRouter()
-
-    if (!resolutionDetails && status !== 'Dismissed' && status !== 'Referred' && status !== 'Settled' && status !== 'Closed') {
-        return null
-    }
-
     const [formattedDate, setFormattedDate] = useState<string>('')
+    const router = useRouter()
 
     useEffect(() => {
         if (resolutionDetails?.date) {
             setFormattedDate(new Date(resolutionDetails.date).toLocaleDateString())
         }
     }, [resolutionDetails?.date])
+
+    if (!resolutionDetails && status !== 'Dismissed' && status !== 'Referred' && status !== 'Settled' && status !== 'Closed') {
+        return null
+    }
 
     // Fallback if resolutionDetails is missing but status is set (legacy or manual update)
     const type = resolutionDetails?.type || status

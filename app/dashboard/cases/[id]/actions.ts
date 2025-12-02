@@ -503,12 +503,29 @@ export async function performCaseAction(caseId: string, action: string, input?: 
         case 'schedule_hearing':
             newStatus = 'Hearing Scheduled';
             logAction = 'Scheduled Hearing';
-            narrativeUpdate = `Hearing scheduled for: ${input}.`;
+            narrativeUpdate = `Hearing scheduled for: ${new Date(input!).toLocaleString()}.`;
+
+            // Insert into hearings table
+            const { error: hearingError } = await supabase.from('hearings').insert({
+                case_id: caseId,
+                hearing_date: input, // input is expected to be ISO string or date string
+                hearing_type: 'Mediation', // Default type, or maybe we need to ask user? For now default to Mediation as per workflow
+                status: 'Scheduled',
+                notes: 'Scheduled via Action Bar'
+            });
+
+            if (hearingError) {
+                return { error: 'Failed to create hearing record: ' + hearingError.message };
+            }
             break;
         case 'issue_summon':
             logAction = 'Issued Summon';
             narrativeUpdate = `Summon issued.`;
-            break;
+            return {
+                success: true,
+                message: 'Summon issued. Opening print view...',
+                redirect: `/dashboard/cases/${caseId}/print?form=summons`
+            };
         case 'settle_case':
             newStatus = 'Settled';
             logAction = 'Settled Case';

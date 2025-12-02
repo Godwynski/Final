@@ -91,7 +91,7 @@ export default function CaseDetailsClient({
                             Generate Document
                             <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
-                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden group-hover:block border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                        <div className="absolute right-0 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden group-hover:block border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                             <a href={`/dashboard/cases/${caseData.id}/print?form=summons`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Summons</a>
                             <a href={`/dashboard/cases/${caseData.id}/print?form=hearing`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Notice of Hearing</a>
                             <a href={`/dashboard/cases/${caseData.id}/print?form=cfa`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Certificate to File Action</a>
@@ -126,8 +126,12 @@ export default function CaseDetailsClient({
             <div className="hidden print:block bg-white text-black p-8 max-w-[210mm] mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8 border-b-2 border-black pb-4">
-                    <div className="w-24 h-24 flex items-center justify-center border border-gray-300 rounded-full">
-                        <span className="text-xs text-center text-gray-500">Barangay Logo</span>
+                    <div className="w-24 h-24 flex items-center justify-center border border-gray-300 rounded-full overflow-hidden relative">
+                        {settings?.logo_url ? (
+                            <img src={settings.logo_url} alt="Barangay Logo" className="w-full h-full object-contain" />
+                        ) : (
+                            <span className="text-xs text-center text-gray-500">Barangay Logo</span>
+                        )}
                     </div>
                     <div className="text-center flex-1">
                         <h1 className="text-xl font-bold uppercase tracking-wide">Republic of the Philippines</h1>
@@ -136,7 +140,7 @@ export default function CaseDetailsClient({
                         <h2 className="text-2xl font-black uppercase mt-2">Barangay {settings?.barangay_name || '[Barangay Name]'}</h2>
                         <h3 className="text-lg font-bold uppercase mt-4 border-2 border-black inline-block px-4 py-1">Blotter Extract</h3>
                     </div>
-                    <div className="w-24 h-24 flex items-center justify-center border border-gray-300 rounded-full">
+                    <div className="w-24 h-24 flex items-center justify-center border border-gray-300 rounded-full overflow-hidden relative">
                         <span className="text-xs text-center text-gray-500">City/Muni Logo</span>
                     </div>
                 </div>

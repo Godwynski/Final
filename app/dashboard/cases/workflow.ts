@@ -57,17 +57,7 @@ export const CASE_WORKFLOW: Record<string, WorkflowAction[]> = {
         }
     ],
     'Under Investigation': [
-        {
-            label: 'Schedule Hearing',
-            action: 'schedule_hearing',
-            nextStatus: 'Hearing Scheduled',
-            variant: 'primary',
-            icon: 'calendar',
-            requiresInput: true,
-            inputLabel: 'Hearing Date & Time',
-            inputType: 'date',
-            description: "Set a date for the Complainant and Respondent to meet face-to-face for mediation."
-        },
+
         {
             label: 'Issue Summon',
             action: 'issue_summon',

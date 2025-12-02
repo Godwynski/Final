@@ -25,6 +25,9 @@ export default function CaseActionHeader({ status, caseId }: { status: string, c
                 if (res?.error) {
                     alert(res.error)
                 } else {
+                    if (res?.redirect) {
+                        window.open(res.redirect, '_blank')
+                    }
                     router.refresh()
                 }
             }
@@ -42,6 +45,9 @@ export default function CaseActionHeader({ status, caseId }: { status: string, c
         if (res?.error) {
             alert(res.error)
         } else {
+            if (res?.redirect) {
+                window.open(res.redirect, '_blank')
+            }
             setSelectedAction(null)
             router.refresh()
         }
@@ -79,7 +85,7 @@ export default function CaseActionHeader({ status, caseId }: { status: string, c
 
             {/* Modal for Input */}
             {selectedAction && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50 p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
                         <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{selectedAction.label}</h3>
                         <form onSubmit={handleSubmit}>
