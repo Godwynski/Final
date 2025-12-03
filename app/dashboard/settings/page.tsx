@@ -4,19 +4,20 @@ import { getSettings } from './actions'
 import SettingsClient from './SettingsClient'
 
 export default async function SettingsPage(props: { searchParams: Promise<{ error?: string, message?: string }> }) {
-    const searchParams = await props.searchParams
-    const supabase = await createClient()
+    const [searchParams, supabase] = await Promise.all([
+        props.searchParams,
+        createClient()
+    ])
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return redirect('/login')
 
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
+    const [profileResult, settings] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        getSettings()
+    ])
 
-    const settings = await getSettings()
+    const profile = profileResult.data
 
     const userData = {
         email: user.email!,
