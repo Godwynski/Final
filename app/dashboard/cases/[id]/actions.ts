@@ -501,15 +501,29 @@ export async function performCaseAction(caseId: string, action: string, input?: 
             };
             break;
         case 'schedule_hearing':
+            let hearingDate = input!;
+            let hearingType = 'Mediation';
+
+            try {
+                const parsed = JSON.parse(input!);
+                if (parsed.date && parsed.type) {
+                    hearingDate = parsed.date;
+                    hearingType = parsed.type;
+                }
+            } catch (e) {
+                // Fallback to simple string if not JSON (backward compatibility)
+                hearingDate = input!;
+            }
+
             newStatus = 'Hearing Scheduled';
             logAction = 'Scheduled Hearing';
-            narrativeUpdate = `Hearing scheduled for: ${new Date(input!).toLocaleString()}.`;
+            narrativeUpdate = `${hearingType} hearing scheduled for: ${new Date(hearingDate).toLocaleString()}.`;
 
             // Insert into hearings table
             const { error: hearingError } = await supabase.from('hearings').insert({
                 case_id: caseId,
-                hearing_date: input, // input is expected to be ISO string or date string
-                hearing_type: 'Mediation', // Default type, or maybe we need to ask user? For now default to Mediation as per workflow
+                hearing_date: hearingDate,
+                hearing_type: hearingType,
                 status: 'Scheduled',
                 notes: 'Scheduled via Action Bar'
             });
@@ -540,18 +554,55 @@ export async function performCaseAction(caseId: string, action: string, input?: 
         case 'reschedule_hearing':
             newStatus = 'Hearing Scheduled';
             logAction = 'Rescheduled Hearing';
-            narrativeUpdate = `Hearing rescheduled to: ${input}.`;
-            break;
-        case 'issue_cfa':
-            newStatus = 'Closed';
-            logAction = 'Issued CFA';
-            narrativeUpdate = `Certificate to File Action (CFA) issued. Reason: ${input}.`;
-            resolutionDetails = {
-                type: 'Closed',
-                reason: input,
-                date: new Date().toISOString(),
-                officer: profile?.full_name || user.email
-            };
+
+            let reschedDate = input!;
+            let reschedType = 'Mediation'; // Default
+
+            // Parse JSON if available
+            try {
+                const parsed = JSON.parse(input!);
+                if (parsed.date && parsed.type) {
+                    reschedDate = parsed.date;
+                    reschedType = parsed.type;
+                }
+            } catch (e) {
+                reschedDate = input!;
+            }
+
+            narrativeUpdate = `Hearing rescheduled to: ${new Date(reschedDate).toLocaleString()} (${reschedType}).`;
+
+            // Find the active hearing
+            const { data: activeHearing } = await supabase
+                .from('hearings')
+                .select('id, hearing_type')
+                .eq('case_id', caseId)
+                .in('status', ['Scheduled', 'Rescheduled'])
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (activeHearing) {
+                // If type wasn't in input (legacy), keep existing type
+                if (!input!.includes('{')) {
+                    reschedType = activeHearing.hearing_type;
+                }
+
+                await supabase.from('hearings').update({
+                    hearing_date: reschedDate,
+                    hearing_type: reschedType,
+                    status: 'Rescheduled',
+                    notes: `Rescheduled to ${reschedDate} (${reschedType})`
+                }).eq('id', activeHearing.id);
+            } else {
+                // Create if missing
+                await supabase.from('hearings').insert({
+                    case_id: caseId,
+                    hearing_date: reschedDate,
+                    hearing_type: reschedType,
+                    status: 'Rescheduled',
+                    notes: 'Rescheduled (No previous active hearing found)'
+                });
+            }
             break;
         case 'reopen_case':
             newStatus = 'Under Investigation';

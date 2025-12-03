@@ -45,9 +45,14 @@ export default function CreateCaseForm() {
             {/* Hidden input to pass parties data to server action */}
             <input type="hidden" name="involved_parties" value={JSON.stringify(parties)} />
 
-            <IncidentDetails />
-
-            <PartyManager parties={parties} setParties={setParties} />
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div className="space-y-6">
+                    <IncidentDetails />
+                </div>
+                <div className="space-y-6">
+                    <PartyManager parties={parties} setParties={setParties} />
+                </div>
+            </div>
 
             <NarrativeEditor />
 

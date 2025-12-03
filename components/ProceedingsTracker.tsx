@@ -68,7 +68,7 @@ export default function ProceedingsTracker({
                     <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     Proceedings Tracker
                 </h2>
-                {!isReadOnly && (
+                {!isReadOnly && !hearings.some(h => ['Scheduled', 'Rescheduled'].includes(h.status)) && (
                     <button
                         onClick={() => setIsScheduling(!isScheduling)}
                         className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"

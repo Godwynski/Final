@@ -56,8 +56,7 @@ export default function SidebarGroup({ label, icon, children, groupKey }: Sideba
                 </svg>
             </button>
             <ul
-                className={`py-2 space-y-2 overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                    }`}
+                className={`py-2 space-y-2 overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'} ml-5 border-l-2 border-gray-200 dark:border-gray-700 pl-2`}
             >
                 {children}
             </ul>

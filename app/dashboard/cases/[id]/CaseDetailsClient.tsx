@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import AlertModal from '@/components/ui/AlertModal'
+import ConfirmModal from '@/components/ui/ConfirmModal'
+import ImageModal from '@/components/ui/ImageModal'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import CopyButton from '@/components/CopyButton'
 import SubmitButton from '@/components/SubmitButton'
-import { addInvolvedParty, addCaseNote, deleteCaseNote, generateCaseGuestLink, toggleGuestLinkStatus, emailGuestLink, updateActionTaken } from './actions'
+import { addInvolvedParty, addCaseNote, deleteCaseNote, generateCaseGuestLink, toggleGuestLinkStatus, emailGuestLink, updateActionTaken, deleteEvidence } from './actions'
 import DashboardEvidenceList from '@/components/DashboardEvidenceList'
 import DashboardEvidenceUploadForm from '@/components/DashboardEvidenceUploadForm'
 import CaseActionHeader from '@/components/CaseActionHeader'
@@ -60,6 +63,67 @@ export default function CaseDetailsClient({
 
     const [generatedDate, setGeneratedDate] = useState<string>('')
 
+    // Alert Modal State
+    const [alertState, setAlertState] = useState<{
+        isOpen: boolean
+        title: string
+        message: string
+        type: 'success' | 'error' | 'info'
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info'
+    })
+
+    const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setAlertState({ isOpen: true, title, message, type })
+    }
+
+    const closeAlert = () => {
+        setAlertState(prev => ({ ...prev, isOpen: false }))
+    }
+
+    // Confirm Modal State
+    const [confirmState, setConfirmState] = useState<{
+        isOpen: boolean
+        title: string
+        message: string
+        onConfirm: () => void
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    })
+
+    const showConfirm = (title: string, message: string, onConfirm: () => void) => {
+        setConfirmState({ isOpen: true, title, message, onConfirm })
+    }
+
+    const closeConfirm = () => {
+        setConfirmState(prev => ({ ...prev, isOpen: false }))
+    }
+
+    // Image Modal State
+    const [imageModalState, setImageModalState] = useState<{
+        isOpen: boolean
+        imageUrl: string
+        altText: string
+    }>({
+        isOpen: false,
+        imageUrl: '',
+        altText: ''
+    })
+
+    const showImage = (imageUrl: string, altText: string) => {
+        setImageModalState({ isOpen: true, imageUrl, altText })
+    }
+
+    const closeImage = () => {
+        setImageModalState(prev => ({ ...prev, isOpen: false }))
+    }
+
     // Format date on client only to avoid hydration mismatch
     useEffect(() => {
         setFormattedDate(new Date(caseData.incident_date).toLocaleString())
@@ -69,6 +133,29 @@ export default function CaseDetailsClient({
 
     return (
         <div className="p-4">
+            <AlertModal
+                isOpen={alertState.isOpen}
+                onClose={closeAlert}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+            />
+
+            <ConfirmModal
+                isOpen={confirmState.isOpen}
+                onClose={closeConfirm}
+                onConfirm={confirmState.onConfirm}
+                title={confirmState.title}
+                message={confirmState.message}
+            />
+
+            <ImageModal
+                isOpen={imageModalState.isOpen}
+                onClose={closeImage}
+                imageUrl={imageModalState.imageUrl}
+                altText={imageModalState.altText}
+            />
+
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <div>
@@ -258,7 +345,7 @@ export default function CaseDetailsClient({
                 />
 
                 {/* Action Header */}
-                <CaseActionHeader status={caseData.status} caseId={caseData.id} />
+                <CaseActionHeader status={caseData.status} caseId={caseData.id} hearings={hearings} />
 
                 {/* Tabs */}
                 <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
@@ -444,7 +531,17 @@ export default function CaseDetailsClient({
                                             </div>
                                             <div>
                                                 <label htmlFor="contact" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Contact #</label>
-                                                <input type="text" name="contact" id="contact" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
+                                                <input
+                                                    type="text"
+                                                    name="contact"
+                                                    id="contact"
+                                                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                                    onInput={(e) => {
+                                                        const target = e.target as HTMLInputElement;
+                                                        target.value = target.value.replace(/[^0-9]/g, '');
+                                                    }}
+                                                    placeholder="Numbers only"
+                                                />
                                             </div>
                                             <div>
                                                 <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Email</label>
@@ -468,8 +565,27 @@ export default function CaseDetailsClient({
                     {activeTab === 'evidence' && (
                         <div className="space-y-6">
                             <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-6">
-                                <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Evidence</h2>
-                                <DashboardEvidenceList evidence={evidence} caseId={caseData.id} />
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Evidence</h2>
+                                    <button
+                                        onClick={() => router.refresh()}
+                                        className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                        Refresh
+                                    </button>
+                                </div>
+                                <DashboardEvidenceList
+                                    evidence={evidence}
+                                    caseId={caseData.id}
+                                    onViewImage={(url) => showImage(url, 'Evidence Preview')}
+                                    onDelete={async (id) => {
+                                        showConfirm('Delete Evidence', 'Are you sure you want to delete this evidence? This action cannot be undone.', async () => {
+                                            const result = await deleteEvidence(caseData.id, id)
+                                            if (result?.error) showAlert('Error', result.error, 'error')
+                                        })
+                                    }}
+                                />
 
                                 <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                                     <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Upload New Evidence</h3>
@@ -490,9 +606,9 @@ export default function CaseDetailsClient({
                                         <form action={async (formData) => {
                                             const result = await generateCaseGuestLink(caseData.id, formData)
                                             if (result?.error) {
-                                                alert(result.error)
+                                                showAlert('Error', result.error, 'error')
                                             } else if (result?.success) {
-                                                alert(result.message)
+                                                showAlert('Link Generated', result.message, 'success')
                                             }
                                         }}>
                                             <SubmitButton className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-green-500 dark:hover:bg-green-600 dark:focus:ring-green-800" loadingText="Generating...">
@@ -524,7 +640,7 @@ export default function CaseDetailsClient({
                                                     )}
                                                     <form action={async () => {
                                                         const result = await toggleGuestLinkStatus(link.id, link.is_active, caseData.id)
-                                                        if (result?.error) alert(result.error)
+                                                        if (result?.error) showAlert('Error', result.error, 'error')
                                                     }}>
                                                         <SubmitButton className={`text-xs hover:underline ${link.is_active ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`} loadingText="...">
                                                             {link.is_active ? 'Close Link' : 'Re-open Link'}
@@ -564,10 +680,10 @@ export default function CaseDetailsClient({
                                                     <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap flex-1">{note.content}</p>
                                                     <button
                                                         onClick={async () => {
-                                                            if (confirm('Are you sure you want to delete this note?')) {
+                                                            showConfirm('Delete Note', 'Are you sure you want to delete this note?', async () => {
                                                                 const result = await deleteCaseNote(caseData.id, note.id)
-                                                                if (result?.error) alert(result.error)
-                                                            }
+                                                                if (result?.error) showAlert('Error', result.error, 'error')
+                                                            })
                                                         }}
                                                         className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 ml-2"
                                                         title="Delete Note"
@@ -594,7 +710,7 @@ export default function CaseDetailsClient({
                                             action={async (formData) => {
                                                 const result = await addCaseNote(caseData.id, formData)
                                                 if (result?.error) {
-                                                    alert(result.error)
+                                                    showAlert('Error', result.error, 'error')
                                                 } else {
                                                     // Reset the textarea
                                                     const form = document.getElementById('add-note-form') as HTMLFormElement
@@ -627,6 +743,7 @@ export default function CaseDetailsClient({
                                 notes={notes}
                                 auditLogs={auditLogs}
                                 evidence={evidence}
+                                onViewImage={(url) => showImage(url, 'Timeline Image')}
                             />
                         </div>
                     )}

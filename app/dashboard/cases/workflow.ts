@@ -9,7 +9,7 @@ export interface WorkflowAction {
     icon?: string;
     requiresInput?: boolean; // If true, might need a modal/prompt (e.g. for hearing date)
     inputLabel?: string;
-    inputType?: 'text' | 'date' | 'textarea';
+    inputType?: 'text' | 'date' | 'textarea' | 'datetime-local';
     description?: string; // Tooltip for the action
 }
 
@@ -57,7 +57,17 @@ export const CASE_WORKFLOW: Record<string, WorkflowAction[]> = {
         }
     ],
     'Under Investigation': [
-
+        {
+            label: 'Schedule Hearing',
+            action: 'schedule_hearing',
+            nextStatus: 'Hearing Scheduled',
+            variant: 'primary',
+            icon: 'calendar',
+            requiresInput: true,
+            inputLabel: 'Hearing Date & Time',
+            inputType: 'datetime-local',
+            description: "Set a date for the mediation/conciliation hearing."
+        },
         {
             label: 'Issue Summon',
             action: 'issue_summon',
@@ -100,8 +110,8 @@ export const CASE_WORKFLOW: Record<string, WorkflowAction[]> = {
             variant: 'secondary',
             icon: 'clock',
             requiresInput: true,
-            inputLabel: 'New Hearing Date',
-            inputType: 'date',
+            inputLabel: 'New Hearing Date & Time',
+            inputType: 'datetime-local',
             description: "Change the date of the hearing if one or both parties cannot attend."
         },
         {

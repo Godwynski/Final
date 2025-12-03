@@ -1,23 +1,26 @@
 'use client'
 
 import { useState } from 'react'
-import { deleteEvidence } from '@/app/dashboard/cases/[id]/actions'
 import Image from 'next/image'
-import ImageLightbox from '@/components/ImageLightbox'
 
-export default function DashboardEvidenceList({ evidence, caseId }: { evidence: any[], caseId: string }) {
+export default function DashboardEvidenceList({
+    evidence,
+    caseId,
+    onViewImage,
+    onDelete
+}: {
+    evidence: any[],
+    caseId: string,
+    onViewImage: (url: string) => void,
+    onDelete?: (id: string) => void
+}) {
     const [deletingId, setDeletingId] = useState<string | null>(null)
-    const [selectedImage, setSelectedImage] = useState<{ src: string, alt: string } | null>(null)
 
-    async function handleDelete(id: string) {
-        if (!confirm('Are you sure you want to delete this evidence? This action cannot be undone.')) return
-
-        setDeletingId(id)
-        const res = await deleteEvidence(caseId, id)
-        setDeletingId(null)
-
-        if (res?.error) {
-            alert(res.error)
+    async function handleDeleteClick(id: string) {
+        if (onDelete) {
+            setDeletingId(id)
+            await onDelete(id)
+            setDeletingId(null)
         }
     }
 
@@ -35,7 +38,7 @@ export default function DashboardEvidenceList({ evidence, caseId }: { evidence: 
                         {e.file_type.startsWith('image/') ? (
                             <div
                                 className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden border dark:border-gray-700 cursor-pointer group-hover:opacity-90 transition-opacity"
-                                onClick={() => setSelectedImage({ src: e.file_path, alt: e.file_name })}
+                                onClick={() => onViewImage(e.file_path)}
                             >
                                 <Image
                                     src={e.file_path}
@@ -73,24 +76,20 @@ export default function DashboardEvidenceList({ evidence, caseId }: { evidence: 
                             {e.description && <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1" title={e.description}>{e.description}</p>}
                         </div>
 
-                        <button
-                            onClick={() => handleDelete(e.id)}
-                            disabled={deletingId === e.id}
-                            className="mt-3 w-full text-xs font-medium text-red-600 hover:text-white dark:text-red-400 dark:hover:text-white border border-red-200 dark:border-red-900 rounded py-1.5 hover:bg-red-600 dark:hover:bg-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {deletingId === e.id ? 'Deleting...' : 'Delete Evidence'}
-                        </button>
+                        {onDelete && (
+                            <button
+                                onClick={() => handleDeleteClick(e.id)}
+                                disabled={deletingId === e.id}
+                                className="mt-3 w-full text-xs font-medium text-red-600 hover:text-white dark:text-red-400 dark:hover:text-white border border-red-200 dark:border-red-900 rounded py-1.5 hover:bg-red-600 dark:hover:bg-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {deletingId === e.id ? 'Deleting...' : 'Delete Evidence'}
+                            </button>
+                        )}
                     </div>
                 ))}
             </div>
 
-            {selectedImage && (
-                <ImageLightbox
-                    src={selectedImage.src}
-                    alt={selectedImage.alt}
-                    onClose={() => setSelectedImage(null)}
-                />
-            )}
+
         </>
     )
 }
