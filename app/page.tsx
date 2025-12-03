@@ -184,7 +184,7 @@ export default function Home() {
 
         {/* 4. STATS SECTION */}
         <section className="bg-blue-900 py-16 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
           <div className="max-w-screen-xl px-4 mx-auto relative z-10">
             <div className="grid gap-8 md:grid-cols-4 text-center">
               <div>

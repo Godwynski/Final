@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { StatusChart, TypeChart, TrendChart } from '@/components/AnalyticsCharts'
+
 import { getFilteredAnalytics, getActionItems, getRecentCases } from './actions'
 import RealtimeListener from '@/components/RealtimeListener'
 import ActionRequired from '@/components/ActionRequired'
@@ -9,6 +9,8 @@ import DashboardControls from '@/components/dashboard/DashboardControls'
 import StatsGrid from '@/components/dashboard/StatsGrid'
 import RecentCasesTable from '@/components/dashboard/RecentCasesTable'
 import DashboardCalendar from '@/components/dashboard/DashboardCalendar'
+
+import DashboardCharts from '@/components/dashboard/DashboardCharts'
 
 export default async function Dashboard(props: { searchParams: Promise<{ range?: string, type?: string, status?: string }> }) {
     const searchParams = await props.searchParams
@@ -70,20 +72,11 @@ export default async function Dashboard(props: { searchParams: Promise<{ range?:
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left Column: Charts & Activity */}
                 <div className="lg:col-span-2 space-y-6">
-                    {/* Charts Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 h-[300px]">
-                            <StatusChart data={statusData} />
-                        </div>
-                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 h-[300px]">
-                            <TypeChart data={typeData} />
-                        </div>
-                    </div>
-
-                    {/* Trend Chart */}
-                    <div className="bg-white border border-gray-200 rounded-xl shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 h-[300px]">
-                        <TrendChart data={trendData} />
-                    </div>
+                    <DashboardCharts
+                        statusData={statusData}
+                        typeData={typeData}
+                        trendData={trendData}
+                    />
 
                     {/* Recent Cases */}
                     <div>

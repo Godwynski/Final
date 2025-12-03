@@ -12,7 +12,7 @@ export async function proxy(request: NextRequest) {
         // Simple IP-based rate limiting
         // Note: In a real edge environment, this memory cache is per-isolate.
         // For distributed rate limiting, use Redis or similar.
-        const ip = request.ip || request.headers.get('x-forwarded-for') || '127.0.0.1'
+        const ip = (request as any).ip || request.headers.get('x-forwarded-for') || '127.0.0.1'
         await rateLimiter.consume(ip)
     } catch {
         return new NextResponse('Too Many Requests', { status: 429 })

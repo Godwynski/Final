@@ -226,29 +226,31 @@ export async function getActionItems() {
     const staleDate = new Date()
     staleDate.setDate(now.getDate() - 15)
 
-    // 1. Stale Cases (New/Under Investigation > 15 days)
-    const { data: staleCases } = await supabase
-        .from('cases')
-        .select('id, case_number, title, status, updated_at')
-        .in('status', ['New', 'Under Investigation'])
-        .lt('updated_at', staleDate.toISOString())
-        .limit(5)
-
-    // 2. Upcoming Hearings (Next 7 days)
     const next7Days = new Date()
     next7Days.setDate(now.getDate() + 7)
 
-    const { data: hearings } = await supabase
-        .from('hearings')
-        .select('*, cases(id, case_number, title)')
-        .gte('hearing_date', now.toISOString())
-        .lte('hearing_date', next7Days.toISOString())
-        .order('hearing_date', { ascending: true })
-        .limit(5)
+    const [staleCasesResult, hearingsResult] = await Promise.all([
+        // 1. Stale Cases (New/Under Investigation > 15 days)
+        supabase
+            .from('cases')
+            .select('id, case_number, title, status, updated_at')
+            .in('status', ['New', 'Under Investigation'])
+            .lt('updated_at', staleDate.toISOString())
+            .limit(5),
+
+        // 2. Upcoming Hearings (Next 7 days)
+        supabase
+            .from('hearings')
+            .select('*, cases(id, case_number, title)')
+            .gte('hearing_date', now.toISOString())
+            .lte('hearing_date', next7Days.toISOString())
+            .order('hearing_date', { ascending: true })
+            .limit(5)
+    ])
 
     return {
-        staleCases: staleCases || [],
-        upcomingHearings: hearings || []
+        staleCases: staleCasesResult.data || [],
+        upcomingHearings: hearingsResult.data || []
     }
 }
 

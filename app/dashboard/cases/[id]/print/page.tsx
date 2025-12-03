@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import PrintButton from '@/components/PrintButton'
 import SummonsForm from '@/components/documents/forms/SummonsForm'
@@ -71,11 +72,6 @@ export default async function PrintDocumentPage(props: { params: Promise<{ id: s
                 />
             )}
 
-            import Link from 'next/link'
-
-            // ... (existing imports)
-
-            // ... (inside component)
 
             {/* Print Controls (Hidden on Print) */}
             <div className="fixed bottom-8 right-8 print:hidden flex gap-4">
