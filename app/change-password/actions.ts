@@ -17,25 +17,25 @@ export async function updatePassword(formData: FormData) {
     const confirmPassword = formData.get('confirm_password') as string
 
     if (password !== confirmPassword) {
-        redirect('/change-password?error=Passwords do not match')
+        return { error: 'Passwords do not match' }
     }
 
     // Validate password strength
     const validation = passwordSchema.safeParse(password)
     if (!validation.success) {
-        redirect(`/change-password?error=${encodeURIComponent(validation.error.issues[0].message)}`)
+        return { error: validation.error.issues[0].message }
     }
 
-    const supabaseAdmin = createAdminClient()
-
-    // Update password
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+    // Update password using the current user's session to maintain it
+    const { error: updateError } = await supabase.auth.updateUser({
         password: password
     })
 
     if (updateError) {
-        redirect(`/change-password?error=${encodeURIComponent(updateError.message)}`)
+        return { error: updateError.message }
     }
+
+    const supabaseAdmin = createAdminClient()
 
     // Update force_password_change flag
     const { error: profileError } = await supabaseAdmin
@@ -45,6 +45,7 @@ export async function updatePassword(formData: FormData) {
 
     if (profileError) {
         // We still redirect to dashboard as password was changed, but log the error
+        console.error('Error updating profile flag:', profileError)
     }
 
     redirect('/dashboard?message=Password updated successfully')

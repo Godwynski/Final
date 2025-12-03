@@ -30,7 +30,7 @@ export async function createUser(formData: FormData) {
     })
 
     if (error) {
-        redirect(`/dashboard/admin?error=${encodeURIComponent(error.message)}`)
+        return { error: error.message }
     }
 
     if (newUser.user) {
@@ -50,6 +50,7 @@ export async function createUser(formData: FormData) {
     }
 
     revalidatePath('/dashboard/admin')
+    return { success: true, message: 'User created successfully.' }
 }
 
 export async function deleteUser(formData: FormData) {

@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { updateProfile, changePassword, updateSettings } from './actions'
 import { createClient } from '@/utils/supabase/client'
+import { toast } from 'sonner'
+import { PasswordRequirements } from '@/components/PasswordRequirements'
 
 type User = {
     email: string
@@ -10,11 +12,19 @@ type User = {
     role: string
 }
 
+
+
 export default function SettingsClient({ user, settings }: { user: User, settings: any }) {
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
+    const [password, setPassword] = useState('')
     const supabase = createClient()
+
+    // Reset password state when modal closes
+    useEffect(() => {
+        if (!isPasswordModalOpen) setPassword('')
+    }, [isPasswordModalOpen])
 
     return (
         <div className="space-y-6">
@@ -382,8 +392,13 @@ export default function SettingsClient({ user, settings }: { user: User, setting
                             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Change Password</h3>
                         </div>
                         <form action={async (formData) => {
-                            await changePassword(formData)
-                            setIsPasswordModalOpen(false)
+                            const result = await changePassword(formData)
+                            if (result?.error) {
+                                toast.error(result.error)
+                            } else {
+                                toast.success('Password changed successfully')
+                                setIsPasswordModalOpen(false)
+                            }
                         }} className="p-6 space-y-4">
                             <div>
                                 <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Current Password</label>
@@ -400,9 +415,12 @@ export default function SettingsClient({ user, settings }: { user: User, setting
                                     type="password"
                                     name="password"
                                     required
-                                    minLength={6}
+                                    minLength={8}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                     className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                                 />
+                                <PasswordRequirements password={password} />
                             </div>
                             <div>
                                 <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Confirm New Password</label>
@@ -410,7 +428,7 @@ export default function SettingsClient({ user, settings }: { user: User, setting
                                     type="password"
                                     name="confirm_password"
                                     required
-                                    minLength={6}
+                                    minLength={8}
                                     className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                                 />
                             </div>

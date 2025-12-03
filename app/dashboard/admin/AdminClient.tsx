@@ -2,6 +2,7 @@
 
 import { useState, ReactNode } from 'react'
 import { createUser } from './actions'
+import { toast } from 'sonner'
 
 type AdminClientProps = {
     usersTabContent: ReactNode
@@ -22,8 +23,8 @@ export function AdminClient({ usersTabContent, logsTabContent }: AdminClientProp
                     <button
                         onClick={() => setActiveTab('users')}
                         className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'users'
-                                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                             }`}
                     >
                         User Management
@@ -31,8 +32,8 @@ export function AdminClient({ usersTabContent, logsTabContent }: AdminClientProp
                     <button
                         onClick={() => setActiveTab('logs')}
                         className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'logs'
-                                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                             }`}
                     >
                         System Audit Logs
@@ -94,8 +95,13 @@ export function AdminClient({ usersTabContent, logsTabContent }: AdminClientProp
                                 </div>
 
                                 <form action={async (formData) => {
-                                    await createUser(formData)
-                                    setIsModalOpen(false)
+                                    const result = await createUser(formData)
+                                    if (result?.error) {
+                                        toast.error(result.error)
+                                    } else {
+                                        toast.success('User created successfully')
+                                        setIsModalOpen(false)
+                                    }
                                 }} className="space-y-4">
                                     <div>
                                         <label htmlFor="full_name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Full Name</label>

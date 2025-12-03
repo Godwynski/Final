@@ -54,19 +54,24 @@ export async function getFilteredAnalytics(
             break
     }
 
-    const { data: stats, error: statsError } = await supabase.rpc('get_case_stats_dynamic', {
-        p_start_date: startDate?.toISOString() || null,
-        p_end_date: null, // To now
-        p_type: filterType || null,
-        p_status: filterStatus || null
-    })
+    // Parallelize Main Stats and Charts
+    const [statsResult, chartsResult] = await Promise.all([
+        supabase.rpc('get_case_stats_dynamic', {
+            p_start_date: startDate?.toISOString() || null,
+            p_end_date: null, // To now
+            p_type: filterType || null,
+            p_status: filterStatus || null
+        }),
+        supabase.rpc('get_analytics_charts_dynamic', {
+            p_start_date: startDate?.toISOString() || null,
+            p_end_date: null,
+            p_type: filterType || null,
+            p_status: filterStatus || null
+        })
+    ])
 
-    const { data: charts, error: chartsError } = await supabase.rpc('get_analytics_charts_dynamic', {
-        p_start_date: startDate?.toISOString() || null,
-        p_end_date: null,
-        p_type: filterType || null,
-        p_status: filterStatus || null
-    })
+    const { data: stats, error: statsError } = statsResult
+    const { data: charts, error: chartsError } = chartsResult
 
     if (statsError || chartsError || !stats || !charts) {
         console.error('Analytics Error:', JSON.stringify({ statsError, chartsError, stats, charts }, null, 2))
@@ -79,7 +84,7 @@ export async function getFilteredAnalytics(
         }
     }
 
-    // Comparison Logic (Simplified: Fetch previous period stats)
+    // Comparison Logic (Fetch previous period stats)
     let comparison = { total: 0, active: 0, resolved: 0, new: 0 }
 
     if (startDate && prevStartDate) {
@@ -99,6 +104,66 @@ export async function getFilteredAnalytics(
         stats,
         comparison
     }
+}
+
+export async function getRecentCases(
+    range: string = '30d',
+    filterType?: string,
+    filterStatus?: string
+) {
+    const supabase = await createClient()
+
+    let recentCasesQuery = supabase
+        .from('cases')
+        .select('id, case_number, title, status, created_at')
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+    const now = new Date()
+    let startDate = new Date()
+    switch (range) {
+        case 'this_week':
+            const day = now.getDay()
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1) // adjust when day is sunday
+            startDate = new Date(now.setDate(diff))
+            startDate.setHours(0, 0, 0, 0)
+            break
+        case 'this_month':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+            break
+        case 'last_month':
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+            break
+        case 'this_quarter':
+            const quarter = Math.floor((now.getMonth() + 3) / 3)
+            startDate = new Date(now.getFullYear(), (quarter - 1) * 3, 1)
+            break
+        case 'ytd':
+            startDate = new Date(now.getFullYear(), 0, 1)
+            break
+        case '7d':
+            startDate.setDate(now.getDate() - 7)
+            break
+        case '30d':
+            startDate.setDate(now.getDate() - 30)
+            break
+        case 'all':
+            startDate = new Date(0)
+            break
+    }
+
+    if (range !== 'all') {
+        recentCasesQuery = recentCasesQuery.gte('created_at', startDate.toISOString())
+    }
+    if (filterType) {
+        recentCasesQuery = recentCasesQuery.eq('incident_type', filterType)
+    }
+    if (filterStatus) {
+        recentCasesQuery = recentCasesQuery.eq('status', filterStatus)
+    }
+
+    const { data: recentCases } = await recentCasesQuery
+    return recentCases || []
 }
 
 export interface PersonStats {

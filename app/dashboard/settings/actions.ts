@@ -52,13 +52,13 @@ export async function changePassword(formData: FormData) {
     const confirmPassword = formData.get('confirm_password') as string
 
     if (password !== confirmPassword) {
-        redirect('/dashboard/settings?error=Passwords do not match')
+        return { error: 'Passwords do not match' }
     }
 
     // Validate password strength using passwordSchema
     const validation = passwordSchema.safeParse(password)
     if (!validation.success) {
-        redirect(`/dashboard/settings?error=${encodeURIComponent(validation.error.issues[0].message)}`)
+        return { error: validation.error.issues[0].message }
     }
 
     // Verify current password by attempting to sign in
@@ -68,7 +68,7 @@ export async function changePassword(formData: FormData) {
     })
 
     if (signInError) {
-        redirect('/dashboard/settings?error=Incorrect current password')
+        return { error: 'Incorrect current password' }
     }
 
     const supabaseAdmin = createAdminClient()
@@ -78,7 +78,7 @@ export async function changePassword(formData: FormData) {
     })
 
     if (error) {
-        redirect(`/dashboard/settings?error=${encodeURIComponent(error.message)}`)
+        return { error: error.message }
     }
 
     await supabase.from('audit_logs').insert({
@@ -87,7 +87,7 @@ export async function changePassword(formData: FormData) {
         details: {},
     })
 
-    redirect('/dashboard/settings?message=Password changed successfully')
+    return { success: true, message: 'Password changed successfully' }
 }
 
 export async function getSettings() {

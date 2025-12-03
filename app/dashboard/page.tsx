@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { StatusChart, TypeChart, TrendChart } from '@/components/AnalyticsCharts'
-import { getFilteredAnalytics, getActionItems } from './actions'
+import { getFilteredAnalytics, getActionItems, getRecentCases } from './actions'
 import RealtimeListener from '@/components/RealtimeListener'
 import ActionRequired from '@/components/ActionRequired'
 import DashboardHeader from '@/components/dashboard/DashboardHeader'
@@ -32,69 +32,20 @@ export default async function Dashboard(props: { searchParams: Promise<{ range?:
         .eq('id', user.id)
         .single()
 
-    // Fetch filtered analytics
-    const analyticsData = await getFilteredAnalytics(range, filterType, filterStatus)
+    // Fetch filtered analytics and other dashboard data in parallel
+    const [analyticsData, actionItems, recentCases] = await Promise.all([
+        getFilteredAnalytics(range, filterType, filterStatus),
+        getActionItems(),
+        getRecentCases(range, filterType, filterStatus)
+    ])
+
     const { stats, comparison, statusData, typeData, trendData } = analyticsData
-    const { staleCases, upcomingHearings } = await getActionItems()
+    const { staleCases, upcomingHearings } = actionItems
 
     // Calculate percentage change for Total Cases
     const totalChange = comparison.total > 0
         ? ((stats.total - comparison.total) / comparison.total) * 100
         : 0
-
-    // Fetch recent cases (still need this separately or could be part of the same action if optimized)
-    let recentCasesQuery = supabase
-        .from('cases')
-        .select('id, case_number, title, status, created_at')
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-    // Apply same filters to recent cases
-    const now = new Date()
-    let startDate = new Date()
-    switch (range) {
-        case 'this_week':
-            const day = now.getDay()
-            const diff = now.getDate() - day + (day === 0 ? -6 : 1) // adjust when day is sunday
-            startDate = new Date(now.setDate(diff))
-            startDate.setHours(0, 0, 0, 0)
-            break
-        case 'this_month':
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-            break
-        case 'last_month':
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-            const endDate = new Date(now.getFullYear(), now.getMonth(), 0)
-            break
-        case 'this_quarter':
-            const quarter = Math.floor((now.getMonth() + 3) / 3)
-            startDate = new Date(now.getFullYear(), (quarter - 1) * 3, 1)
-            break
-        case 'ytd':
-            startDate = new Date(now.getFullYear(), 0, 1)
-            break
-        case '7d':
-            startDate.setDate(now.getDate() - 7)
-            break
-        case '30d':
-            startDate.setDate(now.getDate() - 30)
-            break
-        case 'all':
-            startDate = new Date(0)
-            break
-    }
-
-    if (range !== 'all') {
-        recentCasesQuery = recentCasesQuery.gte('created_at', startDate.toISOString())
-    }
-    if (filterType) {
-        recentCasesQuery = recentCasesQuery.eq('incident_type', filterType)
-    }
-    if (filterStatus) {
-        recentCasesQuery = recentCasesQuery.eq('status', filterStatus)
-    }
-
-    const { data: recentCases } = await recentCasesQuery
 
     return (
         <div className="p-4 sm:p-6 space-y-6 max-w-[1600px] mx-auto">

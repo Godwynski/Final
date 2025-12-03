@@ -23,7 +23,7 @@ export const CONFIG = {
     },
 
     PASSWORD: {
-        MIN_LENGTH: 12,
+        MIN_LENGTH: 8,
         REQUIRE_UPPERCASE: true,
         REQUIRE_LOWERCASE: true,
         REQUIRE_NUMBER: true,
