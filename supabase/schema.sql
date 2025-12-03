@@ -101,10 +101,10 @@ create table if not exists cases (
   incident_date timestamp with time zone not null,
   incident_location text,
   status case_status default 'New',
-  incident_type incident_type default 'Other', -- From migration 002
-  narrative_facts text, -- From migration 002
-  narrative_action text, -- From migration 002
-  resolution_details jsonb, -- From migration 004
+  incident_type incident_type default 'Other',
+  narrative_facts text,
+  narrative_action text,
+  resolution_details jsonb,
   reported_by uuid references profiles(id),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
@@ -147,7 +147,7 @@ create table if not exists evidence (
 create table if not exists audit_logs (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references profiles(id),
-  case_id uuid references cases(id) on delete set null, -- From migration 003
+  case_id uuid references cases(id) on delete set null,
   action text not null,
   details jsonb,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
@@ -212,27 +212,9 @@ drop policy if exists "Staff/Admin view evidence" on evidence;
 create policy "Staff/Admin view evidence" on evidence for select using (auth.uid() is not null);
 
 drop policy if exists "Staff/Admin upload evidence" on evidence;
-create policy "Staff/Admin upload evidence" on evidence for insert with check (auth.uid() is not null);
-
--- Audit Logs
-alter table audit_logs enable row level security;
-
-drop policy if exists "Admins view audit logs" on audit_logs;
-create policy "Admins view audit logs" on audit_logs for select using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-
--- Only allow service role to insert audit logs (prevents users from spoofing logs)
--- Allow authenticated users to insert into audit_logs if the user_id matches their auth.uid()
-drop policy if exists "System insert audit logs" on audit_logs;
-create policy "Authenticated users can insert audit logs" on audit_logs
+create policy "Staff/Admin upload evidence" on evidence
   for insert to authenticated
-  with check (auth.uid() = user_id);
--- Actually, for server actions using supabase-js with auth context, we might need to allow authenticated inserts
--- BUT we should restrict it. A better approach for "Defense" is to force user_id to match auth.uid()
--- However, the safest for audit logs is to ONLY allow insertion via the Service Role (Admin Client) which bypasses RLS.
--- So we can DROP the insert policy for authenticated users entirely.
--- If we drop it, only service role (bypassing RLS) can insert.
+  with check (auth.uid() = uploaded_by);
 
 -- Notifications
 alter table notifications enable row level security;
@@ -240,10 +222,6 @@ alter table notifications enable row level security;
 drop policy if exists "Users can view own notifications" on notifications;
 create policy "Users can view own notifications" on notifications
   for select using (auth.uid() = user_id);
-
--- Restrict notification creation to Service Role (Admin Client) only
-drop policy if exists "System/Admins can insert notifications" on notifications;
--- No insert policy means only Service Role can insert (bypassing RLS)
 
 drop policy if exists "Users can update own notifications" on notifications;
 create policy "Users can update own notifications" on notifications
@@ -398,23 +376,27 @@ VALUES ('branding', 'branding', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Policy: Allow authenticated users (staff/admin) to upload logos
+drop policy if exists "Allow authenticated uploads" on storage.objects;
 CREATE POLICY "Allow authenticated uploads"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (bucket_id = 'branding');
 
 -- Policy: Allow public view
+drop policy if exists "Allow public view" on storage.objects;
 CREATE POLICY "Allow public view"
 ON storage.objects FOR SELECT
 TO public
 USING (bucket_id = 'branding');
 
 -- Policy: Allow authenticated update
+drop policy if exists "Allow authenticated update" on storage.objects;
 CREATE POLICY "Allow authenticated update"
 ON storage.objects FOR UPDATE
 TO authenticated
 USING (bucket_id = 'branding');
 
+drop policy if exists "Allow authenticated delete" on storage.objects;
 CREATE POLICY "Allow authenticated delete"
 ON storage.objects FOR DELETE
 TO authenticated
@@ -425,86 +407,131 @@ USING (bucket_id = 'branding');
 -- 10. DASHBOARD ANALYTICS FUNCTIONS
 -- ==========================================
 
--- Function to get dashboard counts in a single query
-create or replace function get_dashboard_stats()
-returns json
-language plpgsql
-security definer
-as $$
-declare
+-- 1. Dynamic Case Stats RPC
+CREATE OR REPLACE FUNCTION get_case_stats_dynamic(
+  p_start_date timestamp with time zone DEFAULT NULL,
+  p_end_date timestamp with time zone DEFAULT NULL,
+  p_type text DEFAULT NULL,
+  p_status text DEFAULT NULL
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
   total_count integer;
   active_count integer;
   resolved_count integer;
-  new_this_month_count integer;
-  start_of_month timestamp with time zone;
-begin
-  -- Calculate start of month
-  start_of_month := date_trunc('month', now());
-
-  -- Calculate counts based on RLS (using standard select)
-  -- Note: We use COUNT(*) FILTER (...) to do it in one pass
-  select
+  new_count integer;
+BEGIN
+  SELECT
     count(*),
-    count(*) filter (where status in ('New', 'Under Investigation')),
-    count(*) filter (where status in ('Settled', 'Closed')),
-    count(*) filter (where created_at >= start_of_month)
-  into
+    count(*) FILTER (WHERE status IN ('New', 'Under Investigation')),
+    count(*) FILTER (WHERE status IN ('Settled', 'Closed', 'Dismissed')),
+    count(*) FILTER (WHERE status = 'New')
+  INTO
     total_count,
     active_count,
     resolved_count,
-    new_this_month_count
-  from cases;
+    new_count
+  FROM cases
+  WHERE
+    (p_start_date IS NULL OR created_at >= p_start_date) AND
+    (p_end_date IS NULL OR created_at <= p_end_date) AND
+    (p_type IS NULL OR incident_type::text = p_type) AND
+    (p_status IS NULL OR status::text = p_status);
 
-  return json_build_object(
-    'totalCases', total_count,
-    'activeCases', active_count,
-    'resolvedCases', resolved_count,
-    'newThisMonth', new_this_month_count
+  RETURN json_build_object(
+    'total', total_count,
+    'active', active_count,
+    'resolved', resolved_count,
+    'new', new_count
   );
-end;
+END;
 $$;
 
--- Function to get analytics data (charts) in a single query
-create or replace function get_analytics_summary()
-returns json
-language plpgsql
-security definer
-as $$
-declare
+GRANT EXECUTE ON FUNCTION get_case_stats_dynamic TO authenticated;
+GRANT EXECUTE ON FUNCTION get_case_stats_dynamic TO service_role;
+
+-- 2. Dynamic Charts RPC
+CREATE OR REPLACE FUNCTION get_analytics_charts_dynamic(
+  p_start_date timestamp with time zone DEFAULT NULL,
+  p_end_date timestamp with time zone DEFAULT NULL,
+  p_type text DEFAULT NULL,
+  p_status text DEFAULT NULL
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
   status_data json;
   type_data json;
   trend_data json;
-begin
+BEGIN
   -- Status Distribution
-  select json_agg(t) into status_data from (
-    select status as name, count(*) as value
-    from cases
-    group by status
+  SELECT json_agg(t) INTO status_data FROM (
+    SELECT status as name, count(*) as value
+    FROM cases
+    WHERE
+      (p_start_date IS NULL OR created_at >= p_start_date) AND
+      (p_end_date IS NULL OR created_at <= p_end_date) AND
+      (p_type IS NULL OR incident_type::text = p_type) AND
+      (p_status IS NULL OR status::text = p_status)
+    GROUP BY status
   ) t;
 
   -- Incident Types
-  select json_agg(t) into type_data from (
-    select incident_type as name, count(*) as value
-    from cases
-    group by incident_type
+  SELECT json_agg(t) INTO type_data FROM (
+    SELECT incident_type as name, count(*) as value
+    FROM cases
+    WHERE
+      (p_start_date IS NULL OR created_at >= p_start_date) AND
+      (p_end_date IS NULL OR created_at <= p_end_date) AND
+      (p_type IS NULL OR incident_type::text = p_type) AND
+      (p_status IS NULL OR status::text = p_status)
+    GROUP BY incident_type
   ) t;
 
-  -- Monthly Trends (Last 12 months)
-  select json_agg(t) into trend_data from (
-    select
+  -- Trend Data (Monthly)
+  SELECT json_agg(t) INTO trend_data FROM (
+    SELECT
       to_char(created_at, 'Mon') as name,
       count(*) as cases,
       date_trunc('month', created_at) as m_date
-    from cases
-    where created_at >= date_trunc('month', now() - interval '11 months')
-    group by 1, 3
-    order by 3
+    FROM cases
+    WHERE
+      (p_start_date IS NULL OR created_at >= p_start_date) AND
+      (p_end_date IS NULL OR created_at <= p_end_date) AND
+      (p_type IS NULL OR incident_type::text = p_type) AND
+      (p_status IS NULL OR status::text = p_status)
+    GROUP BY 1, 3
+    ORDER BY 3
   ) t;
 
-  return json_build_object(
+  RETURN json_build_object(
     'statusData', coalesce(status_data, '[]'::json),
     'typeData', coalesce(type_data, '[]'::json),
     'trendData', coalesce(trend_data, '[]'::json)
   );
-end;
+END;
 $$;
+
+GRANT EXECUTE ON FUNCTION get_analytics_charts_dynamic TO authenticated;
+GRANT EXECUTE ON FUNCTION get_analytics_charts_dynamic TO service_role;
+
+-- 3. Party Statistics View
+CREATE OR REPLACE VIEW party_statistics AS
+SELECT
+  name,
+  array_agg(DISTINCT type) as roles,
+  max(contact_number) as contact,
+  count(case_id) as "caseCount",
+  max(created_at) as "lastActive",
+  array_agg(case_id) as "caseIds"
+FROM involved_parties
+GROUP BY name;
+
+-- Grant access to the view
+GRANT SELECT ON party_statistics TO authenticated;
+GRANT SELECT ON party_statistics TO service_role;
