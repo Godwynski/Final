@@ -173,6 +173,6 @@ export async function updateSettings(formData: FormData) {
 
     revalidatePath('/dashboard/settings')
     revalidatePath('/dashboard/cases')
-    revalidateTag('settings')
+    revalidateTag('settings', 'max')
     return { success: true, message: 'System settings updated successfully.' }
 }
