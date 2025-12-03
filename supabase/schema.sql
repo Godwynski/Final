@@ -223,10 +223,11 @@ create policy "Admins view audit logs" on audit_logs for select using (
 );
 
 -- Only allow service role to insert audit logs (prevents users from spoofing logs)
+-- Allow authenticated users to insert into audit_logs if the user_id matches their auth.uid()
 drop policy if exists "System insert audit logs" on audit_logs;
-create policy "System insert audit logs" on audit_logs for insert with check (
-  auth.uid() is null -- Service role usually has no auth.uid() or we rely on bypass
-);
+create policy "Authenticated users can insert audit logs" on audit_logs
+  for insert to authenticated
+  with check (auth.uid() = user_id);
 -- Actually, for server actions using supabase-js with auth context, we might need to allow authenticated inserts
 -- BUT we should restrict it. A better approach for "Defense" is to force user_id to match auth.uid()
 -- However, the safest for audit logs is to ONLY allow insertion via the Service Role (Admin Client) which bypasses RLS.

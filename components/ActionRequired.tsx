@@ -70,7 +70,10 @@ export default function ActionRequired({ staleCases, upcomingHearings }: ActionI
                     {activeTab === 'overview' && (
                         <div className="space-y-3">
                             {upcomingHearings.length > 0 && (
-                                <div className="p-3 rounded-lg bg-purple-50 border border-purple-100 dark:bg-purple-900/10 dark:border-purple-800/50">
+                                <Link
+                                    href={`/dashboard/cases/${upcomingHearings[0].case_id}`}
+                                    className="block p-3 rounded-lg bg-purple-50 border border-purple-100 dark:bg-purple-900/10 dark:border-purple-800/50 hover:bg-purple-100 dark:hover:bg-purple-900/20 transition-colors"
+                                >
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-1.5 text-purple-700 dark:text-purple-300 font-semibold text-sm">
                                             <Calendar className="w-4 h-4" />
@@ -80,19 +83,23 @@ export default function ActionRequired({ staleCases, upcomingHearings }: ActionI
                                             URGENT
                                         </span>
                                     </div>
-                                    <h4 className="font-bold text-gray-900 dark:text-white text-base mb-1">
-                                        {mounted ? new Date(upcomingHearings[0].hearing_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                    <h4 className="font-bold text-gray-900 dark:text-white text-base mb-1 line-clamp-1">
+                                        {upcomingHearings[0].cases?.title || 'Untitled Case'}
                                     </h4>
-                                    <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">
-                                        {mounted ? new Date(upcomingHearings[0].hearing_date).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) : ''}
-                                    </p>
-                                    <button
-                                        onClick={() => setActiveTab('hearings')}
-                                        className="text-xs text-purple-700 dark:text-purple-400 font-medium hover:underline flex items-center gap-1"
-                                    >
-                                        View details <ChevronRight className="w-3 h-3" />
-                                    </button>
-                                </div>
+                                    <div className="flex items-center justify-between mt-2">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                {mounted ? new Date(upcomingHearings[0].hearing_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                            </p>
+                                            <p className="text-xs text-gray-600 dark:text-gray-300">
+                                                {mounted ? new Date(upcomingHearings[0].hearing_date).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) : ''}
+                                            </p>
+                                        </div>
+                                        <span className="text-xs text-purple-700 dark:text-purple-400 font-medium flex items-center gap-1">
+                                            View Case <ChevronRight className="w-3 h-3" />
+                                        </span>
+                                    </div>
+                                </Link>
                             )}
 
                             {staleCases.length > 0 && (
@@ -136,10 +143,10 @@ export default function ActionRequired({ staleCases, upcomingHearings }: ActionI
                                         </div>
                                         <div>
                                             <h5 className="font-semibold text-gray-900 dark:text-white text-sm line-clamp-1">
-                                                {h.hearing_type}
+                                                {h.cases?.title || 'Untitled Case'}
                                             </h5>
                                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                                {new Date(h.hearing_date).toLocaleString()}
+                                                {h.hearing_type} • {new Date(h.hearing_date).toLocaleString()}
                                             </p>
                                             <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-1 font-medium">
                                                 Case #{h.cases?.case_number}
@@ -178,12 +185,11 @@ export default function ActionRequired({ staleCases, upcomingHearings }: ActionI
                                         <span className="hidden sm:inline-block px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
                                             {c.status}
                                         </span>
-                                        <Link
-                                            href={`/dashboard/cases/${c.id}`}
+                                        <span
                                             className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-md border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800 dark:hover:bg-amber-900/50 transition-colors"
                                         >
                                             Review Case #{c.case_number}
-                                        </Link>
+                                        </span>
                                     </div>
                                 </Link>
                             ))}

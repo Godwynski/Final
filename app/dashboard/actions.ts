@@ -11,8 +11,8 @@ export async function getFilteredAnalytics(
 
     // Calculate date range
     const now = new Date()
-    let startDate = new Date()
-    let prevStartDate = new Date()
+    let startDate: Date | null = new Date()
+    let prevStartDate: Date | null = new Date()
 
     switch (range) {
         case 'this_week':
@@ -49,28 +49,27 @@ export async function getFilteredAnalytics(
             prevStartDate.setDate(now.getDate() - 60)
             break
         case 'all':
-            startDate = new Date(0) // Beginning of time
+            startDate = null
+            prevStartDate = null
             break
     }
 
-    // Base query
-    let query = supabase.from('cases').select('id, status, incident_type, created_at')
+    const { data: stats, error: statsError } = await supabase.rpc('get_case_stats_dynamic', {
+        p_start_date: startDate?.toISOString() || null,
+        p_end_date: null, // To now
+        p_type: filterType || null,
+        p_status: filterStatus || null
+    })
 
-    if (range !== 'all') {
-        query = query.gte('created_at', startDate.toISOString())
-    }
+    const { data: charts, error: chartsError } = await supabase.rpc('get_analytics_charts_dynamic', {
+        p_start_date: startDate?.toISOString() || null,
+        p_end_date: null,
+        p_type: filterType || null,
+        p_status: filterStatus || null
+    })
 
-    if (filterType) {
-        query = query.eq('incident_type', filterType)
-    }
-
-    if (filterStatus) {
-        query = query.eq('status', filterStatus)
-    }
-
-    const { data: cases, error } = await query
-
-    if (error || !cases) {
+    if (statsError || chartsError || !stats || !charts) {
+        console.error('Analytics Error:', JSON.stringify({ statsError, chartsError, stats, charts }, null, 2))
         return {
             statusData: [],
             typeData: [],
@@ -80,77 +79,35 @@ export async function getFilteredAnalytics(
         }
     }
 
-    // Process Data for Charts
-    const statusMap = new Map<string, number>()
-    const typeMap = new Map<string, number>()
-    const trendMap = new Map<string, number>()
-
-    let activeCount = 0
-    let resolvedCount = 0
-    let newCount = 0
-
-    cases.forEach(c => {
-        // Status
-        statusMap.set(c.status, (statusMap.get(c.status) || 0) + 1)
-
-        // Type
-        const type = c.incident_type || 'Other'
-        typeMap.set(type, (typeMap.get(type) || 0) + 1)
-
-        // Trend (by Month)
-        const date = new Date(c.created_at)
-        const monthKey = date.toLocaleString('default', { month: 'short' })
-        trendMap.set(monthKey, (trendMap.get(monthKey) || 0) + 1)
-
-        // Counts
-        if (['New', 'Under Investigation'].includes(c.status)) activeCount++
-        if (['Settled', 'Closed', 'Dismissed'].includes(c.status)) resolvedCount++
-        if (c.status === 'New') newCount++
-    })
-
-    // Format for Recharts
-    const statusData = Array.from(statusMap.entries()).map(([name, value]) => ({ name, value }))
-    const typeData = Array.from(typeMap.entries()).map(([name, value]) => ({ name, value }))
-
-    // Sort trend data chronologically (simplified for now, assumes data within a year or sorts by month index)
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    const trendData = Array.from(trendMap.entries())
-        .map(([name, cases]) => ({ name, cases }))
-        .sort((a, b) => months.indexOf(a.name) - months.indexOf(b.name))
-
-    // Comparison Logic (Simplified: Fetch previous period count only for Total Cases for demo)
-    // In a real app, you'd run a second query for the previous period for all metrics
+    // Comparison Logic (Simplified: Fetch previous period stats)
     let comparison = { total: 0, active: 0, resolved: 0, new: 0 }
 
-    if (range !== 'all') {
-        const { data: prevCases } = await supabase
-            .from('cases')
-            .select('status')
-            .gte('created_at', prevStartDate.toISOString())
-            .lt('created_at', startDate.toISOString())
-
-        if (prevCases) {
-            comparison.total = prevCases.length
-            prevCases.forEach(c => {
-                if (['New', 'Under Investigation'].includes(c.status)) comparison.active++
-                if (['Settled', 'Closed', 'Dismissed'].includes(c.status)) comparison.resolved++
-                if (c.status === 'New') comparison.new++
-            })
-        }
+    if (startDate && prevStartDate) {
+        const { data: prevStats } = await supabase.rpc('get_case_stats_dynamic', {
+            p_start_date: prevStartDate.toISOString(),
+            p_end_date: startDate.toISOString(),
+            p_type: filterType || null,
+            p_status: filterStatus || null
+        })
+        if (prevStats) comparison = prevStats
     }
 
     return {
-        statusData,
-        typeData,
-        trendData,
-        stats: {
-            total: cases.length,
-            active: activeCount,
-            resolved: resolvedCount,
-            new: newCount
-        },
+        statusData: charts.statusData,
+        typeData: charts.typeData,
+        trendData: charts.trendData,
+        stats,
         comparison
     }
+}
+
+export interface PersonStats {
+    name: string
+    roles: string[]
+    contact: string | null
+    caseCount: number
+    lastActive: string
+    caseIds: string[]
 }
 
 export async function getPeople(query: string = '', page: number = 1, limit: number = 10, sort: string = 'name', order: string = 'asc') {
@@ -159,71 +116,26 @@ export async function getPeople(query: string = '', page: number = 1, limit: num
     const to = from + limit - 1
 
     let queryBuilder = supabase
-        .from('involved_parties')
-        .select('name, type, contact_number, case_id, created_at')
-        .order('name', { ascending: true }) // Initial fetch order for aggregation
+        .from('party_statistics')
+        .select('*', { count: 'exact' })
+        .order(sort, { ascending: order === 'asc' })
+        .range(from, to)
 
     if (query) {
         queryBuilder = queryBuilder.ilike('name', `%${query}%`)
     }
 
-    const { data: parties, error } = await queryBuilder
+    const { data: people, count, error } = await queryBuilder
 
-    if (error || !parties) return { people: [], total: 0 }
+    if (error || !people) {
+        console.error('getPeople Error:', error)
+        return { people: [], total: 0 }
+    }
 
-    // Aggregate by Name
-    const peopleMap = new Map<string, {
-        name: string,
-        roles: Set<string>,
-        contact: string,
-        caseCount: number,
-        lastActive: string,
-        caseIds: Set<string>
-    }>()
+    // Cast to expected type
+    const typedPeople = people as unknown as PersonStats[]
 
-    parties.forEach(p => {
-        const existing = peopleMap.get(p.name) || {
-            name: p.name,
-            roles: new Set(),
-            contact: p.contact_number || '',
-            caseCount: 0,
-            lastActive: p.created_at,
-            caseIds: new Set()
-        }
-
-        existing.roles.add(p.type)
-        if (p.contact_number) existing.contact = p.contact_number
-        existing.caseCount++
-        if (new Date(p.created_at) > new Date(existing.lastActive)) existing.lastActive = p.created_at
-        existing.caseIds.add(p.case_id)
-
-        peopleMap.set(p.name, existing)
-    })
-
-    const allPeople = Array.from(peopleMap.values()).map(p => ({
-        ...p,
-        roles: Array.from(p.roles),
-        caseIds: Array.from(p.caseIds)
-    }))
-
-    // Sort
-    allPeople.sort((a, b) => {
-        let valA = a[sort as keyof typeof a]
-        let valB = b[sort as keyof typeof b]
-
-        if (typeof valA === 'string') valA = valA.toLowerCase()
-        if (typeof valB === 'string') valB = valB.toLowerCase()
-
-        if (valA < valB) return order === 'asc' ? -1 : 1
-        if (valA > valB) return order === 'asc' ? 1 : -1
-        return 0
-    })
-
-    // Pagination
-    const total = allPeople.length
-    const paginatedPeople = allPeople.slice(from, to + 1)
-
-    return { people: paginatedPeople, total }
+    return { people: typedPeople, total: count || 0 }
 }
 
 export async function getPersonHistory(name: string) {
@@ -257,15 +169,15 @@ export async function getActionItems() {
         .lt('updated_at', staleDate.toISOString())
         .limit(5)
 
-    // 2. Upcoming Hearings (Next 48 hours)
-    const next48Hours = new Date()
-    next48Hours.setHours(now.getHours() + 48)
+    // 2. Upcoming Hearings (Next 7 days)
+    const next7Days = new Date()
+    next7Days.setDate(now.getDate() + 7)
 
     const { data: hearings } = await supabase
         .from('hearings')
         .select('*, cases(id, case_number, title)')
         .gte('hearing_date', now.toISOString())
-        .lte('hearing_date', next48Hours.toISOString())
+        .lte('hearing_date', next7Days.toISOString())
         .order('hearing_date', { ascending: true })
         .limit(5)
 
