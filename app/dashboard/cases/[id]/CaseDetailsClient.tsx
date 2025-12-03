@@ -182,6 +182,7 @@ export default function CaseDetailsClient({
                             <a href={`/dashboard/cases/${caseData.id}/print?form=summons`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Summons</a>
                             <a href={`/dashboard/cases/${caseData.id}/print?form=hearing`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Notice of Hearing</a>
                             <a href={`/dashboard/cases/${caseData.id}/print?form=cfa`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Certificate to File Action</a>
+                            <a href={`/dashboard/cases/${caseData.id}/print?form=referral`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Referral / Endorsement</a>
                         </div>
                     </div>
                     <button
@@ -580,6 +581,10 @@ export default function CaseDetailsClient({
                                     caseId={caseData.id}
                                     onViewImage={(url) => showImage(url, 'Evidence Preview')}
                                     onDelete={async (id) => {
+                                        if (isReadOnly) {
+                                            showAlert('Action Denied', 'Cannot delete evidence in a closed case.', 'error')
+                                            return
+                                        }
                                         showConfirm('Delete Evidence', 'Are you sure you want to delete this evidence? This action cannot be undone.', async () => {
                                             const result = await deleteEvidence(caseData.id, id)
                                             if (result?.error) showAlert('Error', result.error, 'error')
@@ -639,10 +644,15 @@ export default function CaseDetailsClient({
                                                         <a href={`/guest/${link.token}`} target="_blank" className="text-sm text-blue-600 hover:underline dark:text-blue-400">Open</a>
                                                     )}
                                                     <form action={async () => {
+                                                        if (isReadOnly) return;
                                                         const result = await toggleGuestLinkStatus(link.id, link.is_active, caseData.id)
                                                         if (result?.error) showAlert('Error', result.error, 'error')
                                                     }}>
-                                                        <SubmitButton className={`text-xs hover:underline ${link.is_active ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`} loadingText="...">
+                                                        <SubmitButton
+                                                            className={`text-xs hover:underline ${link.is_active ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                            loadingText="..."
+                                                            disabled={isReadOnly}
+                                                        >
                                                             {link.is_active ? 'Close Link' : 'Re-open Link'}
                                                         </SubmitButton>
                                                     </form>
@@ -680,13 +690,18 @@ export default function CaseDetailsClient({
                                                     <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap flex-1">{note.content}</p>
                                                     <button
                                                         onClick={async () => {
+                                                            if (isReadOnly) {
+                                                                showAlert('Action Denied', 'Cannot delete notes in a closed case.', 'error')
+                                                                return
+                                                            }
                                                             showConfirm('Delete Note', 'Are you sure you want to delete this note?', async () => {
                                                                 const result = await deleteCaseNote(caseData.id, note.id)
                                                                 if (result?.error) showAlert('Error', result.error, 'error')
                                                             })
                                                         }}
-                                                        className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 ml-2"
+                                                        className={`opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 ml-2 ${isReadOnly ? 'cursor-not-allowed' : ''}`}
                                                         title="Delete Note"
+                                                        disabled={isReadOnly}
                                                     >
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                                     </button>

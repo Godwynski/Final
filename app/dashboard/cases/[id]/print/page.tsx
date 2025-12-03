@@ -5,6 +5,7 @@ import SummonsForm from '@/components/documents/forms/SummonsForm'
 import NoticeOfHearingForm from '@/components/documents/forms/NoticeOfHearingForm'
 import CertificateToFileActionForm from '@/components/documents/forms/CertificateToFileActionForm'
 import AmicableSettlementForm from '@/components/documents/forms/AmicableSettlementForm'
+import ReferralForm from '@/components/documents/forms/ReferralForm'
 
 export default async function PrintDocumentPage(props: { params: Promise<{ id: string }>, searchParams: Promise<{ form?: string }> }) {
     const params = await props.params
@@ -24,7 +25,7 @@ export default async function PrintDocumentPage(props: { params: Promise<{ id: s
     const respondents = parties?.filter(p => p.type === 'Respondent') || []
 
     return (
-        <div className="bg-gray-100 min-h-screen print:bg-white">
+        <div className="bg-gray-100 min-h-screen print:bg-white print:min-h-0 print:h-auto print:overflow-visible">
             {formType === 'summons' && (
                 <SummonsForm
                     caseData={caseData}
@@ -61,8 +62,29 @@ export default async function PrintDocumentPage(props: { params: Promise<{ id: s
                 />
             )}
 
+            {formType === 'referral' && (
+                <ReferralForm
+                    caseData={caseData}
+                    complainants={complainants}
+                    respondents={respondents}
+                    settings={settings}
+                />
+            )}
+
+            import Link from 'next/link'
+
+            // ... (existing imports)
+
+            // ... (inside component)
+
             {/* Print Controls (Hidden on Print) */}
             <div className="fixed bottom-8 right-8 print:hidden flex gap-4">
+                <Link
+                    href={`/dashboard/cases/${id}`}
+                    className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700"
+                >
+                    Back to Case
+                </Link>
                 <PrintButton />
             </div>
         </div>

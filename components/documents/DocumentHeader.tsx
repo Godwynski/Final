@@ -20,7 +20,7 @@ export default function DocumentHeader({ settings }: DocumentHeaderProps) {
                         className="w-full h-full object-contain"
                     />
                 ) : (
-                    <div className="w-full h-full border border-gray-300 rounded-full flex items-center justify-center bg-gray-50">
+                    <div className="w-full h-full border border-gray-300 flex items-center justify-center bg-gray-50">
                         <span className="text-[10px] text-gray-500 text-center">Barangay Logo</span>
                     </div>
                 )}
@@ -35,7 +35,7 @@ export default function DocumentHeader({ settings }: DocumentHeaderProps) {
                         className="w-full h-full object-contain"
                     />
                 ) : (
-                    <div className="w-full h-full border border-gray-300 rounded-full flex items-center justify-center bg-gray-50">
+                    <div className="w-full h-full border border-gray-300 flex items-center justify-center bg-gray-50">
                         <span className="text-[10px] text-gray-500 text-center">City/Muni Logo</span>
                     </div>
                 )}

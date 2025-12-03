@@ -22,11 +22,11 @@ create policy "Public profiles are viewable by everyone." on profiles
 
 drop policy if exists "Users can insert their own profile." on profiles;
 create policy "Users can insert their own profile." on profiles
-  for insert with check (auth.uid() = id);
+  for insert with check ((select auth.uid()) = id);
 
 drop policy if exists "Users can update own profile." on profiles;
 create policy "Users can update own profile." on profiles
-  for update using (auth.uid() = id);
+  for update using ((select auth.uid()) = id);
 
 -- Function to handle new user signup
 create or replace function public.handle_new_user()
@@ -153,6 +153,25 @@ create table if not exists audit_logs (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- Enable RLS for Audit Logs
+alter table audit_logs enable row level security;
+
+-- Policy: Admins/Staff can view audit logs (or maybe just Admins?)
+-- Let's allow authenticated users to view for now, or restrict to admins.
+-- Given the requirements, let's restrict to Admins for viewing, but allow insertion via service role or functions.
+-- Actually, the app inserts via service role or authenticated user.
+-- Let's allow insert for authenticated users (since they trigger actions) but select only for admins.
+drop policy if exists "Allow insert for authenticated users" on audit_logs;
+drop policy if exists "System insert audit logs" on audit_logs;
+create policy "Allow insert for authenticated users" on audit_logs for insert to authenticated with check ((select auth.uid()) = user_id);
+
+-- Consolidated policy for admin access to audit logs
+drop policy if exists "Allow select for admins" on audit_logs;
+drop policy if exists "Admins view audit logs" on audit_logs;
+create policy "Admins view audit logs" on audit_logs for select using (
+  exists (select 1 from profiles where id = (select auth.uid()) and role = 'admin')
+);
+
 -- Guest Links Table
 create table if not exists guest_links (
   id uuid default gen_random_uuid() primary key,
@@ -164,6 +183,15 @@ create table if not exists guest_links (
   is_active boolean default true,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Enable RLS for Guest Links
+alter table guest_links enable row level security;
+
+-- Policy: Public access via token (handled by function mostly, but maybe direct select needed?)
+-- Actually, get_guest_link_by_token is SECURITY DEFINER, so we might not need public select policy if we only use that.
+-- But let's allow authenticated users to view/manage links.
+drop policy if exists "Allow authenticated to manage guest links" on guest_links;
+create policy "Allow authenticated to manage guest links" on guest_links for all to authenticated using (true);
 
 -- Notifications Table
 create table if not exists notifications (
@@ -188,49 +216,49 @@ drop policy if exists "Staff/Admin view all cases" on cases;
 create policy "Staff/Admin view all cases" on cases for select using (true);
 
 drop policy if exists "Staff/Admin insert cases" on cases;
-create policy "Staff/Admin insert cases" on cases for insert with check (auth.uid() is not null);
+create policy "Staff/Admin insert cases" on cases for insert with check ((select auth.uid()) is not null);
 
 drop policy if exists "Staff/Admin update cases" on cases;
-create policy "Staff/Admin update cases" on cases for update using (auth.uid() is not null);
+create policy "Staff/Admin update cases" on cases for update using ((select auth.uid()) is not null);
 
 -- Involved Parties
 alter table involved_parties enable row level security;
 
 drop policy if exists "Staff/Admin manage parties" on involved_parties;
-create policy "Staff/Admin manage parties" on involved_parties for all using (auth.uid() is not null);
+create policy "Staff/Admin manage parties" on involved_parties for all using ((select auth.uid()) is not null);
 
 -- Notes
 alter table case_notes enable row level security;
 
 drop policy if exists "Staff/Admin manage notes" on case_notes;
-create policy "Staff/Admin manage notes" on case_notes for all using (auth.uid() is not null);
+create policy "Staff/Admin manage notes" on case_notes for all using ((select auth.uid()) is not null);
 
 -- Evidence
 alter table evidence enable row level security;
 
 drop policy if exists "Staff/Admin view evidence" on evidence;
-create policy "Staff/Admin view evidence" on evidence for select using (auth.uid() is not null);
+create policy "Staff/Admin view evidence" on evidence for select using ((select auth.uid()) is not null);
 
 drop policy if exists "Staff/Admin upload evidence" on evidence;
 create policy "Staff/Admin upload evidence" on evidence
   for insert to authenticated
-  with check (auth.uid() = uploaded_by);
+  with check ((select auth.uid()) = uploaded_by);
 
 -- Notifications
 alter table notifications enable row level security;
 
 drop policy if exists "Users can view own notifications" on notifications;
 create policy "Users can view own notifications" on notifications
-  for select using (auth.uid() = user_id);
+  for select using ((select auth.uid()) = user_id);
 
 drop policy if exists "Users can update own notifications" on notifications;
 create policy "Users can update own notifications" on notifications
-  for update using (auth.uid() = user_id);
+  for update using ((select auth.uid()) = user_id);
 
 -- Cases DELETE Policy
 drop policy if exists "Admins delete cases" on cases;
 create policy "Admins delete cases" on cases for delete using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  exists (select 1 from profiles where id = (select auth.uid()) and role = 'admin')
 );
 
 
@@ -242,7 +270,7 @@ create policy "Admins delete cases" on cases for delete using (
 create or replace function get_guest_link_by_token(token_input text)
 returns setof guest_links
 language sql
-security definer
+security definer set search_path = public
 as $$
   select * from guest_links where token = token_input;
 $$;
@@ -337,33 +365,31 @@ CREATE POLICY "Enable delete access for authenticated users" ON hearings
 -- 8. INDEXES
 -- ==========================================
 
--- Cases
-CREATE INDEX IF NOT EXISTS idx_cases_reported_by ON cases(reported_by);
-
--- Involved Parties
-CREATE INDEX IF NOT EXISTS idx_involved_parties_case_id ON involved_parties(case_id);
-
--- Case Notes
-CREATE INDEX IF NOT EXISTS idx_case_notes_case_id ON case_notes(case_id);
-CREATE INDEX IF NOT EXISTS idx_case_notes_created_by ON case_notes(created_by);
-
--- Evidence
-CREATE INDEX IF NOT EXISTS idx_evidence_case_id ON evidence(case_id);
-CREATE INDEX IF NOT EXISTS idx_evidence_uploaded_by ON evidence(uploaded_by);
-
--- Audit Logs
-CREATE INDEX IF NOT EXISTS idx_audit_logs_case_id ON audit_logs(case_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
-
--- Guest Links
-CREATE INDEX IF NOT EXISTS idx_guest_links_case_id ON guest_links(case_id);
-CREATE INDEX IF NOT EXISTS idx_guest_links_created_by ON guest_links(created_by);
-
--- Hearings
-CREATE INDEX IF NOT EXISTS idx_hearings_case_id ON hearings(case_id);
-
 -- Notifications
-CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+-- CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+
+-- Removed redundant indexes on Primary Keys if they existed (Postgres creates them automatically)
+-- The list provided by user mentioned "Unused Index" on tables.
+-- If these are foreign key indexes, they are good for performance.
+-- If they are on columns that are not queried often, we might remove them.
+-- However, reported_by, case_id, user_id are frequently used in joins/filters.
+-- I will keep the foreign key indexes as they are best practice.
+-- I will remove any that are strictly duplicates or not needed.
+-- The user report might be flagging indexes that haven't been hit *yet*.
+-- I'll trust my judgement that FK indexes are needed.
+-- UPDATE: User explicitly requested removal of "Unused Index" warnings.
+-- Commenting out FK indexes to satisfy the linter/advisor, though this may impact performance later.
+-- CREATE INDEX IF NOT EXISTS idx_cases_reported_by ON cases(reported_by);
+-- CREATE INDEX IF NOT EXISTS idx_involved_parties_case_id ON involved_parties(case_id);
+-- CREATE INDEX IF NOT EXISTS idx_case_notes_case_id ON case_notes(case_id);
+-- CREATE INDEX IF NOT EXISTS idx_case_notes_created_by ON case_notes(created_by);
+-- CREATE INDEX IF NOT EXISTS idx_evidence_case_id ON evidence(case_id);
+-- CREATE INDEX IF NOT EXISTS idx_evidence_uploaded_by ON evidence(uploaded_by);
+-- CREATE INDEX IF NOT EXISTS idx_audit_logs_case_id ON audit_logs(case_id);
+-- CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+-- CREATE INDEX IF NOT EXISTS idx_guest_links_case_id ON guest_links(case_id);
+-- CREATE INDEX IF NOT EXISTS idx_guest_links_created_by ON guest_links(created_by);
+-- CREATE INDEX IF NOT EXISTS idx_hearings_case_id ON hearings(case_id);
 
 
 -- ==========================================
@@ -403,8 +429,47 @@ TO authenticated
 USING (bucket_id = 'branding');
 
 
+
 -- ==========================================
 -- 10. DASHBOARD ANALYTICS FUNCTIONS
+-- ==========================================
+
+-- Create a new storage bucket for evidence
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('evidence', 'evidence', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- Policy: Allow authenticated users to upload evidence
+drop policy if exists "Allow authenticated uploads evidence" on storage.objects;
+CREATE POLICY "Allow authenticated uploads evidence"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'evidence');
+
+-- Policy: Allow authenticated users to view evidence
+drop policy if exists "Allow authenticated view evidence" on storage.objects;
+CREATE POLICY "Allow authenticated view evidence"
+ON storage.objects FOR SELECT
+TO authenticated
+USING (bucket_id = 'evidence');
+
+-- Policy: Allow authenticated users to update evidence
+drop policy if exists "Allow authenticated update evidence" on storage.objects;
+CREATE POLICY "Allow authenticated update evidence"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (bucket_id = 'evidence');
+
+-- Policy: Allow authenticated users to delete evidence
+drop policy if exists "Allow authenticated delete evidence" on storage.objects;
+CREATE POLICY "Allow authenticated delete evidence"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (bucket_id = 'evidence');
+
+
+-- ==========================================
+-- 11. DASHBOARD ANALYTICS FUNCTIONS
 -- ==========================================
 
 -- 1. Dynamic Case Stats RPC
@@ -416,7 +481,7 @@ CREATE OR REPLACE FUNCTION get_case_stats_dynamic(
 )
 RETURNS json
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINER set search_path = public
 AS $$
 DECLARE
   total_count integer;
@@ -462,7 +527,7 @@ CREATE OR REPLACE FUNCTION get_analytics_charts_dynamic(
 )
 RETURNS json
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINER set search_path = public
 AS $$
 DECLARE
   status_data json;
@@ -521,7 +586,7 @@ GRANT EXECUTE ON FUNCTION get_analytics_charts_dynamic TO authenticated;
 GRANT EXECUTE ON FUNCTION get_analytics_charts_dynamic TO service_role;
 
 -- 3. Party Statistics View
-CREATE OR REPLACE VIEW party_statistics AS
+CREATE OR REPLACE VIEW party_statistics WITH (security_invoker = true) AS
 SELECT
   name,
   array_agg(DISTINCT type) as roles,
@@ -532,6 +597,118 @@ SELECT
 FROM involved_parties
 GROUP BY name;
 
+
 -- Grant access to the view
-GRANT SELECT ON party_statistics TO authenticated;
 GRANT SELECT ON party_statistics TO service_role;
+
+-- CLEANUP: Drop legacy functions and views that might cause security warnings
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN SELECT oid::regprocedure AS func_signature
+             FROM pg_proc
+             WHERE proname IN ('create_case_with_parties', 'get_analytics_summary', 'get_dashboard_stats')
+             AND pronamespace = 'public'::regnamespace
+    LOOP
+        EXECUTE 'DROP FUNCTION IF EXISTS ' || r.func_signature || ' CASCADE';
+    END LOOP;
+END $$;
+
+DROP VIEW IF EXISTS public.view_involved_parties_summary;
+
+-- 4. Advanced Search RPC
+CREATE OR REPLACE FUNCTION search_cases(
+  p_query text DEFAULT '',
+  p_status text DEFAULT NULL,
+  p_type text DEFAULT NULL,
+  p_start_date timestamp with time zone DEFAULT NULL,
+  p_end_date timestamp with time zone DEFAULT NULL,
+  p_limit integer DEFAULT 10,
+  p_offset integer DEFAULT 0
+)
+RETURNS TABLE (
+  id uuid,
+  case_number integer,
+  title text,
+  status case_status,
+  incident_date timestamp with time zone,
+  created_at timestamp with time zone,
+  incident_type incident_type,
+  incident_location text,
+  match_rank real,
+  full_count bigint
+)
+LANGUAGE plpgsql
+SECURITY DEFINER set search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT DISTINCT
+    c.id,
+    c.case_number,
+    c.title,
+    c.status,
+    c.incident_date,
+    c.created_at,
+    c.incident_type,
+    c.incident_location,
+    ts_rank(
+      setweight(to_tsvector('english', coalesce(c.title, '')), 'A') ||
+      setweight(to_tsvector('english', coalesce(c.incident_location, '')), 'B') ||
+      setweight(to_tsvector('english', coalesce(c.narrative_facts, '')), 'C'),
+      plainto_tsquery('english', p_query)
+    ) as match_rank,
+    count(*) OVER() as full_count
+  FROM cases c
+  LEFT JOIN involved_parties ip ON c.id = ip.case_id
+  WHERE
+    (p_query = '' OR 
+      c.title ILIKE '%' || p_query || '%' OR
+      c.incident_location ILIKE '%' || p_query || '%' OR
+      c.case_number::text ILIKE '%' || p_query || '%' OR
+      ip.name ILIKE '%' || p_query || '%'
+    ) AND
+    (p_status IS NULL OR c.status::text = p_status) AND
+    (p_type IS NULL OR c.incident_type::text = p_type) AND
+    (p_start_date IS NULL OR c.created_at >= p_start_date) AND
+    (p_end_date IS NULL OR c.created_at <= p_end_date)
+  ORDER BY 
+    match_rank DESC,
+    c.created_at DESC
+  LIMIT p_limit
+  OFFSET p_offset;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION search_cases TO authenticated;
+GRANT EXECUTE ON FUNCTION search_cases TO service_role;
+
+
+
+-- ==========================================
+-- 11. BUSINESS LOGIC TRIGGERS
+-- ==========================================
+
+-- Function to close guest links when case is closed
+create or replace function public.close_guest_links_on_case_closure()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if new.status = 'Closed' and old.status != 'Closed' then
+    update public.guest_links
+    set is_active = false
+    where case_id = new.id;
+  end if;
+  return new;
+end;
+$$;
+
+-- Trigger for case closure
+drop trigger if exists on_case_closed on cases;
+create trigger on_case_closed
+  after update on cases
+  for each row
+  execute procedure public.close_guest_links_on_case_closure();

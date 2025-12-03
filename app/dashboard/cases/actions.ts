@@ -115,7 +115,7 @@ export async function createCase(prevState: any, formData: FormData) {
         // Find admins
         const { data: admins } = await supabase
             .from('profiles')
-            .select('id')
+            .select('id, email')
             .eq('role', 'admin')
 
         if (admins && admins.length > 0) {
@@ -127,6 +127,40 @@ export async function createCase(prevState: any, formData: FormData) {
             }))
 
             await supabase.from('notifications').insert(notifications)
+
+            // Send Email to Admins
+            try {
+                const { mailersend } = await import('@/utils/mailersend')
+                const { EmailParams, Sender, Recipient } = await import('mailersend')
+
+                const fromEmail = process.env.MAILERSEND_FROM_EMAIL || 'info@trial-z3m5jgr209zgdpyo.mlsender.net'
+                const fromName = process.env.MAILERSEND_FROM_NAME || 'Blotter System'
+                const sentFrom = new Sender(fromEmail, fromName)
+
+                const recipients = admins
+                    .filter(a => a.email)
+                    .map(a => new Recipient(a.email!, 'Admin'))
+
+                if (recipients.length > 0) {
+                    const emailParams = new EmailParams()
+                        .setFrom(sentFrom)
+                        .setTo(recipients)
+                        .setSubject(`[High Priority] New ${incident_type} Case: ${title}`)
+                        .setHtml(`
+                            <h1>New High Priority Case Reported</h1>
+                            <p><strong>Title:</strong> ${title}</p>
+                            <p><strong>Type:</strong> ${incident_type}</p>
+                            <p><strong>Location:</strong> ${incident_location}</p>
+                            <p><strong>Date:</strong> ${new Date(incident_date).toLocaleDateString()}</p>
+                            <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/cases/${data.id}">View Case</a></p>
+                        `)
+                        .setText(`New High Priority Case Reported\n\nTitle: ${title}\nType: ${incident_type}\nLocation: ${incident_location}\nDate: ${new Date(incident_date).toLocaleDateString()}\n\nView Case: ${process.env.NEXT_PUBLIC_APP_URL}/dashboard/cases/${data.id}`)
+
+                    await mailersend.email.send(emailParams)
+                }
+            } catch (e) {
+                console.error('Failed to send email notification:', e)
+            }
         }
     }
 

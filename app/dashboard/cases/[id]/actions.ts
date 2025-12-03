@@ -10,6 +10,18 @@ import { generateSecurePIN, canModifyResource } from '@/utils/auth'
 import { CONFIG } from '@/constants/config'
 import { createAdminClient } from '@/utils/supabase/admin'
 
+const TERMINAL_STATUSES = ['Closed', 'Settled', 'Dismissed', 'Referred']
+
+async function isCaseTerminal(supabase: any, caseId: string) {
+    const { data } = await supabase
+        .from('cases')
+        .select('status')
+        .eq('id', caseId)
+        .single()
+
+    return data && TERMINAL_STATUSES.includes(data.status)
+}
+
 export async function updateCaseStatus(caseId: string, formData: FormData) {
     const supabase = await createClient()
     const status = formData.get('status') as string
@@ -96,6 +108,10 @@ export async function emailGuestLink(formData: FormData) {
 export async function addInvolvedParty(caseId: string, formData: FormData) {
     const supabase = await createClient()
 
+    if (await isCaseTerminal(supabase, caseId)) {
+        redirect(`/dashboard/cases/${caseId}?error=Cannot modify a closed or settled case`)
+    }
+
     const name = formData.get('name') as string
     const type = formData.get('type') as string
     const contact_number = formData.get('contact_number') as string
@@ -126,6 +142,17 @@ export async function addInvolvedParty(caseId: string, formData: FormData) {
         redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent(error.message)}`)
     }
 
+    // Audit Log
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+        await supabase.from('audit_logs').insert({
+            user_id: user.id,
+            action: 'Added Party',
+            details: { name, type, case_id: caseId },
+            case_id: caseId
+        })
+    }
+
     revalidatePath(`/dashboard/cases/${caseId}`)
     redirect(`/dashboard/cases/${caseId}?message=Added ${name} as ${type}`)
 }
@@ -133,6 +160,10 @@ export async function addInvolvedParty(caseId: string, formData: FormData) {
 export async function addCaseNote(caseId: string, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
+
+    if (await isCaseTerminal(supabase, caseId)) {
+        return { error: 'Cannot modify a closed or settled case' }
+    }
 
     if (!user) return { error: 'Unauthorized' }
 
@@ -163,6 +194,10 @@ export async function addCaseNote(caseId: string, formData: FormData) {
 export async function deleteCaseNote(caseId: string, noteId: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
+
+    if (await isCaseTerminal(supabase, caseId)) {
+        return { error: 'Cannot modify a closed or settled case' }
+    }
 
     if (!user) return { error: 'Unauthorized' }
 
@@ -198,6 +233,10 @@ export async function deleteCaseNote(caseId: string, noteId: string) {
 export async function generateCaseGuestLink(caseId: string, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
+
+    if (await isCaseTerminal(supabase, caseId)) {
+        return { error: 'Cannot modify a closed or settled case' }
+    }
 
     if (!user) throw new Error('Unauthorized')
 
@@ -239,6 +278,10 @@ export async function generateCaseGuestLink(caseId: string, formData: FormData) 
 export async function toggleGuestLinkStatus(linkId: string, currentStatus: boolean, caseId: string) {
     const supabase = await createClient()
 
+    if (await isCaseTerminal(supabase, caseId)) {
+        return { error: 'Cannot modify a closed or settled case' }
+    }
+
     const { error } = await supabase
         .from('guest_links')
         .update({ is_active: !currentStatus })
@@ -254,6 +297,10 @@ export async function toggleGuestLinkStatus(linkId: string, currentStatus: boole
 
 export async function updateCaseDetails(caseId: string, formData: FormData) {
     const supabase = await createClient()
+
+    if (await isCaseTerminal(supabase, caseId)) {
+        redirect(`/dashboard/cases/${caseId}?error=Cannot modify a closed or settled case`)
+    }
 
     const title = formData.get('title') as string
     const incident_date = formData.get('incident_date') as string
@@ -288,6 +335,17 @@ export async function updateCaseDetails(caseId: string, formData: FormData) {
         redirect(`/dashboard/cases/${caseId}/edit?error=${encodeURIComponent(error.message)}`)
     }
 
+    // Audit Log
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+        await supabase.from('audit_logs').insert({
+            user_id: user.id,
+            action: 'Updated Case Details',
+            details: { title, incident_type },
+            case_id: caseId
+        })
+    }
+
     revalidatePath(`/dashboard/cases/${caseId}`)
     redirect(`/dashboard/cases/${caseId}?message=Case updated successfully`)
 }
@@ -305,12 +363,30 @@ export async function deleteCase(caseId: string) {
         redirect(`/dashboard/cases/${caseId}/edit?error=${encodeURIComponent(error.message)}`)
     }
 
+    // Audit Log (before redirect, user is still logged in)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+        await supabase.from('audit_logs').insert({
+            user_id: user.id,
+            action: 'Deleted Case',
+            details: { case_id: caseId },
+            // case_id is set null on delete, but we log it here. 
+            // Actually, if case is deleted, foreign key might fail if not set null.
+            // Schema says: case_id uuid references cases(id) on delete set null
+            case_id: caseId
+        })
+    }
+
     revalidatePath('/dashboard/cases')
     redirect('/dashboard/cases?message=Case deleted successfully')
 }
 
 export async function updateActionTaken(caseId: string, formData: FormData) {
     const supabase = await createClient()
+
+    if (await isCaseTerminal(supabase, caseId)) {
+        redirect(`/dashboard/cases/${caseId}?error=Cannot modify a closed or settled case`)
+    }
     const narrative_action = formData.get('narrative_action') as string
 
     // Validate input
@@ -350,6 +426,10 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
+
+    if (await isCaseTerminal(supabase, caseId)) {
+        return { error: 'Cannot modify a closed or settled case' }
+    }
 
     const supabaseAdmin = createAdminClient()
 
@@ -406,6 +486,14 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
         return { error: `Database insert failed: ${insertError.message}` }
     }
 
+    // Audit Log
+    await supabase.from('audit_logs').insert({
+        user_id: user.id,
+        action: 'Uploaded Evidence',
+        details: { file_name: file.name, description },
+        case_id: caseId
+    })
+
     revalidatePath(`/dashboard/cases/${caseId}`)
     return { success: true }
 }
@@ -414,6 +502,10 @@ export async function deleteEvidence(caseId: string, evidenceId: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
+
+    if (await isCaseTerminal(supabase, caseId)) {
+        return { error: 'Cannot modify a closed or settled case' }
+    }
 
     const supabaseAdmin = createAdminClient()
 
@@ -455,6 +547,14 @@ export async function deleteEvidence(caseId: string, evidenceId: string) {
     if (deleteError) {
         return { error: `Failed to delete record: ${deleteError.message}` }
     }
+
+    // Audit Log
+    await supabase.from('audit_logs').insert({
+        user_id: user.id,
+        action: 'Deleted Evidence',
+        details: { evidence_id: evidenceId },
+        case_id: caseId
+    })
 
     revalidatePath(`/dashboard/cases/${caseId}`)
     return { success: true }
@@ -664,6 +764,10 @@ export async function performCaseAction(caseId: string, action: string, input?: 
 export async function scheduleHearing(caseId: string, date: string, type: string, notes: string) {
     const supabase = await createClient()
 
+    if (await isCaseTerminal(supabase, caseId)) {
+        return { error: 'Cannot modify a closed or settled case' }
+    }
+
     // 1. Insert Hearing
     const { error } = await supabase.from('hearings').insert({
         case_id: caseId,
@@ -709,6 +813,10 @@ export async function scheduleHearing(caseId: string, date: string, type: string
 export async function updateHearingStatus(hearingId: string, caseId: string, status: string, outcomeNotes: string) {
     const supabase = await createClient()
 
+    if (await isCaseTerminal(supabase, caseId)) {
+        return { error: 'Cannot modify a closed or settled case' }
+    }
+
     // 1. Update Hearing
     const { error } = await supabase.from('hearings').update({
         status: status,
@@ -736,6 +844,10 @@ export async function updateHearingStatus(hearingId: string, caseId: string, sta
 
 export async function deleteHearing(hearingId: string, caseId: string) {
     const supabase = await createClient()
+
+    if (await isCaseTerminal(supabase, caseId)) {
+        return { error: 'Cannot modify a closed or settled case' }
+    }
 
     const { error } = await supabase.from('hearings').delete().eq('id', hearingId)
 

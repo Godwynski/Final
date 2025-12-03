@@ -56,21 +56,27 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
             break
     }
 
-    let queryBuilder = supabase
-        .from('cases')
-        .select('*, involved_parties(name)', { count: 'exact' })
-        .order(sort, { ascending: order === 'asc' })
-        .range(from, to)
+    const { data: casesData, error } = await supabase
+        .rpc('search_cases', {
+            p_query: query,
+            p_status: status || null,
+            p_type: type || null,
+            p_start_date: range !== 'all' ? startDate.toISOString() : null,
+            p_end_date: null,
+            p_limit: limit,
+            p_offset: from
+        })
 
-    if (range !== 'all') {
-        queryBuilder = queryBuilder.gte('created_at', startDate.toISOString())
+    if (error) {
+        console.error('Error fetching cases:', error)
+        console.error('Error details:', JSON.stringify(error, null, 2))
+        console.error('Error message:', error?.message)
+        console.error('Error hint:', error?.hint)
+        console.error('Error details:', error?.details)
     }
 
-    if (status) queryBuilder = queryBuilder.eq('status', status)
-    if (type) queryBuilder = queryBuilder.eq('incident_type', type)
-    if (query) queryBuilder = queryBuilder.ilike('title', `%${query}%`)
-
-    const { data: cases, count } = await queryBuilder
+    const cases = casesData || []
+    const count = cases.length > 0 ? Number(cases[0].full_count) : 0
 
     const totalPages = count ? Math.ceil(count / limit) : 1
     const hasNextPage = page < totalPages
@@ -126,7 +132,7 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
                             </tr>
                         </thead>
                         <tbody>
-                            {(cases || []).map((c) => (
+                            {(cases || []).map((c: any) => (
                                 <tr key={c.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                                     <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                                         #{c.case_number}

@@ -68,16 +68,17 @@ export const CASE_WORKFLOW: Record<string, WorkflowAction[]> = {
             inputType: 'datetime-local',
             description: "Set a date for the mediation/conciliation hearing."
         },
+
         {
-            label: 'Issue Summon',
-            action: 'issue_summon',
-            // Status stays same or maybe we have a 'Summon Issued' status?
-            // For now let's keep it Under Investigation or move to Hearing Scheduled if summon implies hearing.
-            // Let's assume Issue Summon implies a hearing is set or it's just a document generation.
-            // Let's keep status same but log it.
+            label: 'Refer to Police/Agency',
+            action: 'refer_case',
+            nextStatus: 'Referred',
             variant: 'secondary',
-            icon: 'file-text',
-            description: "Generate an official Summon letter ordering the Respondent to appear."
+            icon: 'share',
+            requiresInput: true,
+            inputLabel: 'Referred To (Agency/Office)',
+            inputType: 'text',
+            description: "Transfer this case to the Police, DSWD, or other agencies if it's not within Barangay jurisdiction."
         },
         {
             label: 'Amicable Settlement',

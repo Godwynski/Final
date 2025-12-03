@@ -22,15 +22,28 @@ export default async function GuestPage(props: { params: Promise<{ token: string
     }
 
     const isExpired = new Date(link.expires_at) < new Date()
-    if (isExpired || !link.is_active) {
+    const terminalStatuses = ['Closed', 'Settled', 'Dismissed', 'Referred']
+    const isCaseClosed = terminalStatuses.includes(link.cases.status)
+
+    if (isExpired || !link.is_active || isCaseClosed) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
                 <div className="p-8 text-center bg-white rounded-lg shadow dark:bg-gray-800 max-w-md w-full">
                     <div className="mb-4 text-red-500">
-                        <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        {isCaseClosed ? (
+                            <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        ) : (
+                            <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        )}
                     </div>
-                    <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">Access Expired</h1>
-                    <p className="text-gray-500 dark:text-gray-400 mb-6">This guest link has expired or is no longer active. Please contact the administrator for a new link.</p>
+                    <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
+                        {isCaseClosed ? 'Case Closed' : 'Access Expired'}
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 mb-6">
+                        {isCaseClosed
+                            ? 'This case has been closed or settled. No further evidence can be uploaded.'
+                            : 'This guest link has expired or is no longer active. Please contact the administrator for a new link.'}
+                    </p>
                 </div>
             </div>
         )

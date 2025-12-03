@@ -26,3 +26,19 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media print {
+
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Ensure no scrollbars are printed */
+  * {
+    overflow: visible !important;
+  }
+}
