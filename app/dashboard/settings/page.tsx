@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { getSettings } from './actions'
+import { getCachedProfile } from '../actions'
 import SettingsClient from './SettingsClient'
 
 export default async function SettingsPage(props: { searchParams: Promise<{ error?: string, message?: string }> }) {
@@ -12,12 +13,12 @@ export default async function SettingsPage(props: { searchParams: Promise<{ erro
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return redirect('/login')
 
-    const [profileResult, settings] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).single(),
+    const [profile, settings] = await Promise.all([
+        getCachedProfile(user.id),
         getSettings()
     ])
 
-    const profile = profileResult.data
+
 
     const userData = {
         email: user.email!,

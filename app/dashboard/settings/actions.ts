@@ -3,7 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { passwordSchema } from '@/utils/validation'
 
 export async function updateProfile(formData: FormData) {
@@ -90,17 +90,19 @@ export async function changePassword(formData: FormData) {
     return { success: true, message: 'Password changed successfully' }
 }
 
-export async function getSettings() {
-    const supabase = await createClient()
-    const { data, error } = await supabase.from('barangay_settings').select('*').single()
+export const getSettings = unstable_cache(
+    async () => {
+        const supabase = createAdminClient()
+        const { data, error } = await supabase.from('barangay_settings').select('*').single()
 
-    if (error) {
-        // If table doesn't exist or is empty, return null or default
-        // console.error('Error fetching settings:', error)
-        return null
-    }
-    return data
-}
+        if (error) {
+            return null
+        }
+        return data
+    },
+    ['barangay-settings'],
+    { revalidate: 300, tags: ['settings'] }
+)
 
 export async function updateSettings(formData: FormData) {
     const supabase = await createClient()
@@ -171,5 +173,6 @@ export async function updateSettings(formData: FormData) {
 
     revalidatePath('/dashboard/settings')
     revalidatePath('/dashboard/cases')
+    revalidateTag('settings')
     return { success: true, message: 'System settings updated successfully.' }
 }

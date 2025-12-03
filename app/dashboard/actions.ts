@@ -1,13 +1,21 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { unstable_cache } from 'next/cache'
 
-export async function getFilteredAnalytics(
+export const getFilteredAnalytics = unstable_cache(
+    getFilteredAnalyticsInternal,
+    ['dashboard-analytics'],
+    { revalidate: 60, tags: ['dashboard'] }
+)
+
+async function getFilteredAnalyticsInternal(
     range: string = '30d',
     filterType?: string,
     filterStatus?: string
 ) {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     // Calculate date range
     const now = new Date()
@@ -106,12 +114,18 @@ export async function getFilteredAnalytics(
     }
 }
 
-export async function getRecentCases(
+export const getRecentCases = unstable_cache(
+    getRecentCasesInternal,
+    ['recent-cases'],
+    { revalidate: 30, tags: ['dashboard', 'cases'] }
+)
+
+async function getRecentCasesInternal(
     range: string = '30d',
     filterType?: string,
     filterStatus?: string
 ) {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     let recentCasesQuery = supabase
         .from('cases')
@@ -272,3 +286,30 @@ export async function getMonthlyHearings(year: number, month: number) {
 
     return hearings || []
 }
+
+export const getCachedProfile = unstable_cache(
+    async (userId: string) => {
+        const supabase = createAdminClient()
+        const { data } = await supabase
+            .from('profiles')
+            .select('full_name, role, force_password_change')
+            .eq('id', userId)
+            .single()
+        return data
+    },
+    ['profile'],
+    { revalidate: 300, tags: ['profile'] }
+)
+
+export const getCachedNewCasesCount = unstable_cache(
+    async () => {
+        const supabase = createAdminClient()
+        const { count } = await supabase
+            .from('cases')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'New')
+        return count || 0
+    },
+    ['new-cases-count'],
+    { revalidate: 60, tags: ['cases'] }
+)

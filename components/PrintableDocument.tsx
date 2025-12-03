@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 
 interface PrintableDocumentProps {
     type: string
@@ -75,7 +76,9 @@ export default function PrintableDocument({
                 <div className="flex justify-between items-center mb-8 pt-4">
                     <div className="w-24 h-24 flex items-center justify-center">
                         {settings?.logo_barangay_url ? (
-                            <img src={settings.logo_barangay_url} alt="Barangay Logo" className="w-full h-full object-contain" />
+                            <div className="relative w-full h-full">
+                                <Image src={settings.logo_barangay_url} alt="Barangay Logo" fill className="object-contain" sizes="96px" />
+                            </div>
                         ) : (
                             <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center text-xs text-center text-gray-400">
                                 Brgy Logo
@@ -93,7 +96,9 @@ export default function PrintableDocument({
 
                     <div className="w-24 h-24 flex items-center justify-center">
                         {settings?.logo_city_url ? (
-                            <img src={settings.logo_city_url} alt="City Logo" className="w-full h-full object-contain" />
+                            <div className="relative w-full h-full">
+                                <Image src={settings.logo_city_url} alt="City Logo" fill className="object-contain" sizes="96px" />
+                            </div>
                         ) : (
                             <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center text-xs text-center text-gray-400">
                                 City Logo

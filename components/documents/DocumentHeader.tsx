@@ -1,4 +1,5 @@
 import React from 'react'
+import Image from 'next/image'
 
 interface DocumentHeaderProps {
     settings: any
@@ -14,10 +15,12 @@ export default function DocumentHeader({ settings }: DocumentHeaderProps) {
             {/* Left Logo (Barangay) */}
             <div className="absolute left-0 top-0 w-24 h-24 flex items-center justify-center">
                 {settings?.logo_barangay_url ? (
-                    <img
+                    <Image
                         src={settings.logo_barangay_url}
                         alt="Barangay Logo"
-                        className="w-full h-full object-contain"
+                        fill
+                        sizes="96px"
+                        className="object-contain"
                     />
                 ) : (
                     <div className="w-full h-full border border-gray-300 flex items-center justify-center bg-gray-50">
@@ -29,10 +32,12 @@ export default function DocumentHeader({ settings }: DocumentHeaderProps) {
             {/* Right Logo (City/Muni) */}
             <div className="absolute right-0 top-0 w-24 h-24 flex items-center justify-center">
                 {settings?.logo_city_url ? (
-                    <img
+                    <Image
                         src={settings.logo_city_url}
                         alt="City/Muni Logo"
-                        className="w-full h-full object-contain"
+                        fill
+                        sizes="96px"
+                        className="object-contain"
                     />
                 ) : (
                     <div className="w-full h-full border border-gray-300 flex items-center justify-center bg-gray-50">

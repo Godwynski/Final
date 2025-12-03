@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import Image from 'next/image'
 
 interface ImageLightboxProps {
     src: string
@@ -34,10 +35,12 @@ export default function ImageLightbox({ src, alt, onClose }: ImageLightboxProps)
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
-                <img
+                <Image
                     src={src}
                     alt={alt}
-                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                    fill
+                    sizes="100vw"
+                    className="object-contain rounded-lg shadow-2xl"
                     onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image itself
                 />
             </div>

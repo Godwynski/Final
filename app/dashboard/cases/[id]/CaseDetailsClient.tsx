@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import AlertModal from '@/components/ui/AlertModal'
 import ConfirmModal from '@/components/ui/ConfirmModal'
@@ -216,7 +217,7 @@ export default function CaseDetailsClient({
                 <div className="flex items-center justify-between mb-8 border-b-2 border-black pb-4">
                     <div className="w-24 h-24 flex items-center justify-center border border-gray-300 rounded-full overflow-hidden relative">
                         {settings?.logo_barangay_url ? (
-                            <img src={settings.logo_barangay_url} alt="Barangay Logo" className="w-full h-full object-contain" />
+                            <Image src={settings.logo_barangay_url} alt="Barangay Logo" fill className="object-contain" sizes="96px" />
                         ) : (
                             <span className="text-xs text-center text-gray-500">Barangay Logo</span>
                         )}
@@ -230,7 +231,7 @@ export default function CaseDetailsClient({
                     </div>
                     <div className="w-24 h-24 flex items-center justify-center border border-gray-300 rounded-full overflow-hidden relative">
                         {settings?.logo_city_url ? (
-                            <img src={settings.logo_city_url} alt="City/Muni Logo" className="w-full h-full object-contain" />
+                            <Image src={settings.logo_city_url} alt="City/Muni Logo" fill className="object-contain" sizes="96px" />
                         ) : (
                             <span className="text-xs text-center text-gray-500">City/Muni Logo</span>
                         )}

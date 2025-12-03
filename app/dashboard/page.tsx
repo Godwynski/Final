@@ -7,10 +7,15 @@ import ActionRequired from '@/components/ActionRequired'
 import DashboardHeader from '@/components/dashboard/DashboardHeader'
 import DashboardControls from '@/components/dashboard/DashboardControls'
 import StatsGrid from '@/components/dashboard/StatsGrid'
-import RecentCasesTable from '@/components/dashboard/RecentCasesTable'
 import DashboardCalendar from '@/components/dashboard/DashboardCalendar'
+import dynamic from 'next/dynamic'
 
-import DashboardCharts from '@/components/dashboard/DashboardCharts'
+const DashboardCharts = dynamic(() => import('@/components/dashboard/DashboardCharts'), {
+    loading: () => <div className="h-96 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
+})
+const RecentCasesTable = dynamic(() => import('@/components/dashboard/RecentCasesTable'), {
+    loading: () => <div className="h-96 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
+})
 
 export default async function Dashboard(props: { searchParams: Promise<{ range?: string, type?: string, status?: string }> }) {
     const searchParams = await props.searchParams

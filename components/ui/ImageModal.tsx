@@ -1,5 +1,7 @@
 'use client'
 
+import Image from 'next/image'
+
 interface ImageModalProps {
     isOpen: boolean
     onClose: () => void
@@ -25,10 +27,12 @@ export default function ImageModal({ isOpen, onClose, imageUrl, altText = 'Image
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
-                <img
+                <Image
                     src={imageUrl}
                     alt={altText}
-                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                    fill
+                    sizes="100vw"
+                    className="object-contain rounded-lg shadow-2xl"
                     onClick={(e) => e.stopPropagation()}
                 />
             </div>

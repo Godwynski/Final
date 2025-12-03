@@ -366,30 +366,21 @@ CREATE POLICY "Enable delete access for authenticated users" ON hearings
 -- ==========================================
 
 -- Notifications
--- CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 
--- Removed redundant indexes on Primary Keys if they existed (Postgres creates them automatically)
--- The list provided by user mentioned "Unused Index" on tables.
--- If these are foreign key indexes, they are good for performance.
--- If they are on columns that are not queried often, we might remove them.
--- However, reported_by, case_id, user_id are frequently used in joins/filters.
--- I will keep the foreign key indexes as they are best practice.
--- I will remove any that are strictly duplicates or not needed.
--- The user report might be flagging indexes that haven't been hit *yet*.
--- I'll trust my judgement that FK indexes are needed.
--- UPDATE: User explicitly requested removal of "Unused Index" warnings.
--- Commenting out FK indexes to satisfy the linter/advisor, though this may impact performance later.
--- CREATE INDEX IF NOT EXISTS idx_cases_reported_by ON cases(reported_by);
--- CREATE INDEX IF NOT EXISTS idx_involved_parties_case_id ON involved_parties(case_id);
--- CREATE INDEX IF NOT EXISTS idx_case_notes_case_id ON case_notes(case_id);
--- CREATE INDEX IF NOT EXISTS idx_case_notes_created_by ON case_notes(created_by);
--- CREATE INDEX IF NOT EXISTS idx_evidence_case_id ON evidence(case_id);
--- CREATE INDEX IF NOT EXISTS idx_evidence_uploaded_by ON evidence(uploaded_by);
--- CREATE INDEX IF NOT EXISTS idx_audit_logs_case_id ON audit_logs(case_id);
--- CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
--- CREATE INDEX IF NOT EXISTS idx_guest_links_case_id ON guest_links(case_id);
--- CREATE INDEX IF NOT EXISTS idx_guest_links_created_by ON guest_links(created_by);
--- CREATE INDEX IF NOT EXISTS idx_hearings_case_id ON hearings(case_id);
+-- Performance Indexes
+-- These indexes are critical for dashboard filtering and sorting performance
+CREATE INDEX IF NOT EXISTS idx_cases_reported_by ON cases(reported_by);
+CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status);
+CREATE INDEX IF NOT EXISTS idx_cases_incident_type ON cases(incident_type);
+CREATE INDEX IF NOT EXISTS idx_cases_created_at ON cases(created_at);
+CREATE INDEX IF NOT EXISTS idx_involved_parties_case_id ON involved_parties(case_id);
+CREATE INDEX IF NOT EXISTS idx_case_notes_case_id ON case_notes(case_id);
+CREATE INDEX IF NOT EXISTS idx_evidence_case_id ON evidence(case_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_case_id ON audit_logs(case_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_guest_links_case_id ON guest_links(case_id);
+CREATE INDEX IF NOT EXISTS idx_hearings_case_id ON hearings(case_id);
 
 
 -- ==========================================

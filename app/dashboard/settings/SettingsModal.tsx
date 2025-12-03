@@ -1,5 +1,7 @@
 'use client'
 
+import Image from 'next/image'
+
 import { updateSettings } from './actions'
 import { createClient } from '@/utils/supabase/client'
 
@@ -91,7 +93,7 @@ export default function SettingsModal({ settings, onClose }: SettingsModalProps)
                             <div className="flex items-center gap-4 mb-2">
                                 {settings?.logo_barangay_url && (
                                     <div className="relative w-16 h-16 border rounded-lg overflow-hidden group">
-                                        <img src={settings.logo_barangay_url} alt="Barangay Logo" className="w-full h-full object-contain" />
+                                        <Image src={settings.logo_barangay_url} alt="Barangay Logo" fill className="object-contain" sizes="64px" />
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -121,7 +123,7 @@ export default function SettingsModal({ settings, onClose }: SettingsModalProps)
                             <div className="flex items-center gap-4 mb-2">
                                 {settings?.logo_city_url && (
                                     <div className="relative w-16 h-16 border rounded-lg overflow-hidden group">
-                                        <img src={settings.logo_city_url} alt="City Logo" className="w-full h-full object-contain" />
+                                        <Image src={settings.logo_city_url} alt="City Logo" fill className="object-contain" sizes="64px" />
                                         <button
                                             type="button"
                                             onClick={() => {
