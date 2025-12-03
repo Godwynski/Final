@@ -123,13 +123,20 @@ export async function getFilteredAnalytics(
     let comparison = { total: 0, active: 0, resolved: 0, new: 0 }
 
     if (range !== 'all') {
-        const { count: prevTotal } = await supabase
+        const { data: prevCases } = await supabase
             .from('cases')
-            .select('*', { count: 'exact', head: true })
+            .select('status')
             .gte('created_at', prevStartDate.toISOString())
             .lt('created_at', startDate.toISOString())
 
-        comparison.total = prevTotal || 0
+        if (prevCases) {
+            comparison.total = prevCases.length
+            prevCases.forEach(c => {
+                if (['New', 'Under Investigation'].includes(c.status)) comparison.active++
+                if (['Settled', 'Closed', 'Dismissed'].includes(c.status)) comparison.resolved++
+                if (c.status === 'New') comparison.new++
+            })
+        }
     }
 
     return {
@@ -266,4 +273,23 @@ export async function getActionItems() {
         staleCases: staleCases || [],
         upcomingHearings: hearings || []
     }
+}
+
+export async function getMonthlyHearings(year: number, month: number) {
+    const supabase = await createClient()
+
+    // Start of month
+    const startDate = new Date(year, month, 1)
+    // End of month
+    const endDate = new Date(year, month + 1, 0)
+    endDate.setHours(23, 59, 59, 999)
+
+    const { data: hearings } = await supabase
+        .from('hearings')
+        .select('*, cases(id, case_number, title, status, incident_date)')
+        .gte('hearing_date', startDate.toISOString())
+        .lte('hearing_date', endDate.toISOString())
+        .order('hearing_date', { ascending: true })
+
+    return hearings || []
 }

@@ -33,9 +33,9 @@ export function StatusChart({ data }: ChartProps) {
     }
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 h-full flex flex-col">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Case Status</h3>
-            <div className="flex-1 min-h-[250px]">
+        <div className="h-full flex flex-col">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Case Status</h3>
+            <div className="flex-1 min-h-[200px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                         <Pie
@@ -55,9 +55,15 @@ export function StatusChart({ data }: ChartProps) {
                         </Pie>
                         <Tooltip
                             contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                            itemStyle={{ color: '#374151' }}
+                            itemStyle={{ color: '#374151', fontSize: '12px' }}
                         />
-                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                        <Legend
+                            verticalAlign="bottom"
+                            height={36}
+                            iconType="circle"
+                            iconSize={8}
+                            wrapperStyle={{ fontSize: '12px' }}
+                        />
                     </PieChart>
                 </ResponsiveContainer>
             </div>
@@ -76,14 +82,14 @@ export function TypeChart({ data }: ChartProps) {
     }
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 h-full flex flex-col">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Incident Types</h3>
-            <div className="flex-1 min-h-[300px]">
+        <div className="h-full flex flex-col">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Incident Types</h3>
+            <div className="flex-1 min-h-[200px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                         data={data}
                         layout="vertical"
-                        margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+                        margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
                         onClick={handleClick}
                         className="cursor-pointer"
                     >
@@ -93,15 +99,16 @@ export function TypeChart({ data }: ChartProps) {
                             dataKey="name"
                             type="category"
                             width={100}
-                            tick={{ fill: '#6B7280', fontSize: 12 }}
+                            tick={{ fill: '#6B7280', fontSize: 11 }}
                             axisLine={false}
                             tickLine={false}
                         />
                         <Tooltip
                             cursor={{ fill: 'transparent' }}
                             contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                            itemStyle={{ color: '#374151', fontSize: '12px' }}
                         />
-                        <Bar dataKey="value" name="Cases" fill="#8B5CF6" radius={[0, 4, 4, 0]} barSize={20} className="hover:opacity-80 transition-opacity">
+                        <Bar dataKey="value" name="Cases" fill="#8B5CF6" radius={[0, 4, 4, 0]} barSize={16} className="hover:opacity-80 transition-opacity">
                             {data.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
@@ -115,13 +122,13 @@ export function TypeChart({ data }: ChartProps) {
 
 export function TrendChart({ data }: ChartProps) {
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 h-full flex flex-col">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Monthly Trends</h3>
-            <div className="flex-1 min-h-[300px]">
+        <div className="h-full flex flex-col">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Monthly Trends</h3>
+            <div className="flex-1 min-h-[200px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
                         data={data}
-                        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                     >
                         <defs>
                             <linearGradient id="colorCases" x1="0" y1="0" x2="0" y2="1">
@@ -132,25 +139,26 @@ export function TrendChart({ data }: ChartProps) {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" opacity={0.5} />
                         <XAxis
                             dataKey="name"
-                            tick={{ fill: '#6B7280', fontSize: 12 }}
+                            tick={{ fill: '#6B7280', fontSize: 11 }}
                             axisLine={false}
                             tickLine={false}
                             dy={10}
                         />
                         <YAxis
-                            tick={{ fill: '#6B7280', fontSize: 12 }}
+                            tick={{ fill: '#6B7280', fontSize: 11 }}
                             axisLine={false}
                             tickLine={false}
                         />
                         <Tooltip
                             contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                            itemStyle={{ color: '#374151', fontSize: '12px' }}
                         />
                         <Area
                             type="monotone"
                             dataKey="cases"
                             name="Cases"
                             stroke="#10B981"
-                            strokeWidth={3}
+                            strokeWidth={2}
                             fillOpacity={1}
                             fill="url(#colorCases)"
                         />

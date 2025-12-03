@@ -8,10 +8,11 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader'
 import DashboardControls from '@/components/dashboard/DashboardControls'
 import StatsGrid from '@/components/dashboard/StatsGrid'
 import RecentCasesTable from '@/components/dashboard/RecentCasesTable'
+import DashboardCalendar from '@/components/dashboard/DashboardCalendar'
 
 export default async function Dashboard(props: { searchParams: Promise<{ range?: string, type?: string, status?: string }> }) {
     const searchParams = await props.searchParams
-    const range = searchParams.range || '30d'
+    const range = searchParams.range || 'all'
     const filterType = searchParams.type
     const filterStatus = searchParams.status
 
@@ -46,7 +47,7 @@ export default async function Dashboard(props: { searchParams: Promise<{ range?:
         .from('cases')
         .select('id, case_number, title, status, created_at')
         .order('created_at', { ascending: false })
-        .limit(5)
+        .limit(10)
 
     // Apply same filters to recent cases
     const now = new Date()
@@ -98,11 +99,13 @@ export default async function Dashboard(props: { searchParams: Promise<{ range?:
     return (
         <div className="p-4 sm:p-6 space-y-6 max-w-[1600px] mx-auto">
             <RealtimeListener />
-            <ActionRequired staleCases={staleCases} upcomingHearings={upcomingHearings} />
 
-            <DashboardHeader userProfile={profile} />
-
-            <DashboardControls analyticsData={analyticsData} />
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <DashboardHeader userProfile={profile} />
+                    <DashboardControls analyticsData={analyticsData} />
+                </div>
+            </div>
 
             {/* Print Header (Visible only when printing) */}
             <div className="hidden print:block mb-8">
@@ -112,28 +115,37 @@ export default async function Dashboard(props: { searchParams: Promise<{ range?:
 
             <StatsGrid stats={stats} range={range} totalChange={totalChange} />
 
-            {/* Recent Cases & Status Chart Row */}
+            {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Recent Cases Table - Takes up 2 columns */}
-                <div className="lg:col-span-2">
-                    <RecentCasesTable recentCases={recentCases} />
-                </div>
+                {/* Left Column: Charts & Activity */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Charts Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 h-[300px]">
+                            <StatusChart data={statusData} />
+                        </div>
+                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 h-[300px]">
+                            <TypeChart data={typeData} />
+                        </div>
+                    </div>
 
-                {/* Status Chart - Takes up 1 column */}
-                <div className="lg:col-span-1 print:col-span-1">
-                    <div className="bg-white border border-gray-200 rounded-xl shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 h-full">
-                        <StatusChart data={statusData} />
+                    {/* Trend Chart */}
+                    <div className="bg-white border border-gray-200 rounded-xl shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 h-[300px]">
+                        <TrendChart data={trendData} />
+                    </div>
+
+                    {/* Recent Cases */}
+                    <div>
+                        <RecentCasesTable recentCases={recentCases} />
                     </div>
                 </div>
-            </div>
 
-            {/* Bottom Row: Types and Trends */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-2">
-                <div className="bg-white border border-gray-200 rounded-xl shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4">
-                    <TypeChart data={typeData} />
-                </div>
-                <div className="bg-white border border-gray-200 rounded-xl shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4">
-                    <TrendChart data={trendData} />
+                {/* Right Column: Action Hub */}
+                <div className="lg:col-span-1">
+                    <div className="sticky top-6 space-y-6">
+                        <ActionRequired staleCases={staleCases} upcomingHearings={upcomingHearings} />
+                        <DashboardCalendar />
+                    </div>
                 </div>
             </div>
         </div>
