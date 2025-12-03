@@ -7,6 +7,7 @@ import NoticeOfHearingForm from '@/components/documents/forms/NoticeOfHearingFor
 import CertificateToFileActionForm from '@/components/documents/forms/CertificateToFileActionForm'
 import AmicableSettlementForm from '@/components/documents/forms/AmicableSettlementForm'
 import ReferralForm from '@/components/documents/forms/ReferralForm'
+import AbstractForm from '@/components/documents/forms/AbstractForm'
 
 export default async function PrintDocumentPage(props: { params: Promise<{ id: string }>, searchParams: Promise<{ form?: string }> }) {
     const params = await props.params
@@ -68,6 +69,14 @@ export default async function PrintDocumentPage(props: { params: Promise<{ id: s
                     caseData={caseData}
                     complainants={complainants}
                     respondents={respondents}
+                    settings={settings}
+                />
+            )}
+
+            {formType === 'abstract' && (
+                <AbstractForm
+                    caseData={caseData}
+                    involvedParties={parties || []}
                     settings={settings}
                 />
             )}

@@ -24,6 +24,7 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
     // Calculate Date Range
     const now = new Date()
     let startDate = new Date()
+    let endDate: Date | null = null
 
     switch (range) {
         case 'this_week':
@@ -45,14 +46,18 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
         case 'ytd':
             startDate = new Date(now.getFullYear(), 0, 1)
             break
-        case '7d':
-            startDate.setDate(now.getDate() - 7)
-            break
         case '30d':
             startDate.setDate(now.getDate() - 30)
             break
         case 'all':
             startDate = new Date(0)
+            break
+        default:
+            // Check if range is a year (e.g., "2024")
+            if (/^\d{4}$/.test(range)) {
+                startDate = new Date(parseInt(range), 0, 1)
+                endDate = new Date(parseInt(range), 11, 31, 23, 59, 59)
+            }
             break
     }
 
@@ -62,7 +67,7 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
             p_status: status || null,
             p_type: type || null,
             p_start_date: range !== 'all' ? startDate.toISOString() : null,
-            p_end_date: null,
+            p_end_date: endDate ? endDate.toISOString() : null,
             p_limit: limit,
             p_offset: from
         })

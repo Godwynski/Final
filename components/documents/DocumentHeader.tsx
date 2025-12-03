@@ -42,7 +42,7 @@ export default function DocumentHeader({ settings }: DocumentHeaderProps) {
                 )}
             </div>
 
-            <div className="px-28"> {/* Padding to avoid overlapping logos */}
+            <div className="px-28 outline-none" contentEditable suppressContentEditableWarning> {/* Padding to avoid overlapping logos */}
                 <p className="text-sm font-serif">Republic of the Philippines</p>
                 <p className="text-sm font-serif">Province of {province}</p>
                 <p className="text-sm font-serif">City/Municipality of {city}</p>

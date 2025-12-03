@@ -35,14 +35,16 @@ export default function NoticeOfHearingForm({ caseData, complainants, respondent
             <h1 className="text-2xl font-bold text-center uppercase mb-8 underline">NOTICE OF HEARING</h1>
             <p className="text-center text-sm mb-8 font-bold">(KP Form No. 8)</p>
 
-            <p className="mb-4">TO: <span className="font-bold uppercase">{complainants.map(c => c.name).join(', ')} / {respondents.map(r => r.name).join(', ')}</span></p>
-            <p className="mb-4 text-justify indent-8 leading-relaxed">
-                You are hereby required to appear before me on the
-                <span className="inline-block w-32 border-b border-black mx-1"></span> day of
-                <span className="inline-block w-32 border-b border-black mx-1"></span>, 20__, at
-                <span className="inline-block w-24 border-b border-black mx-1"></span> o'clock in the morning/afternoon,
-                for the hearing of your dispute.
-            </p>
+            <div className="outline-none" contentEditable suppressContentEditableWarning>
+                <p className="mb-4">TO: <span className="font-bold uppercase">{complainants.map(c => c.name).join(', ')} / {respondents.map(r => r.name).join(', ')}</span></p>
+                <p className="mb-4 text-justify indent-8 leading-relaxed">
+                    You are hereby required to appear before me on the
+                    <span className="inline-block w-32 border-b border-black mx-1"></span> day of
+                    <span className="inline-block w-32 border-b border-black mx-1"></span>, 20__, at
+                    <span className="inline-block w-24 border-b border-black mx-1"></span> o'clock in the morning/afternoon,
+                    for the hearing of your dispute.
+                </p>
+            </div>
 
             <DocumentFooter settings={settings} type="captain" />
         </div>

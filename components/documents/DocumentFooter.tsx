@@ -14,7 +14,7 @@ export default function DocumentFooter({ settings, type = 'captain' }: DocumentF
             {type === 'secretary' && (
                 <div className="text-right">
                     <div className="inline-block text-center">
-                        <p className="font-bold uppercase border-t border-black pt-2 px-8">{secretary}</p>
+                        <p className="font-bold uppercase border-t border-black pt-2 px-8 outline-none" contentEditable suppressContentEditableWarning>{secretary}</p>
                         <p className="text-sm">Barangay Secretary</p>
                     </div>
                 </div>
@@ -23,7 +23,7 @@ export default function DocumentFooter({ settings, type = 'captain' }: DocumentF
             {type === 'captain' && (
                 <div className="text-right">
                     <div className="inline-block text-center">
-                        <p className="font-bold uppercase border-t border-black pt-2 px-8">{captain}</p>
+                        <p className="font-bold uppercase border-t border-black pt-2 px-8 outline-none" contentEditable suppressContentEditableWarning>{captain}</p>
                         <p className="text-sm">Punong Barangay / Lupon Chairman</p>
                     </div>
                 </div>
@@ -34,14 +34,14 @@ export default function DocumentFooter({ settings, type = 'captain' }: DocumentF
                     <div className="text-center">
                         <p className="text-sm mb-8">Prepared by:</p>
                         <div className="inline-block text-center">
-                            <p className="font-bold uppercase border-t border-black pt-2 px-8">{secretary}</p>
+                            <p className="font-bold uppercase border-t border-black pt-2 px-8 outline-none" contentEditable suppressContentEditableWarning>{secretary}</p>
                             <p className="text-sm">Barangay Secretary</p>
                         </div>
                     </div>
                     <div className="text-center">
                         <p className="text-sm mb-8">Attested by:</p>
                         <div className="inline-block text-center">
-                            <p className="font-bold uppercase border-t border-black pt-2 px-8">{captain}</p>
+                            <p className="font-bold uppercase border-t border-black pt-2 px-8 outline-none" contentEditable suppressContentEditableWarning>{captain}</p>
                             <p className="text-sm">Punong Barangay / Lupon Chairman</p>
                         </div>
                     </div>

@@ -35,17 +35,19 @@ export default function CertificateToFileActionForm({ caseData, complainants, re
             <h1 className="text-2xl font-bold text-center uppercase mb-8 underline">CERTIFICATE TO FILE ACTION</h1>
             <p className="text-center text-sm mb-8 font-bold">(KP Form No. 20)</p>
 
-            <p className="mb-4 text-justify indent-8 leading-relaxed">
-                This is to certify that a complaint for <span className="font-bold">{caseData.incident_type}</span> was filed
-                by the complainant(s) against the respondent(s) in this office.
-            </p>
-            <p className="mb-4 text-justify indent-8 leading-relaxed">
-                That there has been a personal confrontation between the parties before the Punong Barangay/Pangkat Tagapagkasundo
-                but mediation failed and/or no settlement was reached.
-            </p>
-            <p className="mb-8 text-justify indent-8 leading-relaxed">
-                Therefore, the corresponding complaint for the dispute may now be filed in court/government office.
-            </p>
+            <div className="outline-none" contentEditable suppressContentEditableWarning>
+                <p className="mb-4 text-justify indent-8 leading-relaxed">
+                    This is to certify that a complaint for <span className="font-bold">{caseData.incident_type}</span> was filed
+                    by the complainant(s) against the respondent(s) in this office.
+                </p>
+                <p className="mb-4 text-justify indent-8 leading-relaxed">
+                    That there has been a personal confrontation between the parties before the Punong Barangay/Pangkat Tagapagkasundo
+                    but mediation failed and/or no settlement was reached.
+                </p>
+                <p className="mb-8 text-justify indent-8 leading-relaxed">
+                    Therefore, the corresponding complaint for the dispute may now be filed in court/government office.
+                </p>
+            </div>
 
             <DocumentFooter settings={settings} type="both" />
         </div>

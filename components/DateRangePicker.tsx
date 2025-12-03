@@ -3,14 +3,20 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 
+const currentYear = new Date().getFullYear()
+const years = Array.from({ length: 5 }, (_, i) => ({
+    label: `${currentYear - i}`,
+    value: `${currentYear - i}`
+}))
+
 const ranges = [
     { label: 'This Week', value: 'this_week' },
     { label: 'This Month', value: 'this_month' },
     { label: 'Last Month', value: 'last_month' },
     { label: 'This Quarter', value: 'this_quarter' },
     { label: 'Year to Date', value: 'ytd' },
-    { label: 'Last 7 Days', value: '7d' },
     { label: 'Last 30 Days', value: '30d' },
+    ...years,
     { label: 'All Time', value: 'all' },
 ]
 

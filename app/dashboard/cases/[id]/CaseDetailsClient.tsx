@@ -184,20 +184,11 @@ export default function CaseDetailsClient({
                             <a href={`/dashboard/cases/${caseData.id}/print?form=hearing`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Notice of Hearing</a>
                             <a href={`/dashboard/cases/${caseData.id}/print?form=cfa`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Certificate to File Action</a>
                             <a href={`/dashboard/cases/${caseData.id}/print?form=referral`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Referral / Endorsement</a>
+                            <a href={`/dashboard/cases/${caseData.id}/print?form=abstract`} target="_blank" className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">
+                                Print Abstract
+                            </a>
                         </div>
                     </div>
-                    <button
-                        onClick={(e) => {
-                            e.preventDefault()
-                            window.print()
-                        }}
-                        className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700 inline-flex items-center gap-2"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                        </svg>
-                        Print Abstract
-                    </button>
                     {!isReadOnly && (
                         <Link href={`/dashboard/cases/${caseData.id}/edit`} className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700">
                             Edit Case
@@ -208,131 +199,6 @@ export default function CaseDetailsClient({
                             🔒 Read Only
                         </span>
                     )}
-                </div>
-            </div>
-
-            {/* Printable Abstract (Visible only on print) */}
-            <div className="hidden print:block bg-white text-black p-8 max-w-[210mm] mx-auto">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-8 border-b-2 border-black pb-4">
-                    <div className="w-24 h-24 flex items-center justify-center border border-gray-300 rounded-full overflow-hidden relative">
-                        {settings?.logo_barangay_url ? (
-                            <Image src={settings.logo_barangay_url} alt="Barangay Logo" fill className="object-contain" sizes="96px" />
-                        ) : (
-                            <span className="text-xs text-center text-gray-500">Barangay Logo</span>
-                        )}
-                    </div>
-                    <div className="text-center flex-1">
-                        <h1 className="text-xl font-bold uppercase tracking-wide">Republic of the Philippines</h1>
-                        <p className="text-sm uppercase">Province of {settings?.province || '[Province Name]'}</p>
-                        <p className="text-sm uppercase">City/Municipality of {settings?.city_municipality || '[City Name]'}</p>
-                        <h2 className="text-2xl font-black uppercase mt-2">Barangay {settings?.barangay_name || '[Barangay Name]'}</h2>
-                        <h3 className="text-lg font-bold uppercase mt-4 border-2 border-black inline-block px-4 py-1">Blotter Extract</h3>
-                    </div>
-                    <div className="w-24 h-24 flex items-center justify-center border border-gray-300 rounded-full overflow-hidden relative">
-                        {settings?.logo_city_url ? (
-                            <Image src={settings.logo_city_url} alt="City/Muni Logo" fill className="object-contain" sizes="96px" />
-                        ) : (
-                            <span className="text-xs text-center text-gray-500">City/Muni Logo</span>
-                        )}
-                    </div>
-                </div>
-
-                {/* Case Meta */}
-                <div className="flex justify-between items-end mb-6">
-                    <div>
-                        <p className="text-sm font-bold">Case Number:</p>
-                        <p className="text-xl font-mono border-b border-black">{caseData.case_number}</p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-sm font-bold">Date & Time Reported:</p>
-                        <p className="text-lg border-b border-black">{formattedDate}</p>
-                    </div>
-                </div>
-
-                {/* Main Content Table */}
-                <div className="border-2 border-black">
-                    {/* Row 1: Incident Type & Location */}
-                    <div className="flex border-b border-black">
-                        <div className="w-1/2 p-2 border-r border-black">
-                            <p className="text-xs font-bold uppercase text-gray-600">Nature of Incident</p>
-                            <p className="font-semibold">{caseData.incident_type}</p>
-                        </div>
-                        <div className="w-1/2 p-2">
-                            <p className="text-xs font-bold uppercase text-gray-600">Place of Incident</p>
-                            <p className="font-semibold">{caseData.incident_location}</p>
-                        </div>
-                    </div>
-
-                    {/* Row 2: Title */}
-                    <div className="p-2 border-b border-black">
-                        <p className="text-xs font-bold uppercase text-gray-600">Subject / Title</p>
-                        <p className="font-bold text-lg">{caseData.title}</p>
-                    </div>
-
-                    {/* Row 3: Parties */}
-                    <div className="flex border-b border-black">
-                        <div className="w-1/2 p-2 border-r border-black">
-                            <p className="text-xs font-bold uppercase text-gray-600 mb-1">Complainant(s)</p>
-                            <ul className="list-disc list-inside text-sm">
-                                {involvedParties.filter(p => p.type === 'Complainant').map(p => (
-                                    <li key={p.id}><span className="font-semibold">{p.name}</span> {p.contact_number && <span className="text-xs text-gray-500">({p.contact_number})</span>}</li>
-                                ))}
-                                {involvedParties.filter(p => p.type === 'Complainant').length === 0 && <li className="italic text-gray-500">None listed</li>}
-                            </ul>
-                        </div>
-                        <div className="w-1/2 p-2">
-                            <p className="text-xs font-bold uppercase text-gray-600 mb-1">Respondent(s)</p>
-                            <ul className="list-disc list-inside text-sm">
-                                {involvedParties.filter(p => p.type === 'Respondent').map(p => (
-                                    <li key={p.id}><span className="font-semibold">{p.name}</span></li>
-                                ))}
-                                {involvedParties.filter(p => p.type === 'Respondent').length === 0 && <li className="italic text-gray-500">None listed</li>}
-                            </ul>
-                        </div>
-                    </div>
-
-                    {/* Row 4: Narrative */}
-                    <div className="p-4 border-b border-black min-h-[150px]">
-                        <p className="text-xs font-bold uppercase text-gray-600 mb-2">Narrative of Facts</p>
-                        <p className="text-justify whitespace-pre-wrap leading-snug text-sm">
-                            {caseData.narrative_facts || caseData.description}
-                        </p>
-                    </div>
-
-                    {/* Row 5: Action Taken */}
-                    <div className="p-4 min-h-[100px]">
-                        <p className="text-xs font-bold uppercase text-gray-600 mb-2">Action Taken / Disposition</p>
-                        <p className="text-justify whitespace-pre-wrap leading-snug text-sm">
-                            {caseData.narrative_action || 'No specific action recorded.'}
-                        </p>
-                    </div>
-                </div>
-
-                {/* Status Footer */}
-                <div className="mt-4 mb-12">
-                    <p className="text-sm">Current Status: <span className="font-bold uppercase">{caseData.status}</span></p>
-                </div>
-
-                {/* Signatures */}
-                <div className="grid grid-cols-2 gap-12 mt-12">
-                    <div className="text-center">
-                        <div className="border-b border-black mb-2"></div>
-                        <p className="text-xs font-bold uppercase">Signature of Complainant</p>
-                    </div>
-                    <div className="text-center">
-                        <div className="border-b border-black mb-2"></div>
-                        <p className="text-xs font-bold uppercase">Certified Correct By:</p>
-                        <p className="text-sm font-semibold mt-4">{settings?.barangay_secretary || '[Name of Desk Officer]'}</p>
-                        <p className="text-xs">Barangay Secretary / Desk Officer</p>
-                    </div>
-                </div>
-
-                {/* Footer */}
-                <div className="mt-16 text-center text-[10px] text-gray-500 border-t border-gray-300 pt-2">
-                    <p>This document is a system-generated extract from the Barangay Blotter System.</p>
-                    <p>Generated on: {generatedDate} | Case ID: {caseData.id}</p>
-                    <p>Not valid without the official Barangay Seal.</p>
                 </div>
             </div>
 

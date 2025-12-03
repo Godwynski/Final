@@ -35,20 +35,22 @@ export default function SummonsForm({ caseData, complainants, respondents, setti
             <h1 className="text-2xl font-bold text-center uppercase mb-8 underline">SUMMONS</h1>
             <p className="text-center text-sm mb-8 font-bold">(KP Form No. 9)</p>
 
-            <p className="mb-4">TO: <span className="font-bold uppercase">{respondents.map(r => r.name).join(', ')}</span></p>
-            <p className="mb-4 text-justify indent-8 leading-relaxed">
-                You are hereby summoned to appear before me in person, together with your witnesses, on the
-                <span className="inline-block w-32 border-b border-black mx-1"></span> day of
-                <span className="inline-block w-32 border-b border-black mx-1"></span>, 20__, at
-                <span className="inline-block w-24 border-b border-black mx-1"></span> o'clock in the morning/afternoon,
-                then and there to answer to a complaint made before me, copy of which is attached herewith, for mediation/conciliation of your dispute with complainant/s.
-            </p>
-            <p className="mb-8 text-justify indent-8 leading-relaxed">
-                You are hereby warned that if you refuse or willfully fail to appear in obedience to this summons, you may be barred from filing any counterclaim arising from said complaint.
-            </p>
-            <p className="mb-8 text-justify indent-8 leading-relaxed">
-                FAIL NOT or else face punishment for contempt of court.
-            </p>
+            <div className="outline-none" contentEditable suppressContentEditableWarning>
+                <p className="mb-4">TO: <span className="font-bold uppercase">{respondents.map(r => r.name).join(', ')}</span></p>
+                <p className="mb-4 text-justify indent-8 leading-relaxed">
+                    You are hereby summoned to appear before me in person, together with your witnesses, on the
+                    <span className="inline-block w-32 border-b border-black mx-1"></span> day of
+                    <span className="inline-block w-32 border-b border-black mx-1"></span>, 20__, at
+                    <span className="inline-block w-24 border-b border-black mx-1"></span> o'clock in the morning/afternoon,
+                    then and there to answer to a complaint made before me, copy of which is attached herewith, for mediation/conciliation of your dispute with complainant/s.
+                </p>
+                <p className="mb-8 text-justify indent-8 leading-relaxed">
+                    You are hereby warned that if you refuse or willfully fail to appear in obedience to this summons, you may be barred from filing any counterclaim arising from said complaint.
+                </p>
+                <p className="mb-8 text-justify indent-8 leading-relaxed">
+                    FAIL NOT or else face punishment for contempt of court.
+                </p>
+            </div>
 
             <DocumentFooter settings={settings} type="captain" />
         </div>
