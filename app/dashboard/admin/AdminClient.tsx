@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, ReactNode } from 'react'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { createUser } from './actions'
 import { toast } from 'sonner'
 
@@ -10,35 +11,28 @@ type AdminClientProps = {
 }
 
 export function AdminClient({ usersTabContent, logsTabContent }: AdminClientProps) {
-    const [activeTab, setActiveTab] = useState<'users' | 'logs'>('users')
+    const searchParams = useSearchParams()
+    const router = useRouter()
+    const pathname = usePathname()
     const [isModalOpen, setIsModalOpen] = useState(false)
+
+    const activeTab = searchParams.get('tab') === 'logs' ? 'logs' : 'users'
+
+    const handleTabChange = (tab: 'users' | 'logs') => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('tab', tab)
+        // Reset page when switching tabs
+        params.delete('page')
+        router.push(`${pathname}?${params.toString()}`)
+    }
 
     return (
         <div className="space-y-6">
             {/* Header Actions */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200 dark:border-gray-700 pb-4">
 
-                {/* Tabs */}
-                <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-                    <button
-                        onClick={() => setActiveTab('users')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'users'
-                            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                            }`}
-                    >
-                        User Management
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('logs')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'logs'
-                            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                            }`}
-                    >
-                        System Audit Logs
-                    </button>
-                </div>
+                {/* Tabs - Removed as per new sidebar navigation */}
+                <div className="hidden"></div>
 
                 {/* Create User Button (Only visible on Users tab) */}
                 {activeTab === 'users' && (

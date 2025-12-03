@@ -5,6 +5,7 @@ import { Suspense } from 'react'
 import UsersTable from './UsersTable'
 import AuditLogsTable from './AuditLogsTable'
 import TableSkeleton from './TableSkeleton'
+import { getCachedProfile } from '../actions'
 
 export default async function AdminPage(props: { searchParams: Promise<{ error?: string, message?: string, page?: string, sort?: string, order?: string }> }) {
     const searchParams = await props.searchParams
@@ -20,11 +21,7 @@ export default async function AdminPage(props: { searchParams: Promise<{ error?:
     if (!user) return redirect('/login')
 
     // Verify Admin Role
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
+    const profile = await getCachedProfile(user.id)
 
     if (profile?.role !== 'admin') {
         return (
@@ -42,7 +39,7 @@ export default async function AdminPage(props: { searchParams: Promise<{ error?:
     }
 
     return (
-        <div className="p-4 md:p-6">
+        <div className="p-4 md:p-6 max-w-7xl mx-auto">
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row items-start md:items-center gap-4 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">

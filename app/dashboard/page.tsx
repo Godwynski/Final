@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 
-import { getFilteredAnalytics, getActionItems, getRecentCases } from './actions'
+import { getFilteredAnalytics, getActionItems, getRecentCases, getCachedProfile } from './actions'
 import RealtimeListener from '@/components/RealtimeListener'
 import ActionRequired from '@/components/ActionRequired'
 import DashboardHeader from '@/components/dashboard/DashboardHeader'
@@ -33,11 +33,11 @@ export default async function Dashboard(props: { searchParams: Promise<{ range?:
         return redirect('/login')
     }
 
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
+    const cachedProfile = await getCachedProfile(user.id)
+    const profile = {
+        full_name: cachedProfile?.full_name || null,
+        email: user.email!
+    }
 
     // Fetch filtered analytics and other dashboard data in parallel
     const [analyticsData, actionItems, recentCases] = await Promise.all([
