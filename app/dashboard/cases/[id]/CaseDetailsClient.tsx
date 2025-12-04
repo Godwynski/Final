@@ -17,6 +17,7 @@ import CaseActionHeader from '@/components/CaseActionHeader'
 import CaseTimeline from '@/components/CaseTimeline'
 import ResolutionBanner from '@/components/ResolutionBanner'
 import ProceedingsTracker from '@/components/ProceedingsTracker'
+import { CONFIG } from '@/constants/config'
 
 type Tab = 'overview' | 'parties' | 'evidence' | 'notes' | 'activity'
 
@@ -58,6 +59,11 @@ export default function CaseDetailsClient({
 
     // Determine if case is in a read-only state
     const isReadOnly = ['Dismissed', 'Referred', 'Settled', 'Closed'].includes(caseData.status)
+
+    // Count only image evidence for photo limit
+    const imageCount = evidence.filter(e =>
+        CONFIG.FILE_UPLOAD.ALLOWED_IMAGE_TYPES.includes(e.file_type as any)
+    ).length
 
     const [formattedDate, setFormattedDate] = useState<string>('')
     const [origin, setOrigin] = useState<string>('')
@@ -465,7 +471,7 @@ export default function CaseDetailsClient({
                                         <p className="text-sm text-gray-500 italic">Case is closed. Re-open to upload evidence.</p>
                                     ) : (
                                         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
-                                            <DashboardEvidenceUploadForm caseId={caseData.id} />
+                                            <DashboardEvidenceUploadForm caseId={caseData.id} currentPhotoCount={imageCount} />
                                         </div>
                                     )}
                                 </div>

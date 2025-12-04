@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import PinEntryForm from './pin-form'
 import GuestUploadForm from './GuestUploadForm'
 import GuestEvidenceList from './GuestEvidenceList'
+import { CONFIG } from '@/constants/config'
 
 export default async function GuestPage(props: { params: Promise<{ token: string }> }) {
     const params = await props.params
@@ -63,6 +64,11 @@ export default async function GuestPage(props: { params: Promise<{ token: string
         .select('*')
         .eq('case_id', link.case_id)
         .order('created_at', { ascending: false })
+
+    // Count only image evidence for photo limit
+    const imageCount = evidence?.filter(e =>
+        CONFIG.FILE_UPLOAD.ALLOWED_IMAGE_TYPES.includes(e.file_type as any)
+    ).length || 0
 
     const caseData = link.cases
 
@@ -124,7 +130,7 @@ export default async function GuestPage(props: { params: Promise<{ token: string
                                 </p>
                             </div>
                             <div className="p-6">
-                                <GuestUploadForm token={token} />
+                                <GuestUploadForm token={token} currentPhotoCount={imageCount} />
                             </div>
                         </div>
                     </div>

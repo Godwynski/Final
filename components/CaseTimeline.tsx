@@ -70,12 +70,36 @@ export default function CaseTimeline({
             if (log.action === 'Created Case') return;
 
             let description = '';
+            let metadata: any = undefined;
+
             if (log.details?.narrative_action) {
                 description = log.details.narrative_action;
             } else if (log.details?.new_status) {
                 description = `Status changed from ${log.details.old_status} to ${log.details.new_status}`;
+            } else if (log.action === 'Deleted Evidence' && log.details?.file_name) {
+                // Handle evidence deletion
+                description = `Deleted file: ${log.details.file_name}`;
+            } else if (log.details?.file_name) {
+                // Handle evidence upload details (both guest and staff)
+                description = `File: ${log.details.file_name}${log.details.description ? ` - ${log.details.description}` : ''}`;
+                // Add file_path to metadata if available so View Attachment link appears
+                if (log.details.file_path) {
+                    metadata = { url: log.details.file_path };
+                }
+            } else if (log.details?.name && log.details?.type) {
+                // Handle party addition
+                description = `Added ${log.details.name} as ${log.details.type}`;
+            } else if (log.details) {
+                // For other details, create a more readable format
+                const entries = Object.entries(log.details)
+                    .filter(([key, value]) => value !== null && value !== undefined && key !== 'case_id')
+                    .map(([key, value]) => {
+                        const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        return `${label}: ${value}`;
+                    });
+                description = entries.length > 0 ? entries.join(', ') : 'Action performed';
             } else {
-                description = JSON.stringify(log.details);
+                description = 'Action performed';
             }
 
             list.push({
@@ -84,7 +108,8 @@ export default function CaseTimeline({
                 date: new Date(log.created_at),
                 title: log.action,
                 description: description,
-                user: log.profiles?.full_name || log.profiles?.email || 'System'
+                user: log.profiles?.full_name || log.profiles?.email || 'System',
+                metadata: metadata
             })
         })
 

@@ -2,11 +2,15 @@
 
 import { useState } from 'react'
 import { uploadEvidence } from '@/app/dashboard/cases/[id]/actions'
+import UploadLimitInfo from '@/components/UploadLimitInfo'
+import { CONFIG } from '@/constants/config'
 
-export default function DashboardEvidenceUploadForm({ caseId }: { caseId: string }) {
+export default function DashboardEvidenceUploadForm({ caseId, currentPhotoCount }: { caseId: string, currentPhotoCount: number }) {
     const [isLoading, setIsLoading] = useState(false)
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
+
+    const isAtLimit = currentPhotoCount >= CONFIG.FILE_UPLOAD.STAFF_MAX_PHOTOS_PER_CASE
 
     async function handleSubmit(formData: FormData) {
         setIsLoading(true)
@@ -27,39 +31,52 @@ export default function DashboardEvidenceUploadForm({ caseId }: { caseId: string
     }
 
     return (
-        <form id="dashboard-upload-form" action={handleSubmit} className="space-y-4">
-            <div>
-                <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white" htmlFor="dashboard_file_input">Upload Evidence (Images)</label>
-                <input
-                    name="file"
-                    accept="image/*"
-                    className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-white dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
-                    id="dashboard_file_input"
-                    type="file"
-                    required
-                />
-            </div>
-            <div>
-                <label htmlFor="dashboard_description" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Description</label>
-                <textarea
-                    name="description"
-                    id="dashboard_description"
-                    rows={2}
-                    className="block p-2.5 w-full text-sm text-gray-900 bg-white rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                    placeholder="Describe this evidence..."
-                ></textarea>
-            </div>
+        <div className="space-y-4">
+            {/* Upload Limits Info */}
+            <UploadLimitInfo
+                currentCount={currentPhotoCount}
+                maxCount={CONFIG.FILE_UPLOAD.STAFF_MAX_PHOTOS_PER_CASE}
+                maxSizeMB={CONFIG.FILE_UPLOAD.MAX_SIZE_MB}
+                userType="staff"
+            />
 
-            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-            {message && <p className="text-sm text-green-600 dark:text-green-400">{message}</p>}
+            <form id="dashboard-upload-form" action={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white" htmlFor="dashboard_file_input">Upload Evidence (Images)</label>
+                    <input
+                        name="file"
+                        accept="image/*"
+                        className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-white dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
+                        id="dashboard_file_input"
+                        type="file"
+                        required
+                        disabled={isAtLimit}
+                    />
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-300">SVG, PNG, JPG or GIF (MAX. {CONFIG.FILE_UPLOAD.MAX_SIZE_MB}MB)</p>
+                </div>
+                <div>
+                    <label htmlFor="dashboard_description" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Description</label>
+                    <textarea
+                        name="description"
+                        id="dashboard_description"
+                        rows={2}
+                        className="block p-2.5 w-full text-sm text-gray-900 bg-white rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                        placeholder="Describe this evidence..."
+                        disabled={isAtLimit}
+                    ></textarea>
+                </div>
 
-            <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 disabled:opacity-50"
-            >
-                {isLoading ? 'Uploading...' : 'Upload Evidence'}
-            </button>
-        </form>
+                {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+                {message && <p className="text-sm text-green-600 dark:text-green-400">{message}</p>}
+
+                <button
+                    type="submit"
+                    disabled={isLoading || isAtLimit}
+                    className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isAtLimit ? 'Upload Limit Reached' : isLoading ? 'Uploading...' : 'Upload Evidence'}
+                </button>
+            </form>
+        </div>
     )
 }

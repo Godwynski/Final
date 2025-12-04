@@ -57,9 +57,20 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
         return { error: 'No file uploaded.' }
     }
 
-    // Validate file size
-    if (file.size > CONFIG.FILE_UPLOAD.MAX_SIZE) {
-        return { error: `File size must be less than ${CONFIG.FILE_UPLOAD.MAX_SIZE_MB}MB` }
+    // Check photo count limit for guests
+    const { count: photoCount } = await supabaseAdmin
+        .from('evidence')
+        .select('id', { count: 'exact', head: true })
+        .eq('case_id', caseId)
+        .in('file_type', CONFIG.FILE_UPLOAD.ALLOWED_IMAGE_TYPES)
+
+    if (photoCount && photoCount >= CONFIG.FILE_UPLOAD.GUEST_MAX_PHOTOS_PER_CASE) {
+        return { error: `Guest upload limit reached. Maximum ${CONFIG.FILE_UPLOAD.GUEST_MAX_PHOTOS_PER_CASE} photos allowed per case.` }
+    }
+
+    // Validate file size (Guest limit: 5MB)
+    if (file.size > CONFIG.FILE_UPLOAD.GUEST_MAX_SIZE) {
+        return { error: `File size must be less than ${CONFIG.FILE_UPLOAD.GUEST_MAX_SIZE_MB}MB for guest uploads` }
     }
 
     // Validate file type
@@ -109,8 +120,15 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
     // Log action (System)
     await supabaseAdmin.from('audit_logs').insert({
         action: 'Guest Upload',
-        details: { case_id: caseId, token_id: links.id, file_name: file.name },
+        details: {
+            case_id: caseId,
+            token_id: links.id,
+            file_name: file.name,
+            file_path: publicUrl,
+            description: description
+        },
     })
+
 
     // Notify the creator of the link
     await supabaseAdmin.from('notifications').insert({

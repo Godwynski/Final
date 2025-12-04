@@ -102,7 +102,7 @@ export async function emailGuestLink(formData: FormData) {
         redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent('Failed to send email: ' + (error.message || error))}`)
     }
 
-    redirect(`/dashboard/cases/${caseId}?message=Email sent to ${email}`)
+    redirect(`/dashboard/cases/${caseId}?tab=evidence&message=Email sent to ${email}`)
 }
 
 export async function addInvolvedParty(caseId: string, formData: FormData) {
@@ -438,6 +438,17 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
 
     if (!file) return { error: 'No file uploaded' }
 
+    // Check photo count limit for staff/admin
+    const { count: photoCount } = await supabaseAdmin
+        .from('evidence')
+        .select('id', { count: 'exact', head: true })
+        .eq('case_id', caseId)
+        .in('file_type', CONFIG.FILE_UPLOAD.ALLOWED_IMAGE_TYPES)
+
+    if (photoCount && photoCount >= CONFIG.FILE_UPLOAD.STAFF_MAX_PHOTOS_PER_CASE) {
+        return { error: `Upload limit reached. Maximum ${CONFIG.FILE_UPLOAD.STAFF_MAX_PHOTOS_PER_CASE} photos allowed per case.` }
+    }
+
     // Validate file size
     if (file.size > CONFIG.FILE_UPLOAD.MAX_SIZE) {
         return { error: `File size must be less than ${CONFIG.FILE_UPLOAD.MAX_SIZE_MB}MB` }
@@ -490,9 +501,14 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
     await supabase.from('audit_logs').insert({
         user_id: user.id,
         action: 'Uploaded Evidence',
-        details: { file_name: file.name, description },
+        details: {
+            file_name: file.name,
+            file_path: publicUrl,
+            description
+        },
         case_id: caseId
     })
+
 
     revalidatePath(`/dashboard/cases/${caseId}`)
     return { success: true }
@@ -552,9 +568,13 @@ export async function deleteEvidence(caseId: string, evidenceId: string) {
     await supabase.from('audit_logs').insert({
         user_id: user.id,
         action: 'Deleted Evidence',
-        details: { evidence_id: evidenceId },
+        details: {
+            evidence_id: evidenceId,
+            file_name: evidence.file_name
+        },
         case_id: caseId
     })
+
 
     revalidatePath(`/dashboard/cases/${caseId}`)
     return { success: true }

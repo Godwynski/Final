@@ -7,6 +7,10 @@ export const CONFIG = {
     FILE_UPLOAD: {
         MAX_SIZE: 10 * 1024 * 1024, // 10MB in bytes
         MAX_SIZE_MB: 10,
+        GUEST_MAX_SIZE: 5 * 1024 * 1024, // 5MB in bytes for guests
+        GUEST_MAX_SIZE_MB: 5,
+        GUEST_MAX_PHOTOS_PER_CASE: 5, // Maximum photos a guest can upload per case
+        STAFF_MAX_PHOTOS_PER_CASE: 20, // Maximum photos staff/admin can upload per case
         ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'] as const,
         ALLOWED_DOCUMENT_TYPES: ['application/pdf'] as const,
         get ALLOWED_TYPES() {
