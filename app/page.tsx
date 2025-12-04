@@ -38,7 +38,7 @@ export default function Home() {
             <div className="mr-auto place-self-center lg:col-span-7">
               <div className="inline-flex items-center px-3 py-1 mb-6 text-sm font-medium text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                 <span className="w-2 h-2 mr-2 bg-blue-600 rounded-full animate-pulse"></span>
-                v2.0 is now live
+                Absolute Cinema✋🏻😏🤚🏻
               </div>
               <h1 className="max-w-2xl mb-6 text-5xl font-extrabold tracking-tight leading-tight md:text-6xl xl:text-7xl dark:text-white">
                 Modern Justice for <br />

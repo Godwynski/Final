@@ -1,12 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import puppeteer from 'puppeteer'
-import { renderToString } from 'react-dom/server'
+import { createElement } from 'react'
 import SummonsForm from '@/components/documents/forms/SummonsForm'
 import NoticeOfHearingForm from '@/components/documents/forms/NoticeOfHearingForm'
 import CertificateToFileActionForm from '@/components/documents/forms/CertificateToFileActionForm'
 import AmicableSettlementForm from '@/components/documents/forms/AmicableSettlementForm'
 import ReferralForm from '@/components/documents/forms/ReferralForm'
+
+// Simple function to render React elements to HTML string without react-dom/server
+function renderElement(element: any): string {
+    if (!element) return ''
+    if (typeof element === 'string' || typeof element === 'number') return String(element)
+    if (Array.isArray(element)) return element.map(renderElement).join('')
+
+    const { type, props } = element
+
+    if (!type) return ''
+    if (typeof type === 'function') {
+        return renderElement(type(props))
+    }
+
+    const { children, ...attributes } = props || {}
+    const attrs = Object.entries(attributes || {})
+        .filter(([key]) => key !== 'key' && key !== 'ref')
+        .map(([key, value]) => {
+            if (key === 'className') return `class="${value}"`
+            if (typeof value === 'boolean') return value ? key : ''
+            if (typeof value === 'string' || typeof value === 'number') return `${key}="${value}"`
+            return ''
+        })
+        .filter(Boolean)
+        .join(' ')
+
+    const childrenHtml = children ? (Array.isArray(children) ? children : [children]).map(renderElement).join('') : ''
+
+    // Self-closing tags
+    if (['img', 'br', 'hr', 'input', 'meta', 'link'].includes(type)) {
+        return `<${type}${attrs ? ' ' + attrs : ''} />`
+    }
+
+    return `<${type}${attrs ? ' ' + attrs : ''}>${childrenHtml}</${type}>`
+}
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
@@ -81,15 +116,15 @@ export async function GET(request: NextRequest) {
                 return NextResponse.json({ error: 'Invalid form type' }, { status: 400 })
         }
 
-        // Render component to HTML string
-        const formHtml = renderToString(
-            FormComponent({
-                caseData,
-                complainants,
-                respondents,
-                settings
-            })
-        )
+        // Render component to HTML string using our custom renderer
+        const formElement = createElement(FormComponent, {
+            caseData,
+            complainants,
+            respondents,
+            settings
+        })
+        const formHtml = renderElement(formElement)
+
 
         // Create full HTML document with styles
         const fullHtml = `
@@ -183,13 +218,14 @@ export async function GET(request: NextRequest) {
         await browser.close()
 
         // Return PDF as download
-        return new NextResponse(pdfBuffer, {
+        return new NextResponse(Buffer.from(pdfBuffer), {
             headers: {
                 'Content-Type': 'application/pdf',
                 'Content-Disposition': `attachment; filename="${filename}"`,
                 'Content-Length': pdfBuffer.length.toString()
             }
         })
+
 
     } catch (error: any) {
         console.error('PDF Generation Error:', error)

@@ -109,8 +109,9 @@ export async function addInvolvedParty(caseId: string, formData: FormData) {
     const supabase = await createClient()
 
     if (await isCaseTerminal(supabase, caseId)) {
-        redirect(`/dashboard/cases/${caseId}?error=Cannot modify a closed or settled case`)
+        redirect(`/dashboard/cases/${caseId}?tab=parties&error=Cannot modify a closed or settled case`)
     }
+
 
     const name = formData.get('name') as string
     const type = formData.get('type') as string
@@ -124,7 +125,7 @@ export async function addInvolvedParty(caseId: string, formData: FormData) {
     })
 
     if (!validation.success) {
-        redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent(validation.error.issues[0].message)}`)
+        redirect(`/dashboard/cases/${caseId}?tab=parties&error=${encodeURIComponent(validation.error.issues[0].message)}`)
     }
 
     const { error } = await supabase
@@ -139,7 +140,7 @@ export async function addInvolvedParty(caseId: string, formData: FormData) {
         })
 
     if (error) {
-        redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent(error.message)}`)
+        redirect(`/dashboard/cases/${caseId}?tab=parties&error=${encodeURIComponent(error.message)}`)
     }
 
     // Audit Log
@@ -154,7 +155,7 @@ export async function addInvolvedParty(caseId: string, formData: FormData) {
     }
 
     revalidatePath(`/dashboard/cases/${caseId}`)
-    redirect(`/dashboard/cases/${caseId}?message=Added ${name} as ${type}`)
+    redirect(`/dashboard/cases/${caseId}?tab=parties&message=Added ${name} as ${type}`)
 }
 
 export async function addCaseNote(caseId: string, formData: FormData) {
