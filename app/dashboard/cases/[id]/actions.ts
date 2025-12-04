@@ -588,7 +588,48 @@ export async function performCaseAction(caseId: string, action: string, input?: 
                 date: new Date().toISOString(),
                 officer: profile?.full_name || user.email
             };
-            break;
+
+            // Update status and resolution in database first
+            await supabase
+                .from('cases')
+                .update({
+                    status: newStatus,
+                    resolution_details: resolutionDetails,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', caseId);
+
+            // Append to narrative
+            const { data: referralCase } = await supabase.from('cases').select('narrative_action').eq('id', caseId).single();
+            const referralNarrative = referralCase?.narrative_action || '';
+            const referralTimestamp = new Date().toLocaleString();
+            const newReferralNarrative = `${referralNarrative ? referralNarrative + '\n' : ''}[${referralTimestamp}] ${narrativeUpdate}`;
+
+            await supabase
+                .from('cases')
+                .update({ narrative_action: newReferralNarrative })
+                .eq('id', caseId);
+
+            // Log to audit
+            await supabase.from('audit_logs').insert({
+                user_id: user.id,
+                action: logAction,
+                details: {
+                    action_key: 'refer_case',
+                    input: input,
+                    new_status: newStatus,
+                    resolution: resolutionDetails
+                },
+                case_id: caseId
+            });
+
+            revalidatePath(`/dashboard/cases/${caseId}`);
+
+            return {
+                success: true,
+                message: 'Referral document is being generated...',
+                downloadUrl: `/api/documents/download?caseId=${caseId}&formType=referral`
+            };
         case 'dismiss_case':
             newStatus = 'Dismissed';
             logAction = 'Dismissed Case';
@@ -631,14 +672,55 @@ export async function performCaseAction(caseId: string, action: string, input?: 
             if (hearingError) {
                 return { error: 'Failed to create hearing record: ' + hearingError.message };
             }
-            break;
+
+            // Update case status
+            await supabase
+                .from('cases')
+                .update({
+                    status: newStatus,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', caseId);
+
+            // Append to narrative
+            const { data: hearingCase } = await supabase.from('cases').select('narrative_action').eq('id', caseId).single();
+            const hearingNarrative = hearingCase?.narrative_action || '';
+            const hearingTimestamp = new Date().toLocaleString();
+            const newHearingNarrative = `${hearingNarrative ? hearingNarrative + '\n' : ''}[${hearingTimestamp}] ${narrativeUpdate}`;
+
+            await supabase
+                .from('cases')
+                .update({ narrative_action: newHearingNarrative })
+                .eq('id', caseId);
+
+            // Log to audit
+            await supabase.from('audit_logs').insert({
+                user_id: user.id,
+                action: logAction,
+                details: {
+                    action_key: 'schedule_hearing',
+                    input: input,
+                    new_status: newStatus,
+                    hearing_date: hearingDate,
+                    hearing_type: hearingType
+                },
+                case_id: caseId
+            });
+
+            revalidatePath(`/dashboard/cases/${caseId}`);
+
+            return {
+                success: true,
+                message: 'Hearing scheduled. Notice of Hearing is being generated...',
+                downloadUrl: `/api/documents/download?caseId=${caseId}&formType=hearing`
+            };
         case 'issue_summon':
             logAction = 'Issued Summon';
             narrativeUpdate = `Summon issued.`;
             return {
                 success: true,
-                message: 'Summon issued. Opening print view...',
-                redirect: `/dashboard/cases/${caseId}/print?form=summons`
+                message: 'Summon document is being generated...',
+                downloadUrl: `/api/documents/download?caseId=${caseId}&formType=summons`
             };
         case 'settle_case':
             newStatus = 'Settled';
@@ -650,7 +732,48 @@ export async function performCaseAction(caseId: string, action: string, input?: 
                 date: new Date().toISOString(),
                 officer: profile?.full_name || user.email
             };
-            break;
+
+            // Update status and resolution in database first
+            await supabase
+                .from('cases')
+                .update({
+                    status: newStatus,
+                    resolution_details: resolutionDetails,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', caseId);
+
+            // Append to narrative
+            const { data: settlementCase } = await supabase.from('cases').select('narrative_action').eq('id', caseId).single();
+            const settlementNarrative = settlementCase?.narrative_action || '';
+            const settlementTimestamp = new Date().toLocaleString();
+            const newSettlementNarrative = `${settlementNarrative ? settlementNarrative + '\n' : ''}[${settlementTimestamp}] ${narrativeUpdate}`;
+
+            await supabase
+                .from('cases')
+                .update({ narrative_action: newSettlementNarrative })
+                .eq('id', caseId);
+
+            // Log to audit
+            await supabase.from('audit_logs').insert({
+                user_id: user.id,
+                action: logAction,
+                details: {
+                    action_key: 'settle_case',
+                    input: input,
+                    new_status: newStatus,
+                    resolution: resolutionDetails
+                },
+                case_id: caseId
+            });
+
+            revalidatePath(`/dashboard/cases/${caseId}`);
+
+            return {
+                success: true,
+                message: 'Case settled. Settlement document is being generated...',
+                downloadUrl: `/api/documents/download?caseId=${caseId}&formType=settlement`
+            };
         case 'reschedule_hearing':
             newStatus = 'Hearing Scheduled';
             logAction = 'Rescheduled Hearing';
@@ -711,6 +834,58 @@ export async function performCaseAction(caseId: string, action: string, input?: 
             // Clear resolution details on re-open
             resolutionDetails = null;
             break;
+        case 'issue_cfa':
+            newStatus = 'Closed';
+            logAction = 'Issued Certificate to File Action';
+            narrativeUpdate = `Certificate to File Action issued. Reason: ${input}.`;
+            resolutionDetails = {
+                type: 'CFA Issued',
+                reason: input,
+                date: new Date().toISOString(),
+                officer: profile?.full_name || user.email
+            };
+
+            // Update status and resolution in database first
+            await supabase
+                .from('cases')
+                .update({
+                    status: newStatus,
+                    resolution_details: resolutionDetails,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', caseId);
+
+            // Append to narrative
+            const { data: cfaCase } = await supabase.from('cases').select('narrative_action').eq('id', caseId).single();
+            const cfaNarrative = cfaCase?.narrative_action || '';
+            const cfaTimestamp = new Date().toLocaleString();
+            const newCfaNarrative = `${cfaNarrative ? cfaNarrative + '\n' : ''}[${cfaTimestamp}] ${narrativeUpdate}`;
+
+            await supabase
+                .from('cases')
+                .update({ narrative_action: newCfaNarrative })
+                .eq('id', caseId);
+
+            // Log to audit
+            await supabase.from('audit_logs').insert({
+                user_id: user.id,
+                action: logAction,
+                details: {
+                    action_key: 'issue_cfa',
+                    input: input,
+                    new_status: newStatus,
+                    resolution: resolutionDetails
+                },
+                case_id: caseId
+            });
+
+            revalidatePath(`/dashboard/cases/${caseId}`);
+
+            return {
+                success: true,
+                message: 'CFA document is being generated...',
+                downloadUrl: `/api/documents/download?caseId=${caseId}&formType=cfa`
+            };
         default:
             return { error: 'Invalid action' };
     }

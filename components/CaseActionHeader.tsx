@@ -106,8 +106,17 @@ export default function CaseActionHeader({ status, caseId, hearings = [] }: { st
                     if (res?.error) {
                         showAlert('Error', res.error, 'error')
                     } else {
-                        if (res?.redirect) {
-                            window.open(res.redirect, '_blank')
+                        if (res?.downloadUrl) {
+                            // Trigger download
+                            const link = document.createElement('a')
+                            link.href = res.downloadUrl
+                            link.download = ''
+                            document.body.appendChild(link)
+                            link.click()
+                            document.body.removeChild(link)
+                            showAlert('Success', res.message || 'Document is being downloaded', 'success')
+                        } else {
+                            showAlert('Success', res.message || 'Action completed successfully', 'success')
                         }
                         router.refresh()
                     }
@@ -133,8 +142,17 @@ export default function CaseActionHeader({ status, caseId, hearings = [] }: { st
         if (res?.error) {
             showAlert('Error', res.error, 'error')
         } else {
-            if (res?.redirect) {
-                window.open(res.redirect, '_blank')
+            if (res?.downloadUrl) {
+                // Trigger download
+                const link = document.createElement('a')
+                link.href = res.downloadUrl
+                link.download = ''
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+                showAlert('Success', res.message || 'Document is being downloaded', 'success')
+            } else {
+                showAlert('Success', res.message || 'Action completed successfully', 'success')
             }
             setSelectedAction(null)
             router.refresh()
