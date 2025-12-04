@@ -106,7 +106,7 @@ export default function Home() {
                         <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs font-bold">JD</div>
                         <div>
                           <div className="text-sm font-bold dark:text-white">Theft Complaint</div>
-                          <div className="text-xs text-gray-500">Case #2024-001 • Just now</div>
+                          <div className="text-xs text-gray-500">Case #2025-001 • Just now</div>
                         </div>
                       </div>
                       <span className="bg-yellow-100 text-yellow-800 text-xs font-bold px-2.5 py-1 rounded-full">Hearing</span>
@@ -116,7 +116,7 @@ export default function Home() {
                         <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold">AS</div>
                         <div>
                           <div className="text-sm font-bold dark:text-white">Noise Complaint</div>
-                          <div className="text-xs text-gray-500">Case #2024-002 • 2h ago</div>
+                          <div className="text-xs text-gray-500">Case #2025-002 • 2h ago</div>
                         </div>
                       </div>
                       <span className="bg-green-100 text-green-800 text-xs font-bold px-2.5 py-1 rounded-full">Settled</span>
@@ -256,44 +256,12 @@ export default function Home() {
       {/* 7. FOOTER */}
       <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
         <div className="max-w-screen-xl mx-auto p-8 md:p-12">
-          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-            <div>
-              <h3 className="mb-4 text-sm font-semibold text-gray-900 uppercase dark:text-white">Product</h3>
-              <ul className="text-gray-500 dark:text-gray-400 font-medium space-y-2">
-                <li><a href="#" className="hover:underline">Features</a></li>
-                <li><a href="#" className="hover:underline">Security</a></li>
-                <li><a href="#" className="hover:underline">Pricing</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="mb-4 text-sm font-semibold text-gray-900 uppercase dark:text-white">Resources</h3>
-              <ul className="text-gray-500 dark:text-gray-400 font-medium space-y-2">
-                <li><a href="#" className="hover:underline">Documentation</a></li>
-                <li><a href="#" className="hover:underline">API Reference</a></li>
-                <li><a href="#" className="hover:underline">Guides</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="mb-4 text-sm font-semibold text-gray-900 uppercase dark:text-white">Company</h3>
-              <ul className="text-gray-500 dark:text-gray-400 font-medium space-y-2">
-                <li><a href="#" className="hover:underline">About</a></li>
-                <li><a href="#" className="hover:underline">Careers</a></li>
-                <li><a href="#" className="hover:underline">Contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="mb-4 text-sm font-semibold text-gray-900 uppercase dark:text-white">Legal</h3>
-              <ul className="text-gray-500 dark:text-gray-400 font-medium space-y-2">
-                <li><a href="#" className="hover:underline">Privacy Policy</a></li>
-                <li><a href="#" className="hover:underline">Terms of Service</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 text-center">
+
+          <div className="text-center">
             <a href="#" className="flex justify-center items-center text-2xl font-bold text-gray-900 dark:text-white mb-4">
               Blotter<span className="text-blue-600">Sys</span>
             </a>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">© 2024 BlotterSys™ Inc. All Rights Reserved.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">© 2025 BlotterSys™ Inc. All Rights Reserved.</p>
           </div>
         </div>
       </footer>
