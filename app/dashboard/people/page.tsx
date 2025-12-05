@@ -3,6 +3,12 @@ import Link from 'next/link'
 import SearchInput from '@/components/SearchInput'
 import PaginationControls from '@/components/PaginationControls'
 import SortableColumn from '@/components/SortableColumn'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+    title: 'People Directory | Dashboard',
+    description: 'View and manage individuals involved in blotter cases'
+}
 
 export default async function PeopleDirectory(props: { searchParams: Promise<{ query?: string, page?: string, sort?: string, order?: string }> }) {
     const searchParams = await props.searchParams

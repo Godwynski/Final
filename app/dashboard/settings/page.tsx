@@ -3,6 +3,12 @@ import { redirect } from 'next/navigation'
 import { getSettings } from './actions'
 import { getCachedProfile } from '../actions'
 import SettingsClient from './SettingsClient'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+    title: 'Account Settings | Dashboard',
+    description: 'Manage your profile, security preferences, and system configuration'
+}
 
 export default async function SettingsPage(props: { searchParams: Promise<{ error?: string, message?: string }> }) {
     const [searchParams, supabase] = await Promise.all([

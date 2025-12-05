@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 
 import { getFilteredAnalytics, getActionItems, getRecentCases, getCachedProfile } from './actions'
 import RealtimeListener from '@/components/RealtimeListener'
@@ -9,6 +10,11 @@ import DashboardControls from '@/components/dashboard/DashboardControls'
 import StatsGrid from '@/components/dashboard/StatsGrid'
 import DashboardCalendar from '@/components/dashboard/DashboardCalendar'
 import dynamic from 'next/dynamic'
+
+export const metadata: Metadata = {
+    title: 'Dashboard | Blotter System',
+    description: 'Overview of blotter cases, analytics, and action items'
+}
 
 const DashboardCharts = dynamic(() => import('@/components/dashboard/DashboardCharts'), {
     loading: () => <div className="h-96 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />

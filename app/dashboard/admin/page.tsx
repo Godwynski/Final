@@ -6,6 +6,12 @@ import UsersTable from './UsersTable'
 import AuditLogsTable from './AuditLogsTable'
 import TableSkeleton from './TableSkeleton'
 import { getCachedProfile } from '../actions'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+    title: 'Admin Panel | Dashboard',
+    description: 'Manage users, monitor system activity, and configure access permissions'
+}
 
 export default async function AdminPage(props: { searchParams: Promise<{ error?: string, message?: string, page?: string, sort?: string, order?: string }> }) {
     const searchParams = await props.searchParams

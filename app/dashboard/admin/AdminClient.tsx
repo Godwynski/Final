@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, ReactNode } from 'react'
+import { useState, ReactNode, useEffect } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { createUser } from './actions'
 import { toast } from 'sonner'
@@ -17,6 +17,12 @@ export function AdminClient({ usersTabContent, logsTabContent }: AdminClientProp
     const [isModalOpen, setIsModalOpen] = useState(false)
 
     const activeTab = searchParams.get('tab') === 'logs' ? 'logs' : 'users'
+
+    // Update document title based on active tab
+    useEffect(() => {
+        const title = activeTab === 'logs' ? 'System Audit Logs' : 'User Management'
+        document.title = `${title} | Dashboard`
+    }, [activeTab])
 
     const handleTabChange = (tab: 'users' | 'logs') => {
         const params = new URLSearchParams(searchParams.toString())

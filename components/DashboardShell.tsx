@@ -14,7 +14,7 @@ export default function DashboardShell({
     const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
     return (
-        <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
+        <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
             <div className="print:hidden">
                 <Navbar
                     name={userProfile.full_name || userProfile.email}
@@ -28,8 +28,8 @@ export default function DashboardShell({
                     newCasesCount={userProfile.newCasesCount}
                 />
             </div>
-            <div className="h-full p-4 sm:ml-64 pt-20 print:ml-0 print:pt-0 print:p-0 overflow-y-auto overflow-x-hidden">
-                <main className="print:p-0 print:overflow-visible w-full max-w-full pb-10">
+            <div className="flex-1 p-4 sm:ml-64 pt-20 print:ml-0 print:pt-0 print:p-0 overflow-y-auto overflow-x-hidden">
+                <main className="print:p-0 print:overflow-visible w-full max-w-full pb-10 min-h-full">
                     {children}
                 </main>
             </div>

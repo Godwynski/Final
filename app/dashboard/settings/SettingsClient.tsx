@@ -18,6 +18,12 @@ type UserData = {
 
 type Tab = 'profile' | 'system' | 'security'
 
+const tabTitles: Record<Tab, string> = {
+    profile: 'Profile',
+    system: 'System',
+    security: 'Security'
+}
+
 export default function SettingsClient({ user, settings }: { user: UserData, settings: any }) {
     const searchParams = useSearchParams()
     const router = useRouter()
@@ -25,6 +31,11 @@ export default function SettingsClient({ user, settings }: { user: UserData, set
 
     // Get active tab from URL or default to 'profile'
     const activeTab = (searchParams.get('tab') as Tab) || 'profile'
+
+    // Update document title based on active tab
+    useEffect(() => {
+        document.title = `${tabTitles[activeTab]} | Dashboard`
+    }, [activeTab])
 
     const handleTabChange = (tab: Tab) => {
         const params = new URLSearchParams(searchParams.toString())

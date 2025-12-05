@@ -117,7 +117,7 @@ export default function NotificationBell() {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 z-50 mt-2 w-80 bg-white rounded-lg shadow-xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="fixed sm:absolute right-2 sm:right-0 left-2 sm:left-auto top-16 sm:top-auto z-50 sm:mt-2 sm:w-80 bg-white rounded-lg shadow-xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden">
                     <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
                         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Notifications</h3>
                         {unreadCount > 0 && (
@@ -126,7 +126,7 @@ export default function NotificationBell() {
                             </button>
                         )}
                     </div>
-                    <div className="max-h-96 overflow-y-auto">
+                    <div className="max-h-80 sm:max-h-96 overflow-y-auto">
                         {notifications.length === 0 ? (
                             <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
                                 No notifications
@@ -145,8 +145,8 @@ export default function NotificationBell() {
                                                         setIsOpen(false)
                                                     }}
                                                 >
-                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">{notification.title}</p>
-                                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{notification.message}</p>
+                                                    <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-1">{notification.title}</p>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{notification.message}</p>
                                                     <p className="text-xs text-gray-400 mt-2">{new Date(notification.created_at).toLocaleString()}</p>
                                                 </Link>
                                             ) : (
@@ -154,8 +154,8 @@ export default function NotificationBell() {
                                                     className="cursor-pointer"
                                                     onClick={() => markAsRead(notification.id)}
                                                 >
-                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">{notification.title}</p>
-                                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{notification.message}</p>
+                                                    <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-1">{notification.title}</p>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{notification.message}</p>
                                                     <p className="text-xs text-gray-400 mt-2">{new Date(notification.created_at).toLocaleString()}</p>
                                                 </div>
                                             )}

@@ -5,6 +5,12 @@ import DateRangePicker from '@/components/DateRangePicker'
 import FilterDropdown from '@/components/FilterDropdown'
 import SearchInput from '@/components/SearchInput'
 import SortableColumn from '@/components/SortableColumn'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+    title: 'Blotter Cases | Dashboard',
+    description: 'Manage and track all reported blotter cases'
+}
 
 export default async function CasesPage(props: { searchParams: Promise<{ query?: string, status?: string, type?: string, range?: string, page?: string, sort?: string, order?: string }> }) {
     const searchParams = await props.searchParams

@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { signout } from '@/app/login/actions'
 import SidebarItem from './sidebar/SidebarItem'
-import SidebarGroup from './sidebar/SidebarGroup'
 import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 import {
@@ -82,69 +81,66 @@ export default function Sidebar({ role, email, isOpen, onClose, newCasesCount }:
                             icon={<LayoutDashboard className="w-5 h-5" />}
                         />
 
-                        {/* Case Management Group */}
-                        <SidebarGroup
-                            label="Case Management"
-                            groupKey="case-management"
+                        {/* Case Management Section */}
+                        <li className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+                            <span className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                Case Management
+                            </span>
+                        </li>
+                        <SidebarItem
+                            href="/dashboard/cases"
+                            label="Blotter Cases"
+                            badge={newCasesCount}
                             icon={<Briefcase className="w-5 h-5" />}
-                        >
-                            <SidebarItem
-                                href="/dashboard/cases"
-                                label="Blotter Cases"
-                                badge={newCasesCount}
-                                icon={<Briefcase className="w-4 h-4" />}
-                            />
-                            <SidebarItem
-                                href="/dashboard/people"
-                                label="People Directory"
-                                icon={<Users className="w-4 h-4" />}
-                            />
-                        </SidebarGroup>
+                        />
+                        <SidebarItem
+                            href="/dashboard/people"
+                            label="People Directory"
+                            icon={<Users className="w-5 h-5" />}
+                        />
 
-                        {/* Administration Group */}
-                        <SidebarGroup
-                            label="Administration"
-                            groupKey="administration"
-                            icon={<UserCog className="w-5 h-5" />}
-                        >
-                            {role === 'admin' && (
-                                <>
-                                    <SidebarItem
-                                        href="/dashboard/admin?tab=users"
-                                        label="User Management"
-                                        icon={<Users className="w-4 h-4" />}
-                                    />
-                                    <SidebarItem
-                                        href="/dashboard/admin?tab=logs"
-                                        label="System Audit Logs"
-                                        icon={<FileClock className="w-4 h-4" />}
-                                    />
-                                </>
-                            )}
-                        </SidebarGroup>
+                        {/* Administration Section */}
+                        {role === 'admin' && (
+                            <>
+                                <li className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+                                    <span className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                        Administration
+                                    </span>
+                                </li>
+                                <SidebarItem
+                                    href="/dashboard/admin?tab=users"
+                                    label="User Management"
+                                    icon={<UserCog className="w-5 h-5" />}
+                                />
+                                <SidebarItem
+                                    href="/dashboard/admin?tab=logs"
+                                    label="System Audit Logs"
+                                    icon={<FileClock className="w-5 h-5" />}
+                                />
+                            </>
+                        )}
 
-                        {/* Settings Group */}
-                        <SidebarGroup
-                            label="Settings"
-                            groupKey="settings"
+                        {/* Settings Section */}
+                        <li className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+                            <span className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                Settings
+                            </span>
+                        </li>
+                        <SidebarItem
+                            href="/dashboard/settings?tab=profile"
+                            label="Profile"
+                            icon={<User className="w-5 h-5" />}
+                        />
+                        <SidebarItem
+                            href="/dashboard/settings?tab=system"
+                            label="System"
                             icon={<Settings className="w-5 h-5" />}
-                        >
-                            <SidebarItem
-                                href="/dashboard/settings?tab=profile"
-                                label="Profile"
-                                icon={<User className="w-4 h-4" />}
-                            />
-                            <SidebarItem
-                                href="/dashboard/settings?tab=system"
-                                label="System"
-                                icon={<Settings className="w-4 h-4" />}
-                            />
-                            <SidebarItem
-                                href="/dashboard/settings?tab=security"
-                                label="Security"
-                                icon={<Shield className="w-4 h-4" />}
-                            />
-                        </SidebarGroup>
+                        />
+                        <SidebarItem
+                            href="/dashboard/settings?tab=security"
+                            label="Security"
+                            icon={<Shield className="w-5 h-5" />}
+                        />
                     </ul>
                     <div className="pt-4 mt-4 space-y-2 border-t border-gray-200 dark:border-gray-700">
                         <form action={signout}>
