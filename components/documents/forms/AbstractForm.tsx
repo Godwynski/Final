@@ -7,9 +7,10 @@ interface AbstractFormProps {
     caseData: any
     involvedParties: any[]
     settings: any
+    evidence?: any[]
 }
 
-export default function AbstractForm({ caseData, involvedParties, settings }: AbstractFormProps) {
+export default function AbstractForm({ caseData, involvedParties, settings, evidence = [] }: AbstractFormProps) {
     const formattedDate = new Date(caseData.incident_date).toLocaleString()
     const generatedDate = new Date().toLocaleString()
 
@@ -120,8 +121,39 @@ export default function AbstractForm({ caseData, involvedParties, settings }: Ab
                 <p className="text-sm">Current Status: <span className="font-bold uppercase">{caseData.status}</span></p>
             </div>
 
+            {/* Evidence Gallery - Only shown when evidence is provided */}
+            {evidence.length > 0 && (
+                <div className="mt-8 border-t-2 border-black pt-4" style={{ pageBreakBefore: 'auto' }}>
+                    <h3 className="text-lg font-bold uppercase mb-4">Attached Evidence ({evidence.length} items)</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        {evidence.map((item, index) => (
+                            <div key={item.id || index} className="border border-gray-400 p-2 break-inside-avoid">
+                                <img
+                                    src={item.file_path}
+                                    alt={item.description || `Evidence ${index + 1}`}
+                                    style={{
+                                        width: '100%',
+                                        height: '150px',
+                                        objectFit: 'cover',
+                                        display: 'block'
+                                    }}
+                                />
+                                <p className="text-xs text-center mt-2" style={{ color: '#4b5563' }}>
+                                    {item.description || item.file_name || `Evidence ${index + 1}`}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Signatures */}
-            <div className="grid grid-cols-2 gap-12 mt-12 outline-none" contentEditable suppressContentEditableWarning>
+            <div
+                className="grid grid-cols-2 gap-12 mt-12 outline-none"
+                contentEditable
+                suppressContentEditableWarning
+                style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+            >
                 <div className="text-center">
                     <div className="border-b border-black mb-2"></div>
                     <p className="text-xs font-bold uppercase">Signature of Complainant</p>
@@ -135,7 +167,10 @@ export default function AbstractForm({ caseData, involvedParties, settings }: Ab
             </div>
 
             {/* Footer */}
-            <div className="mt-16 text-center text-[10px] text-gray-500 border-t border-gray-300 pt-2">
+            <div
+                className="mt-16 text-center text-[10px] text-gray-500 border-t border-gray-300 pt-2"
+                style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+            >
                 <p>This document is a system-generated extract from the Barangay Blotter System.</p>
                 <p>Generated on: {generatedDate} | Case ID: {caseData.id}</p>
                 <p>Not valid without the official Barangay Seal.</p>

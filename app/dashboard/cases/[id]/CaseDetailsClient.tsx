@@ -6,6 +6,7 @@ import Link from 'next/link'
 import AlertModal from '@/components/ui/AlertModal'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import ImageModal from '@/components/ui/ImageModal'
+import DocumentPreviewModal, { type DocumentType } from '@/components/DocumentPreviewModal'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import CopyButton from '@/components/CopyButton'
@@ -127,8 +128,26 @@ export default function CaseDetailsClient({
         setImageModalState({ isOpen: true, imageUrl, altText })
     }
 
+
     const closeImage = () => {
         setImageModalState(prev => ({ ...prev, isOpen: false }))
+    }
+
+    // Document Preview Modal State
+    const [documentModalState, setDocumentModalState] = useState<{
+        isOpen: boolean
+        documentType: DocumentType
+    }>({
+        isOpen: false,
+        documentType: 'summons'
+    })
+
+    const openDocumentPreview = (type: DocumentType) => {
+        setDocumentModalState({ isOpen: true, documentType: type })
+    }
+
+    const closeDocumentPreview = () => {
+        setDocumentModalState(prev => ({ ...prev, isOpen: false }))
     }
 
     // Format date on client only to avoid hydration mismatch
@@ -163,6 +182,16 @@ export default function CaseDetailsClient({
                 altText={imageModalState.altText}
             />
 
+            <DocumentPreviewModal
+                isOpen={documentModalState.isOpen}
+                onClose={closeDocumentPreview}
+                documentType={documentModalState.documentType}
+                caseData={caseData}
+                involvedParties={involvedParties}
+                settings={settings}
+                evidence={evidence}
+            />
+
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <div>
@@ -186,13 +215,11 @@ export default function CaseDetailsClient({
                             <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
                         <div className="absolute right-0 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden group-hover:block border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-                            <a href={`/dashboard/cases/${caseData.id}/print?form=summons`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Summons</a>
-                            <a href={`/dashboard/cases/${caseData.id}/print?form=hearing`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Notice of Hearing</a>
-                            <a href={`/dashboard/cases/${caseData.id}/print?form=cfa`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Certificate to File Action</a>
-                            <a href={`/dashboard/cases/${caseData.id}/print?form=referral`} target="_blank" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Referral / Endorsement</a>
-                            <a href={`/dashboard/cases/${caseData.id}/print?form=abstract`} target="_blank" className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">
-                                Print Abstract
-                            </a>
+                            <button onClick={() => openDocumentPreview('summons')} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Summons</button>
+                            <button onClick={() => openDocumentPreview('hearing')} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Notice of Hearing</button>
+                            <button onClick={() => openDocumentPreview('cfa')} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Certificate to File Action</button>
+                            <button onClick={() => openDocumentPreview('referral')} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Referral / Endorsement</button>
+                            <button onClick={() => openDocumentPreview('abstract')} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">Print Abstract</button>
                         </div>
                     </div>
                     {!isReadOnly && (

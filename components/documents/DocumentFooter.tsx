@@ -10,7 +10,15 @@ export default function DocumentFooter({ settings, type = 'captain' }: DocumentF
     const secretary = settings?.barangay_secretary || '[Secretary Name]'
 
     return (
-        <div className="mt-16">
+        <div
+            className="mt-16"
+            style={{
+                breakInside: 'avoid',
+                pageBreakInside: 'avoid',
+                breakBefore: 'avoid',
+                pageBreakBefore: 'avoid'
+            }}
+        >
             {type === 'secretary' && (
                 <div className="text-right">
                     <div className="inline-block text-center">

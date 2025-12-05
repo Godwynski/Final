@@ -11,7 +11,10 @@ export default function DocumentHeader({ settings }: DocumentHeaderProps) {
     const province = settings?.province || '[Province]'
 
     return (
-        <div className="text-center mb-8 relative">
+        <div
+            className="text-center mb-8 relative"
+            style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+        >
             {/* Left Logo (Barangay) */}
             <div className="absolute left-0 top-0 w-24 h-24 flex items-center justify-center">
                 {settings?.logo_barangay_url ? (

@@ -51,7 +51,10 @@ export default function AmicableSettlementForm({ caseData, complainants, respond
                 <p className="mb-8">Entered into this <span className="font-bold underline">{new Date().toLocaleDateString()}</span>.</p>
             </div>
 
-            <div className="flex justify-between items-start mt-16 mb-16">
+            <div
+                className="flex justify-between items-start mt-16 mb-16"
+                style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+            >
                 <div className="text-center w-1/2">
                     <p className="font-bold uppercase border-t border-black pt-2 px-8 mx-8">Complainant(s)</p>
                 </div>

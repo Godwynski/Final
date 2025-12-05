@@ -55,7 +55,10 @@ export default function ReferralForm({ caseData, complainants, respondents, sett
                 </p>
             </div>
 
-            <div className="mt-16">
+            <div
+                className="mt-16"
+                style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+            >
                 <p className="mb-8">Submitted by:</p>
                 <DocumentFooter settings={settings} type="both" />
             </div>
