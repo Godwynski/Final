@@ -34,6 +34,7 @@ export type VisitStats = {
     browserStats: { name: string; count: number }[]
     deviceStats: { name: string; count: number }[]
     hourlyDistribution: { hour: number; count: number }[]
+    dailyStats: { date: string; pageViews: number; sessions: number; uniqueVisitors: number }[]
 }
 
 export type VisitFilters = {
@@ -275,6 +276,31 @@ export async function getVisitStats(startDate?: string, endDate?: string): Promi
         ? Math.round(dailyValues.reduce((a, b) => a + b, 0) / dailyValues.length)
         : 0
 
+    // Calculate daily stats for charts
+    const dailyStatsMap = new Map<string, { pageViews: number; sessions: number; uniqueVisitors: number }>()
+
+    allVisits.forEach(v => {
+        const dayKey = new Date(v.visited_at).toISOString().split('T')[0]
+        if (!dailyStatsMap.has(dayKey)) {
+            dailyStatsMap.set(dayKey, { pageViews: 0, sessions: 0, uniqueVisitors: 0 })
+        }
+        const stat = dailyStatsMap.get(dayKey)!
+
+        if (v.visit_type === 'page_view') {
+            stat.pageViews++
+        } else if (v.visit_type === 'session') {
+            stat.sessions++
+        } else if (v.visit_type === 'unique_daily') {
+            stat.uniqueVisitors++
+        }
+    })
+
+    // Fill in missing days if needed (optional, but good for charts)
+    // For now, we'll just sort the existing data
+    const dailyStats = Array.from(dailyStatsMap.entries())
+        .map(([date, stats]) => ({ date, ...stats }))
+        .sort((a, b) => a.date.localeCompare(b.date))
+
     return {
         totalPageViews: pageViewsResult.count || 0,
         totalSessions: sessionsResult.count || 0,
@@ -288,6 +314,7 @@ export async function getVisitStats(startDate?: string, endDate?: string): Promi
         browserStats,
         deviceStats,
         hourlyDistribution,
+        dailyStats
     }
 }
 

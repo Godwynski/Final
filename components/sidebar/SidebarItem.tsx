@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 
 type SidebarItemProps = {
     href: string
@@ -12,7 +12,29 @@ type SidebarItemProps = {
 
 export default function SidebarItem({ href, icon, label, badge }: SidebarItemProps) {
     const pathname = usePathname()
-    const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+    const searchParams = useSearchParams()
+
+    // Base path check
+    const isPathMatch = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+
+    let isActive = isPathMatch
+
+    // If href contains query params, check if they match the current search params
+    if (href.includes('?')) {
+        const [path, query] = href.split('?')
+        const hrefParams = new URLSearchParams(query)
+        const currentParams = new URLSearchParams(searchParams.toString())
+
+        let paramsMatch = true
+        hrefParams.forEach((value, key) => {
+            if (currentParams.get(key) !== value) {
+                paramsMatch = false
+            }
+        })
+
+        // Strict check: Path must match AND params must match
+        isActive = pathname === path && paramsMatch
+    }
 
     return (
         <li>
