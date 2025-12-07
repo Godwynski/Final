@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -8,11 +9,13 @@ export default function Home() {
       <nav className="fixed w-full z-50 top-0 left-0 border-b border-gray-200/80 bg-white/80 backdrop-blur-md dark:bg-gray-900/80 dark:border-gray-800 transition-all duration-300">
         <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
           <Link href="/" className="flex items-center group">
-            <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-2 rounded-xl mr-3 shadow-lg group-hover:shadow-blue-500/30 transition-all duration-300">
-              <svg className="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.414.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Blotter System Logo"
+              width={44}
+              height={44}
+              className="mr-3 rounded-xl shadow-lg group-hover:shadow-blue-500/30 transition-all duration-300"
+            />
             <span className="self-center text-2xl font-bold whitespace-nowrap dark:text-white tracking-tight">Blotter<span className="text-blue-600 dark:text-blue-500">Sys</span></span>
           </Link>
           <div className="flex md:order-2">
@@ -259,6 +262,13 @@ export default function Home() {
 
           <div className="text-center">
             <a href="#" className="flex justify-center items-center text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              <Image
+                src="/logo.png"
+                alt="Blotter System Logo"
+                width={40}
+                height={40}
+                className="mr-2"
+              />
               Blotter<span className="text-blue-600">Sys</span>
             </a>
             <p className="text-gray-500 dark:text-gray-400 text-sm">© 2025 BlotterSys™ Inc. All Rights Reserved.</p>

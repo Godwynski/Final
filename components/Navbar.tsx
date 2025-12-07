@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import NotificationBell from '@/components/NotificationBell'
 
 export default function Navbar({ name, onToggleSidebar }: { name: string, onToggleSidebar?: () => void }) {
@@ -19,7 +20,14 @@ export default function Navbar({ name, onToggleSidebar }: { name: string, onTogg
                                 <path clipRule="evenodd" fillRule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z"></path>
                             </svg>
                         </button>
-                        <Link href="/dashboard" className="flex ms-2 md:me-24">
+                        <Link href="/dashboard" className="flex items-center ms-2 md:me-24">
+                            <Image
+                                src="/logo.png"
+                                alt="Blotter System Logo"
+                                width={40}
+                                height={40}
+                                className="mr-2"
+                            />
                             <span className="self-center text-xl font-semibold sm:text-2xl whitespace-nowrap dark:text-white">Blotter System</span>
                         </Link>
                     </div>

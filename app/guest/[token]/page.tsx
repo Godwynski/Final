@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/utils/supabase/admin'
 import { notFound } from 'next/navigation'
 import { cookies } from 'next/headers'
+import Image from 'next/image'
 import PinEntryForm from './pin-form'
 import GuestUploadForm from './GuestUploadForm'
 import GuestEvidenceList from './GuestEvidenceList'
@@ -80,7 +81,16 @@ export default async function GuestPage(props: { params: Promise<{ token: string
                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 overflow-hidden">
                     <div className="bg-blue-700 px-6 py-4 dark:bg-blue-900">
                         <div className="flex justify-between items-center text-white">
-                            <h1 className="text-2xl font-bold">Guest Access Portal</h1>
+                            <div className="flex items-center">
+                                <Image
+                                    src="/logo.png"
+                                    alt="Blotter System Logo"
+                                    width={40}
+                                    height={40}
+                                    className="mr-3"
+                                />
+                                <h1 className="text-2xl font-bold">Guest Access Portal</h1>
+                            </div>
                             <span className="text-sm bg-blue-600 px-3 py-1 rounded-full dark:bg-blue-800 border border-blue-500 dark:border-blue-700">
                                 Expires: {new Date(link.expires_at).toLocaleDateString()}
                             </span>
@@ -135,7 +145,7 @@ export default async function GuestPage(props: { params: Promise<{ token: string
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     )
 }

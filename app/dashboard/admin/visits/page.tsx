@@ -10,11 +10,30 @@ export const metadata: Metadata = {
     description: 'Monitor website visitor activity and analytics'
 }
 
-export default async function VisitsPage(props: { searchParams: Promise<{ page?: string, filter?: string }> }) {
+type SearchParams = {
+    page?: string
+    limit?: string
+    filter?: string
+    search?: string
+    startDate?: string
+    endDate?: string
+    sortBy?: string
+    sortOrder?: string
+}
+
+export default async function VisitsPage(props: { searchParams: Promise<SearchParams> }) {
     const searchParams = await props.searchParams
     const supabase = await createClient()
+
+    // Parse all URL parameters with defaults
     const page = Number(searchParams.page) || 1
+    const limit = Number(searchParams.limit) || 25
     const filter = searchParams.filter || 'all'
+    const search = searchParams.search || ''
+    const startDate = searchParams.startDate || ''
+    const endDate = searchParams.endDate || ''
+    const sortBy = searchParams.sortBy || 'visited_at'
+    const sortOrder = (searchParams.sortOrder as 'asc' | 'desc') || 'desc'
 
     const {
         data: { user },
@@ -41,8 +60,17 @@ export default async function VisitsPage(props: { searchParams: Promise<{ page?:
     }
 
     const [{ visits, total }, stats] = await Promise.all([
-        getVisits(page, 25, filter !== 'all' ? filter : undefined),
-        getVisitStats()
+        getVisits({
+            page,
+            limit,
+            visitType: filter !== 'all' ? filter : undefined,
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
+            search: search || undefined,
+            sortBy,
+            sortOrder
+        }),
+        getVisitStats(startDate || undefined, endDate || undefined)
     ])
 
     return (
@@ -59,7 +87,7 @@ export default async function VisitsPage(props: { searchParams: Promise<{ page?:
                     <div className="flex-1">
                         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Visit Monitor</h1>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 max-w-2xl">
-                            Track page views, sessions, and unique daily visitors in real-time.
+                            Track page views, sessions, and unique daily visitors with detailed analytics.
                         </p>
                     </div>
                 </div>
@@ -69,10 +97,15 @@ export default async function VisitsPage(props: { searchParams: Promise<{ page?:
                     initialStats={stats}
                     totalCount={total}
                     currentPage={page}
+                    currentLimit={limit}
                     currentFilter={filter}
+                    currentSearch={search}
+                    currentStartDate={startDate}
+                    currentEndDate={endDate}
+                    currentSortBy={sortBy}
+                    currentSortOrder={sortOrder}
                 />
             </div>
         </div>
     )
 }
-

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { LoginForm } from './login-form'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
@@ -16,7 +17,13 @@ export default async function LoginPage(props: { searchParams: Promise<{ message
     return (
         <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0 bg-gray-50 dark:bg-gray-900">
             <Link href="/" className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
-                <span className="mr-2">⚖️</span>
+                <Image
+                    src="/logo.png"
+                    alt="Blotter System Logo"
+                    width={48}
+                    height={48}
+                    className="mr-3"
+                />
                 Blotter System
             </Link>
             <div className="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">

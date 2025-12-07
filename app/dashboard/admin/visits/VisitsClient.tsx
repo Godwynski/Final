@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { SiteVisit, VisitStats, deleteVisit, clearOldVisits } from './actions'
+import { useState, useEffect, useCallback } from 'react'
+import { SiteVisit, VisitStats, deleteVisit, clearOldVisits, exportVisitsCSV, VisitFilters } from './actions'
 import { toast } from 'sonner'
 import {
     Globe,
@@ -13,11 +13,19 @@ import {
     RefreshCw,
     Calendar,
     Eye,
-    Users,
     TrendingUp,
     Activity,
     UserCheck,
-    Filter
+    Filter,
+    Search,
+    Download,
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    BarChart3,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown
 } from 'lucide-react'
 
 type VisitsClientProps = {
@@ -25,7 +33,13 @@ type VisitsClientProps = {
     initialStats: VisitStats
     totalCount: number
     currentPage: number
+    currentLimit: number
     currentFilter: string
+    currentSearch: string
+    currentStartDate: string
+    currentEndDate: string
+    currentSortBy: string
+    currentSortOrder: string
 }
 
 const visitTypeLabels: Record<string, string> = {
@@ -40,19 +54,113 @@ const visitTypeColors: Record<string, string> = {
     'unique_daily': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
 }
 
+const datePresets = [
+    { label: 'Today', value: 'today' },
+    { label: 'Last 7 days', value: '7days' },
+    { label: 'Last 30 days', value: '30days' },
+    { label: 'This month', value: 'month' },
+    { label: 'Custom', value: 'custom' },
+]
+
 export default function VisitsClient({
     initialVisits,
     initialStats,
     totalCount,
     currentPage,
-    currentFilter
+    currentLimit,
+    currentFilter,
+    currentSearch,
+    currentStartDate,
+    currentEndDate,
+    currentSortBy,
+    currentSortOrder
 }: VisitsClientProps) {
     const [visits, setVisits] = useState(initialVisits)
     const [stats] = useState(initialStats)
     const [isDeleting, setIsDeleting] = useState<string | null>(null)
     const [isClearing, setIsClearing] = useState(false)
+    const [isExporting, setIsExporting] = useState(false)
+    const [searchInput, setSearchInput] = useState(currentSearch)
+    const [autoRefresh, setAutoRefresh] = useState(false)
+    const [datePreset, setDatePreset] = useState<string>(
+        currentStartDate || currentEndDate ? 'custom' : ''
+    )
+    const [customStartDate, setCustomStartDate] = useState(currentStartDate)
+    const [customEndDate, setCustomEndDate] = useState(currentEndDate)
 
-    const totalPages = Math.ceil(totalCount / 25)
+    const totalPages = Math.ceil(totalCount / currentLimit)
+
+    // Auto-refresh functionality
+    useEffect(() => {
+        if (!autoRefresh) return
+        const interval = setInterval(() => {
+            window.location.reload()
+        }, 30000)
+        return () => clearInterval(interval)
+    }, [autoRefresh])
+
+    // Debounced search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchInput !== currentSearch) {
+                updateUrl({ search: searchInput, page: '1' })
+            }
+        }, 500)
+        return () => clearTimeout(timer)
+    }, [searchInput])
+
+    const updateUrl = useCallback((params: Record<string, string>) => {
+        const url = new URL(window.location.href)
+        Object.entries(params).forEach(([key, value]) => {
+            if (value) {
+                url.searchParams.set(key, value)
+            } else {
+                url.searchParams.delete(key)
+            }
+        })
+        window.location.href = url.toString()
+    }, [])
+
+    const handleDatePresetChange = (preset: string) => {
+        setDatePreset(preset)
+        const today = new Date()
+        let startDate = ''
+        let endDate = today.toISOString().split('T')[0]
+
+        switch (preset) {
+            case 'today':
+                startDate = endDate
+                break
+            case '7days':
+                const week = new Date(today)
+                week.setDate(week.getDate() - 7)
+                startDate = week.toISOString().split('T')[0]
+                break
+            case '30days':
+                const month = new Date(today)
+                month.setDate(month.getDate() - 30)
+                startDate = month.toISOString().split('T')[0]
+                break
+            case 'month':
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
+                break
+            case 'custom':
+                return // Don't update URL, wait for user input
+            default:
+                startDate = ''
+                endDate = ''
+        }
+
+        updateUrl({ startDate, endDate, page: '1' })
+    }
+
+    const handleCustomDateApply = () => {
+        updateUrl({
+            startDate: customStartDate,
+            endDate: customEndDate,
+            page: '1'
+        })
+    }
 
     const handleDelete = async (id: string) => {
         setIsDeleting(id)
@@ -79,6 +187,45 @@ export default function VisitsClient({
         setIsClearing(false)
     }
 
+    const handleExport = async () => {
+        setIsExporting(true)
+        try {
+            const csv = await exportVisitsCSV({
+                visitType: currentFilter,
+                startDate: currentStartDate,
+                endDate: currentEndDate,
+                search: currentSearch
+            })
+            if (csv) {
+                const blob = new Blob([csv], { type: 'text/csv' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `visits_${new Date().toISOString().split('T')[0]}.csv`
+                a.click()
+                URL.revokeObjectURL(url)
+                toast.success('Export downloaded')
+            } else {
+                toast.error('Failed to export data')
+            }
+        } catch {
+            toast.error('Export failed')
+        }
+        setIsExporting(false)
+    }
+
+    const handleSort = (column: string) => {
+        const newOrder = currentSortBy === column && currentSortOrder === 'desc' ? 'asc' : 'desc'
+        updateUrl({ sortBy: column, sortOrder: newOrder })
+    }
+
+    const getSortIcon = (column: string) => {
+        if (currentSortBy !== column) return <ArrowUpDown className="w-3 h-3 opacity-30" />
+        return currentSortOrder === 'asc'
+            ? <ArrowUp className="w-3 h-3" />
+            : <ArrowDown className="w-3 h-3" />
+    }
+
     const getDeviceIcon = (type: string | null) => {
         switch (type?.toLowerCase()) {
             case 'mobile': return <Smartphone className="w-4 h-4" />
@@ -98,10 +245,35 @@ export default function VisitsClient({
         })
     }
 
+    // Generate page numbers with ellipsis
+    const getPageNumbers = () => {
+        const pages: (number | string)[] = []
+        const showPages = 5
+
+        if (totalPages <= showPages + 2) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i)
+        } else {
+            pages.push(1)
+            if (currentPage > 3) pages.push('...')
+
+            const start = Math.max(2, currentPage - 1)
+            const end = Math.min(totalPages - 1, currentPage + 1)
+
+            for (let i = start; i <= end; i++) pages.push(i)
+
+            if (currentPage < totalPages - 2) pages.push('...')
+            pages.push(totalPages)
+        }
+
+        return pages
+    }
+
+    const maxHourCount = Math.max(...stats.hourlyDistribution.map(h => h.count), 1)
+
     return (
         <div className="space-y-6">
-            {/* Main Stats Cards - All Time */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Main Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
                     <div className="flex items-center gap-3">
                         <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -140,24 +312,67 @@ export default function VisitsClient({
                         </div>
                     </div>
                 </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                            <BarChart3 className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Avg Daily Views</p>
+                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.avgDailyPageViews.toLocaleString()}</p>
+                            <p className="text-xs text-orange-600 dark:text-orange-400">per day average</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            {/* Top Pages */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5" /> Top Pages
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                    {stats.topPages.length === 0 ? (
-                        <p className="text-gray-500 dark:text-gray-400 col-span-5 text-center py-4">No page data yet</p>
-                    ) : (
-                        stats.topPages.map((p, i) => (
-                            <div key={i} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate" title={p.page}>{p.page}</p>
-                                <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{p.count.toLocaleString()}</p>
+            {/* Hourly Distribution + Top Pages */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Hourly Distribution */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <Clock className="w-5 h-5" /> Traffic by Hour
+                    </h3>
+                    <div className="flex items-end gap-1 h-32">
+                        {stats.hourlyDistribution.map((h) => (
+                            <div key={h.hour} className="flex-1 flex flex-col items-center group">
+                                <div className="relative w-full flex justify-center">
+                                    <div
+                                        className="w-full max-w-[20px] bg-blue-500 dark:bg-blue-600 rounded-t transition-all group-hover:bg-blue-600 dark:group-hover:bg-blue-500"
+                                        style={{ height: `${(h.count / maxHourCount) * 100}%`, minHeight: h.count > 0 ? '4px' : '0' }}
+                                        title={`${h.hour}:00 - ${h.count} visits`}
+                                    />
+                                </div>
                             </div>
-                        ))
-                    )}
+                        ))}
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-400 mt-2">
+                        <span>12am</span>
+                        <span>6am</span>
+                        <span>12pm</span>
+                        <span>6pm</span>
+                        <span>11pm</span>
+                    </div>
+                </div>
+
+                {/* Top Pages */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5" /> Top Pages
+                    </h3>
+                    <div className="space-y-3">
+                        {stats.topPages.length === 0 ? (
+                            <p className="text-gray-500 dark:text-gray-400 text-center py-4">No page data yet</p>
+                        ) : (
+                            stats.topPages.map((p, i) => (
+                                <div key={i} className="flex items-center justify-between">
+                                    <span className="text-gray-600 dark:text-gray-300 truncate flex-1 mr-4" title={p.page}>{p.page}</span>
+                                    <span className="text-blue-600 dark:text-blue-400 font-bold">{p.count.toLocaleString()}</span>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -218,16 +433,28 @@ export default function VisitsClient({
                 </div>
             </div>
 
-            {/* Actions Bar with Filter */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Visit Log</h3>
+            {/* Filters Bar */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
+                    {/* Search */}
+                    <div className="relative w-full lg:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search IP or page..."
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                    </div>
+
+                    {/* Type Filter */}
                     <div className="flex items-center gap-2">
                         <Filter className="w-4 h-4 text-gray-400" />
                         <select
                             value={currentFilter}
-                            onChange={(e) => window.location.href = `?filter=${e.target.value}`}
-                            className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                            onChange={(e) => updateUrl({ filter: e.target.value, page: '1' })}
+                            className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                         >
                             <option value="all">All Types</option>
                             <option value="page_view">Page Views</option>
@@ -235,22 +462,86 @@ export default function VisitsClient({
                             <option value="unique_daily">Daily Unique</option>
                         </select>
                     </div>
-                </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
-                    >
-                        <RefreshCw className="w-4 h-4" /> Refresh
-                    </button>
-                    <button
-                        onClick={handleClearOld}
-                        disabled={isClearing}
-                        className="flex items-center gap-2 px-4 py-2 text-sm bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                        {isClearing ? 'Clearing...' : 'Clear 30+ days'}
-                    </button>
+
+                    {/* Date Presets */}
+                    <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <select
+                            value={datePreset}
+                            onChange={(e) => handleDatePresetChange(e.target.value)}
+                            className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                        >
+                            <option value="">All Time</option>
+                            {datePresets.map(p => (
+                                <option key={p.value} value={p.value}>{p.label}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Custom Date Range */}
+                    {datePreset === 'custom' && (
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="date"
+                                value={customStartDate}
+                                onChange={(e) => setCustomStartDate(e.target.value)}
+                                className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                            />
+                            <span className="text-gray-400">to</span>
+                            <input
+                                type="date"
+                                value={customEndDate}
+                                onChange={(e) => setCustomEndDate(e.target.value)}
+                                className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                            />
+                            <button
+                                onClick={handleCustomDateApply}
+                                className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                            >
+                                Apply
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Spacer */}
+                    <div className="flex-1" />
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={autoRefresh}
+                                onChange={(e) => setAutoRefresh(e.target.checked)}
+                                className="rounded"
+                            />
+                            Auto-refresh
+                        </label>
+
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                        </button>
+
+                        <button
+                            onClick={handleExport}
+                            disabled={isExporting}
+                            className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 rounded-lg disabled:opacity-50"
+                        >
+                            <Download className="w-4 h-4" />
+                            {isExporting ? 'Exporting...' : 'Export'}
+                        </button>
+
+                        <button
+                            onClick={handleClearOld}
+                            disabled={isClearing}
+                            className="flex items-center gap-2 px-3 py-2 text-sm bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg disabled:opacity-50"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -260,10 +551,18 @@ export default function VisitsClient({
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                             <tr>
-                                <th className="px-6 py-3">Date/Time</th>
-                                <th className="px-6 py-3">Type</th>
-                                <th className="px-6 py-3">IP Address</th>
-                                <th className="px-6 py-3">Page</th>
+                                <th className="px-6 py-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onClick={() => handleSort('visited_at')}>
+                                    <div className="flex items-center gap-1">Date/Time {getSortIcon('visited_at')}</div>
+                                </th>
+                                <th className="px-6 py-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onClick={() => handleSort('visit_type')}>
+                                    <div className="flex items-center gap-1">Type {getSortIcon('visit_type')}</div>
+                                </th>
+                                <th className="px-6 py-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onClick={() => handleSort('ip_address')}>
+                                    <div className="flex items-center gap-1">IP Address {getSortIcon('ip_address')}</div>
+                                </th>
+                                <th className="px-6 py-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onClick={() => handleSort('page_path')}>
+                                    <div className="flex items-center gap-1">Page {getSortIcon('page_path')}</div>
+                                </th>
                                 <th className="px-6 py-3">Browser</th>
                                 <th className="px-6 py-3">Device</th>
                                 <th className="px-6 py-3">Actions</th>
@@ -274,17 +573,14 @@ export default function VisitsClient({
                                 <tr>
                                     <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                                         <Globe className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                                        No visits recorded yet
+                                        No visits found
                                     </td>
                                 </tr>
                             ) : (
                                 visits.map((visit) => (
                                     <tr key={visit.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                                                <Calendar className="w-4 h-4 text-gray-400" />
-                                                {formatDate(visit.visited_at)}
-                                            </div>
+                                        <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-300">
+                                            {formatDate(visit.visited_at)}
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${visitTypeColors[visit.visit_type || 'page_view']}`}>
@@ -295,7 +591,7 @@ export default function VisitsClient({
                                             {visit.ip_address || 'Unknown'}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-blue-600 dark:text-blue-400 font-medium">
+                                            <span className="text-blue-600 dark:text-blue-400 font-medium truncate block max-w-[200px]" title={visit.page_path}>
                                                 {visit.page_path}
                                             </span>
                                         </td>
@@ -325,31 +621,58 @@ export default function VisitsClient({
                     </table>
                 </div>
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                    <div className="px-6 py-4 border-t dark:border-gray-700 flex items-center justify-between">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Showing page {currentPage} of {totalPages} ({totalCount} total)
-                        </p>
-                        <div className="flex gap-2">
-                            <a
-                                href={`?page=${Math.max(1, currentPage - 1)}&filter=${currentFilter}`}
-                                className={`px-3 py-1 text-sm rounded border dark:border-gray-600 ${currentPage === 1
-                                    ? 'text-gray-400 cursor-not-allowed'
-                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                    }`}
+                {/* Enhanced Pagination */}
+                {totalPages > 0 && (
+                    <div className="px-6 py-4 border-t dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Showing {((currentPage - 1) * currentLimit) + 1}-{Math.min(currentPage * currentLimit, totalCount)} of {totalCount}
+                            </p>
+                            <select
+                                value={currentLimit}
+                                onChange={(e) => updateUrl({ limit: e.target.value, page: '1' })}
+                                className="text-sm border border-gray-200 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                             >
-                                Previous
-                            </a>
-                            <a
-                                href={`?page=${Math.min(totalPages, currentPage + 1)}&filter=${currentFilter}`}
-                                className={`px-3 py-1 text-sm rounded border dark:border-gray-600 ${currentPage === totalPages
-                                    ? 'text-gray-400 cursor-not-allowed'
-                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                    }`}
+                                <option value="10">10 / page</option>
+                                <option value="25">25 / page</option>
+                                <option value="50">50 / page</option>
+                                <option value="100">100 / page</option>
+                            </select>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => updateUrl({ page: String(Math.max(1, currentPage - 1)) })}
+                                disabled={currentPage === 1}
+                                className="p-2 rounded border dark:border-gray-600 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-700"
                             >
-                                Next
-                            </a>
+                                <ChevronLeft className="w-4 h-4" />
+                            </button>
+
+                            {getPageNumbers().map((pageNum, i) => (
+                                pageNum === '...' ? (
+                                    <span key={i} className="px-2 text-gray-400">...</span>
+                                ) : (
+                                    <button
+                                        key={i}
+                                        onClick={() => updateUrl({ page: String(pageNum) })}
+                                        className={`min-w-[32px] h-8 rounded border text-sm ${currentPage === pageNum
+                                                ? 'bg-blue-600 text-white border-blue-600'
+                                                : 'dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                            }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                )
+                            ))}
+
+                            <button
+                                onClick={() => updateUrl({ page: String(Math.min(totalPages, currentPage + 1)) })}
+                                disabled={currentPage === totalPages}
+                                className="p-2 rounded border dark:border-gray-600 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
                         </div>
                     </div>
                 )}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { verifyGuestPin } from './actions'
 
 export default function PinEntryForm({ token }: { token: string }) {
@@ -31,7 +32,17 @@ export default function PinEntryForm({ token }: { token: string }) {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+            <div className="flex items-center mb-6">
+                <Image
+                    src="/logo.png"
+                    alt="Blotter System Logo"
+                    width={56}
+                    height={56}
+                    className="mr-3"
+                />
+                <span className="text-2xl font-bold text-gray-900 dark:text-white">Blotter System</span>
+            </div>
             <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
                 <h1 className="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-white">Secure Access Required</h1>
 
