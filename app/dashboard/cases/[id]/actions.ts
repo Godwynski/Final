@@ -86,15 +86,85 @@ export async function emailGuestLink(formData: FormData) {
     const emailParams = new EmailParams()
         .setFrom(sentFrom)
         .setTo(recipients)
-        .setSubject('Secure Evidence Upload Link')
+        .setSubject('🔐 Secure Evidence Upload Link - Action Required')
         .setHtml(`
-            <h1>Secure Evidence Upload Link</h1>
-            <p>You have been invited to upload evidence for a case.</p>
-            <p><strong>Link:</strong> <a href="${link}">${link}</a></p>
-            <p><strong>PIN:</strong> ${pin}</p>
-            <p>This link will expire soon.</p>
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <tr>
+                        <td>
+                            <!-- Header -->
+                            <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 16px 16px 0 0; padding: 32px; text-align: center;">
+                                <div style="width: 64px; height: 64px; background-color: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+                                    <span style="font-size: 32px;">📤</span>
+                                </div>
+                                <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">Secure Evidence Upload</h1>
+                                <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">You've been invited to submit evidence</p>
+                            </div>
+                            
+                            <!-- Content -->
+                            <div style="background-color: #ffffff; padding: 32px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                                <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 0 0 24px;">
+                                    Hello,<br><br>
+                                    You have been invited to securely upload evidence for an ongoing case. Please use the link and PIN below to access the upload portal.
+                                </p>
+                                
+                                <!-- PIN Box -->
+                                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 24px;">
+                                    <p style="color: #92400e; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px;">Your Secure PIN</p>
+                                    <p style="color: #78350f; font-size: 32px; font-weight: 700; letter-spacing: 8px; margin: 0; font-family: 'Courier New', monospace;">${pin}</p>
+                                    <p style="color: #92400e; font-size: 11px; margin: 12px 0 0;">Keep this PIN confidential. You'll need it to access the upload portal.</p>
+                                </div>
+                                
+                                <!-- CTA Button -->
+                                <div style="text-align: center; margin-bottom: 24px;">
+                                    <a href="${link}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">
+                                        📎 Upload Evidence Now
+                                    </a>
+                                </div>
+                                
+                                <!-- Link fallback -->
+                                <div style="background-color: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                                    <p style="color: #6b7280; font-size: 12px; margin: 0 0 8px;">If the button doesn't work, copy and paste this link:</p>
+                                    <p style="color: #3b82f6; font-size: 13px; word-break: break-all; margin: 0;">
+                                        <a href="${link}" style="color: #3b82f6; text-decoration: underline;">${link}</a>
+                                    </p>
+                                </div>
+                                
+                                <!-- Security Notice -->
+                                <div style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                                    <div style="display: flex; align-items: flex-start;">
+                                        <span style="font-size: 16px; margin-right: 8px;">🔒</span>
+                                        <div>
+                                            <p style="color: #374151; font-size: 13px; font-weight: 600; margin: 0 0 4px;">Security Notice</p>
+                                            <p style="color: #6b7280; font-size: 12px; margin: 0; line-height: 1.5;">
+                                                This is a secure link that will expire soon. Do not share this email or your PIN with anyone. 
+                                                Only upload evidence relevant to the case.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Footer -->
+                            <div style="text-align: center; padding: 24px;">
+                                <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                                    This is an automated message from the Barangay Blotter System.<br>
+                                    Please do not reply to this email.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </body>
+            </html>
         `)
-        .setText(`Secure Evidence Upload Link\n\nYou have been invited to upload evidence for a case.\n\nLink: ${link}\nPIN: ${pin}\n\nThis link will expire soon.`);
+        .setText(`SECURE EVIDENCE UPLOAD LINK\n\nHello,\n\nYou have been invited to securely upload evidence for an ongoing case.\n\n━━━━━━━━━━━━━━━━━━━━━━━━\nYOUR SECURE PIN: ${pin}\n━━━━━━━━━━━━━━━━━━━━━━━━\n\nUpload Link: ${link}\n\nSECURITY NOTICE:\n• This link will expire soon\n• Do not share this email or PIN with anyone\n• Only upload evidence relevant to the case\n\nThis is an automated message from the Barangay Blotter System.`);
 
     try {
         await mailersend.email.send(emailParams);
@@ -241,8 +311,24 @@ export async function generateCaseGuestLink(caseId: string, formData: FormData) 
 
     if (!user) throw new Error('Unauthorized')
 
+    // Check active link limit
+    const { count: activeLinksCount } = await supabase
+        .from('guest_links')
+        .select('id', { count: 'exact', head: true })
+        .eq('case_id', caseId)
+        .eq('is_active', true)
+
+    if (activeLinksCount !== null && activeLinksCount >= CONFIG.GUEST_LINK.MAX_LINKS_PER_CASE) {
+        return { error: `Maximum ${CONFIG.GUEST_LINK.MAX_LINKS_PER_CASE} active links per case. Deactivate existing links to create new ones.` }
+    }
+
     const durationStr = formData.get('duration') as string
     const durationHours = durationStr ? parseInt(durationStr) : 72 // Default 3 days
+
+    // Get recipient info
+    const recipientName = formData.get('recipient_name') as string || null
+    const recipientEmail = formData.get('recipient_email') as string || null
+    const recipientPhone = formData.get('recipient_phone') as string || null
 
     // Validate duration
     const validation = guestLinkDurationSchema.safeParse(durationHours)
@@ -266,14 +352,128 @@ export async function generateCaseGuestLink(caseId: string, formData: FormData) 
             created_by: user.id,
             expires_at: expiresAt.toISOString(),
             is_active: true,
+            recipient_name: recipientName,
+            recipient_email: recipientEmail,
+            recipient_phone: recipientPhone,
         })
 
     if (error) {
         return { error: error.message }
     }
 
+    // Auto-send email if recipient email is provided
+    let emailSent = false
+    if (recipientEmail) {
+        try {
+            const fromEmail = process.env.MAILERSEND_FROM_EMAIL || 'info@trial-z3m5jgr209zgdpyo.mlsender.net';
+            const fromName = process.env.MAILERSEND_FROM_NAME || 'Blotter System';
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+            const link = `${baseUrl}/guest/${token}`;
+
+            const sentFrom = new Sender(fromEmail, fromName);
+            const recipients = [
+                new Recipient(recipientEmail, recipientName || "Guest")
+            ];
+
+            const emailParams = new EmailParams()
+                .setFrom(sentFrom)
+                .setTo(recipients)
+                .setSubject('🔐 Secure Evidence Upload Link - Action Required')
+                .setHtml(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    </head>
+                    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <tr>
+                                <td>
+                                    <!-- Header -->
+                                    <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 16px 16px 0 0; padding: 32px; text-align: center;">
+                                        <div style="width: 64px; height: 64px; background-color: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+                                            <span style="font-size: 32px;">📤</span>
+                                        </div>
+                                        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">Secure Evidence Upload</h1>
+                                        <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">You've been invited to submit evidence</p>
+                                    </div>
+                                    
+                                    <!-- Content -->
+                                    <div style="background-color: #ffffff; padding: 32px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                                        <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 0 0 24px;">
+                                            Hello${recipientName ? ` ${recipientName}` : ''},<br><br>
+                                            You have been invited to securely upload evidence for an ongoing case. Please use the link and PIN below to access the upload portal.
+                                        </p>
+                                        
+                                        <!-- PIN Box -->
+                                        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 24px;">
+                                            <p style="color: #92400e; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px;">Your Secure PIN</p>
+                                            <p style="color: #78350f; font-size: 32px; font-weight: 700; letter-spacing: 8px; margin: 0; font-family: 'Courier New', monospace;">${pin}</p>
+                                            <p style="color: #92400e; font-size: 11px; margin: 12px 0 0;">Keep this PIN confidential. You'll need it to access the upload portal.</p>
+                                        </div>
+                                        
+                                        <!-- CTA Button -->
+                                        <div style="text-align: center; margin-bottom: 24px;">
+                                            <a href="${link}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">
+                                                📎 Upload Evidence Now
+                                            </a>
+                                        </div>
+                                        
+                                        <!-- Link fallback -->
+                                        <div style="background-color: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                                            <p style="color: #6b7280; font-size: 12px; margin: 0 0 8px;">If the button doesn't work, copy and paste this link:</p>
+                                            <p style="color: #3b82f6; font-size: 13px; word-break: break-all; margin: 0;">
+                                                <a href="${link}" style="color: #3b82f6; text-decoration: underline;">${link}</a>
+                                            </p>
+                                        </div>
+                                        
+                                        <!-- Security Notice -->
+                                        <div style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                                            <div style="display: flex; align-items: flex-start;">
+                                                <span style="font-size: 16px; margin-right: 8px;">🔒</span>
+                                                <div>
+                                                    <p style="color: #374151; font-size: 13px; font-weight: 600; margin: 0 0 4px;">Security Notice</p>
+                                                    <p style="color: #6b7280; font-size: 12px; margin: 0; line-height: 1.5;">
+                                                        This is a secure link that will expire soon. Do not share this email or your PIN with anyone. 
+                                                        Only upload evidence relevant to the case.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Footer -->
+                                    <div style="text-align: center; padding: 24px;">
+                                        <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                                            This is an automated message from the Barangay Blotter System.<br>
+                                            Please do not reply to this email.
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </body>
+                    </html>
+                `)
+                .setText(`SECURE EVIDENCE UPLOAD LINK\n\nHello${recipientName ? ` ${recipientName}` : ''},\n\nYou have been invited to securely upload evidence for an ongoing case.\n\n━━━━━━━━━━━━━━━━━━━━━━━━\nYOUR SECURE PIN: ${pin}\n━━━━━━━━━━━━━━━━━━━━━━━━\n\nUpload Link: ${link}\n\nSECURITY NOTICE:\n• This link will expire soon\n• Do not share this email or PIN with anyone\n• Only upload evidence relevant to the case\n\nThis is an automated message from the Barangay Blotter System.`);
+
+            await mailersend.email.send(emailParams);
+            emailSent = true
+        } catch (emailError) {
+            // Log error but don't fail the entire operation
+            console.error('Failed to send guest link email:', emailError)
+        }
+    }
+
     revalidatePath(`/dashboard/cases/${caseId}`)
-    return { success: true, pin, message: `Secure link generated. PIN: ${pin}` }
+
+    let message = `Secure link generated. PIN: ${pin}`
+    if (recipientEmail) {
+        message += emailSent ? ` Email sent to ${recipientEmail}.` : ` (Email sending failed, please send manually.)`
+    }
+
+    return { success: true, pin, token, message }
 }
 
 export async function toggleGuestLinkStatus(linkId: string, currentStatus: boolean, caseId: string) {

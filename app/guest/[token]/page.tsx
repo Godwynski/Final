@@ -60,14 +60,25 @@ export default async function GuestPage(props: { params: Promise<{ token: string
     }
 
     // 3. Fetch Evidence (Authenticated via PIN)
-    const { data: evidence } = await supabaseAdmin
+    const { data: allEvidence } = await supabaseAdmin
         .from('evidence')
         .select('*')
         .eq('case_id', link.case_id)
         .order('created_at', { ascending: false })
 
-    // Count only image evidence for photo limit
-    const imageCount = evidence?.filter(e =>
+    // Filter evidence for guest visibility:
+    // - Staff uploads (uploaded_by is not null)
+    // - Own uploads (guest_link_id matches this link)
+    // - Other guests' uploads where is_visible_to_others = true
+    const visibleEvidence = allEvidence?.filter(e =>
+        e.uploaded_by !== null ||                     // Staff uploads
+        e.guest_link_id === link.id ||                // Own uploads
+        e.is_visible_to_others === true               // Other guests (if public)
+    ) || []
+
+    // Count only image evidence for THIS LINK's photo limit
+    const linkPhotoCount = allEvidence?.filter(e =>
+        e.guest_link_id === link.id &&
         CONFIG.FILE_UPLOAD.ALLOWED_IMAGE_TYPES.includes(e.file_type as any)
     ).length || 0
 
@@ -125,9 +136,9 @@ export default async function GuestPage(props: { params: Promise<{ token: string
                     <div className="lg:col-span-2 space-y-6">
                         <div className="flex justify-between items-center">
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white">Case Evidence</h3>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">{evidence?.length || 0} items</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{visibleEvidence.length} items</span>
                         </div>
-                        <GuestEvidenceList evidence={evidence || []} token={token} />
+                        <GuestEvidenceList evidence={visibleEvidence} token={token} />
                     </div>
 
                     {/* Right Column: Upload Form */}
@@ -140,7 +151,7 @@ export default async function GuestPage(props: { params: Promise<{ token: string
                                 </p>
                             </div>
                             <div className="p-6">
-                                <GuestUploadForm token={token} currentPhotoCount={imageCount} />
+                                <GuestUploadForm token={token} currentPhotoCount={linkPhotoCount} />
                             </div>
                         </div>
                     </div>

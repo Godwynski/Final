@@ -150,6 +150,9 @@ export default function CaseDetailsClient({
         setDocumentModalState(prev => ({ ...prev, isOpen: false }))
     }
 
+    // Link Generation Modal State
+    const [showLinkModal, setShowLinkModal] = useState(false)
+
     // Format date on client only to avoid hydration mismatch
     useEffect(() => {
         setFormattedDate(new Date(caseData.incident_date).toLocaleString())
@@ -508,29 +511,133 @@ export default function CaseDetailsClient({
                                 <div className="flex justify-between items-center mb-4">
                                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">Guest Upload Links</h2>
                                     {!isReadOnly && (
-                                        <form action={async (formData) => {
-                                            const result = await generateCaseGuestLink(caseData.id, formData)
-                                            if (result?.error) {
-                                                showAlert('Error', result.error, 'error')
-                                            } else if (result?.success) {
-                                                showAlert('Link Generated', result.message, 'success')
-                                            }
-                                        }}>
-                                            <SubmitButton className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-green-500 dark:hover:bg-green-600 dark:focus:ring-green-800" loadingText="Generating...">
-                                                Generate New Link
-                                            </SubmitButton>
-                                        </form>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowLinkModal(true)}
+                                            className="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-green-500 dark:hover:bg-green-600 dark:focus:ring-green-800 inline-flex items-center gap-1"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+                                            Generate Link
+                                        </button>
                                     )}
                                 </div>
+
+                                {/* Generate Link Modal */}
+                                {showLinkModal && (
+                                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowLinkModal(false)}>
+                                        <div
+                                            className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {/* Modal Header */}
+                                            <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4">
+                                                <div className="flex justify-between items-center">
+                                                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                                        </svg>
+                                                        Generate Guest Link
+                                                    </h3>
+                                                    <button
+                                                        onClick={() => setShowLinkModal(false)}
+                                                        className="text-white/80 hover:text-white transition-colors"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                <p className="text-green-100 text-sm mt-1">Create a secure upload link for a recipient</p>
+                                            </div>
+
+                                            {/* Modal Body */}
+                                            <form
+                                                action={async (formData) => {
+                                                    const result = await generateCaseGuestLink(caseData.id, formData)
+                                                    if (result?.error) {
+                                                        showAlert('Error', result.error, 'error')
+                                                    } else if (result?.success) {
+                                                        setShowLinkModal(false)
+                                                        showAlert('Link Generated', result.message, 'success')
+                                                    }
+                                                }}
+                                                className="p-6 space-y-4"
+                                            >
+                                                <div>
+                                                    <label htmlFor="recipient_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                                        Recipient Name
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        name="recipient_name"
+                                                        id="recipient_name"
+                                                        placeholder="e.g. Juan Dela Cruz"
+                                                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-green-500 dark:focus:border-green-500"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label htmlFor="recipient_email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                                        Recipient Email
+                                                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-1 font-normal">(auto-sends link)</span>
+                                                    </label>
+                                                    <input
+                                                        type="email"
+                                                        name="recipient_email"
+                                                        id="recipient_email"
+                                                        placeholder="email@example.com"
+                                                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-green-500 dark:focus:border-green-500"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label htmlFor="recipient_phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                                        Recipient Phone
+                                                    </label>
+                                                    <input
+                                                        type="tel"
+                                                        name="recipient_phone"
+                                                        id="recipient_phone"
+                                                        placeholder="09xxxxxxxxx"
+                                                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-green-500 dark:focus:border-green-500"
+                                                    />
+                                                </div>
+
+                                                <div className="pt-2 space-y-3">
+                                                    <SubmitButton
+                                                        className="w-full text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-green-500 dark:hover:bg-green-600 dark:focus:ring-green-800 inline-flex items-center justify-center gap-2"
+                                                        loadingText="Generating..."
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                                        </svg>
+                                                        Generate Secure Link
+                                                    </SubmitButton>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                                                        Max {CONFIG.GUEST_LINK.MAX_LINKS_PER_CASE} active links per case
+                                                    </p>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="space-y-4">
                                     {guestLinks.map(link => (
                                         <div key={link.id} className="mb-4">
                                             <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 rounded-lg gap-2 border ${link.is_active ? 'bg-blue-50 border-blue-100 dark:bg-blue-900/30 dark:border-blue-800' : 'bg-gray-100 border-gray-200 dark:bg-gray-700 dark:border-gray-600 opacity-75'}`}>
                                                 <div className="flex flex-col gap-1">
+                                                    {(link.recipient_name || link.recipient_email || link.recipient_phone) && (
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                                {link.recipient_name || 'Unknown Recipient'}
+                                                            </span>
+                                                            {link.recipient_email && (
+                                                                <span className="text-xs text-gray-500 dark:text-gray-400">({link.recipient_email})</span>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-sm font-mono text-blue-600 dark:text-blue-400">Link: ...{link.token.slice(-8)}</span>
-                                                        <CopyButton text={`/guest/${link.token}`} label="Copy Link" />
+                                                        <CopyButton text={`${origin}/guest/${link.token}`} label="Copy Link" />
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-xs font-bold text-gray-700 dark:text-gray-300">PIN: {link.pin}</span>

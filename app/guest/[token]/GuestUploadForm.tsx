@@ -9,13 +9,17 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
     const [isLoading, setIsLoading] = useState(false)
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
+    const [isVisible, setIsVisible] = useState(true)
 
-    const isAtLimit = currentPhotoCount >= CONFIG.FILE_UPLOAD.GUEST_MAX_PHOTOS_PER_CASE
+    const isAtLimit = currentPhotoCount >= CONFIG.GUEST_LINK.MAX_UPLOADS_PER_LINK
 
     async function handleSubmit(formData: FormData) {
         setIsLoading(true)
         setMessage('')
         setError('')
+
+        // Add visibility flag to form data
+        formData.set('is_visible', isVisible.toString())
 
         const res = await uploadGuestEvidence(token, formData)
 
@@ -26,6 +30,7 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
             // Reset form
             const form = document.getElementById('upload-form') as HTMLFormElement
             form.reset()
+            setIsVisible(true)
         }
         setIsLoading(false)
     }
@@ -35,7 +40,7 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
             {/* Upload Limits Info */}
             <UploadLimitInfo
                 currentCount={currentPhotoCount}
-                maxCount={CONFIG.FILE_UPLOAD.GUEST_MAX_PHOTOS_PER_CASE}
+                maxCount={CONFIG.GUEST_LINK.MAX_UPLOADS_PER_LINK}
                 maxSizeMB={CONFIG.FILE_UPLOAD.GUEST_MAX_SIZE_MB}
                 userType="guest"
             />
@@ -64,6 +69,24 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
                         placeholder="Describe this evidence..."
                         disabled={isAtLimit}
                     ></textarea>
+                </div>
+
+                {/* Visibility Toggle */}
+                <div className="flex items-start">
+                    <div className="flex items-center h-5">
+                        <input
+                            id="visibility"
+                            type="checkbox"
+                            checked={isVisible}
+                            onChange={(e) => setIsVisible(e.target.checked)}
+                            className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600"
+                            disabled={isAtLimit}
+                        />
+                    </div>
+                    <label htmlFor="visibility" className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                        <span className="font-medium text-gray-900 dark:text-white">Visible to other parties</span>
+                        <p className="text-xs mt-0.5">If unchecked, only staff can see this evidence</p>
+                    </label>
                 </div>
 
                 {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}

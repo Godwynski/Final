@@ -140,6 +140,8 @@ create table if not exists evidence (
   file_type text,
   description text,
   uploaded_by uuid references profiles(id),
+  guest_link_id uuid references guest_links(id) on delete set null,
+  is_visible_to_others boolean default true,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -181,6 +183,9 @@ create table if not exists guest_links (
   created_by uuid references profiles(id) not null,
   expires_at timestamp with time zone not null,
   is_active boolean default true,
+  recipient_name text,
+  recipient_email text,
+  recipient_phone text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

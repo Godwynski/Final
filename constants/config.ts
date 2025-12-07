@@ -19,6 +19,8 @@ export const CONFIG = {
     },
 
     GUEST_LINK: {
+        MAX_LINKS_PER_CASE: 5,          // Maximum active links per case
+        MAX_UPLOADS_PER_LINK: 3,        // Maximum uploads per guest link
         DEFAULT_DURATION_HOURS: 24,
         MIN_DURATION_HOURS: 1,
         MAX_DURATION_HOURS: 168, // 7 days

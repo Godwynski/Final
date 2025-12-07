@@ -44,28 +44,23 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
         return { error: 'Invalid or missing PIN. Please re-enter your PIN.' }
     }
 
-    // 2. Handle File Upload (Mock for now, or real if bucket exists)
-    // Since we can't easily upload binary files via server actions without client-side help or base64,
-    // we will assume the file is passed as a string path or we simulate it.
-    // BUT, in a real app, we would upload to storage first.
-    // For this demo, let's just insert a record into 'evidence' table as if it was uploaded.
-
     const file = formData.get('file') as File
     const description = formData.get('description') as string
+    const isVisibleToOthers = formData.get('is_visible') === 'true'
 
     if (!file) {
         return { error: 'No file uploaded.' }
     }
 
-    // Check photo count limit for guests
-    const { count: photoCount } = await supabaseAdmin
+    // Check photo count limit for THIS LINK (per-link limit)
+    const { count: linkPhotoCount } = await supabaseAdmin
         .from('evidence')
         .select('id', { count: 'exact', head: true })
-        .eq('case_id', caseId)
+        .eq('guest_link_id', links.id)
         .in('file_type', CONFIG.FILE_UPLOAD.ALLOWED_IMAGE_TYPES)
 
-    if (photoCount && photoCount >= CONFIG.FILE_UPLOAD.GUEST_MAX_PHOTOS_PER_CASE) {
-        return { error: `Guest upload limit reached. Maximum ${CONFIG.FILE_UPLOAD.GUEST_MAX_PHOTOS_PER_CASE} photos allowed per case.` }
+    if (linkPhotoCount !== null && linkPhotoCount >= CONFIG.GUEST_LINK.MAX_UPLOADS_PER_LINK) {
+        return { error: `Upload limit reached for this link. Maximum ${CONFIG.GUEST_LINK.MAX_UPLOADS_PER_LINK} photos per link.` }
     }
 
     // Validate file size (Guest limit: 5MB)
@@ -100,15 +95,17 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
         .from('evidence')
         .getPublicUrl(fileName)
 
-    // Insert into Evidence Table using Admin Client (Bypass RLS)
+    // Insert into Evidence Table with guest_link_id and visibility
     const { error: insertError } = await supabaseAdmin
         .from('evidence')
         .insert({
             case_id: caseId,
-            file_path: publicUrl, // Storing the full URL for easier access
+            file_path: publicUrl,
             file_name: file.name,
             file_type: file.type,
             description: description,
+            guest_link_id: links.id,
+            is_visible_to_others: isVisibleToOthers,
             // uploaded_by is null for guests
         })
 
@@ -125,7 +122,8 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
             token_id: links.id,
             file_name: file.name,
             file_path: publicUrl,
-            description: description
+            description: description,
+            is_visible_to_others: isVisibleToOthers
         },
     })
 
@@ -134,7 +132,7 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
     await supabaseAdmin.from('notifications').insert({
         user_id: links.created_by,
         title: 'New Evidence Uploaded',
-        message: `A guest uploaded evidence: ${file.name}`,
+        message: `A guest (${links.recipient_name || 'Unknown'}) uploaded evidence: ${file.name}`,
         link: `/dashboard/cases/${caseId}`,
     })
 
