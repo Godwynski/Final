@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { getDateRangeFromParams } from '@/utils/dateRange'
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 
@@ -23,11 +24,27 @@ const RecentCasesTable = dynamic(() => import('@/components/dashboard/RecentCase
     loading: () => <div className="h-96 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
 })
 
-export default async function Dashboard(props: { searchParams: Promise<{ range?: string, type?: string, status?: string }> }) {
+export default async function Dashboard(props: { searchParams: Promise<{ range?: string, type?: string, status?: string, startDate?: string, endDate?: string }> }) {
     const searchParams = await props.searchParams
     const range = searchParams.range || 'all'
     const filterType = searchParams.type
     const filterStatus = searchParams.status
+
+    // Parse dates consistently using shared util (mostly for custom/specific ranges)
+    // We pass these explicit dates to the actions so they don't need to re-parse or guess 'custom' logic
+    const { startDate, endDate } = getDateRangeFromParams(
+        range,
+        // We don't have startDate/endDate directly in searchParams for Main Dashboard usually?
+        // Wait, DashboardControls might push 'startDate'/'endDate' params if range is custom/specific.
+        // Let's check if SearchParams type includes them. The props above definition says: { range?: string, type?: string, status?: string }
+        // I should update props definition to include starDate/endDate
+        (searchParams as any).startDate,
+        (searchParams as any).endDate
+    )
+
+    // Convert to string for server action if valid dates
+    const customStart = startDate ? startDate.toISOString() : undefined
+    const customEnd = endDate ? endDate.toISOString() : undefined
 
     const supabase = await createClient()
 
@@ -47,9 +64,9 @@ export default async function Dashboard(props: { searchParams: Promise<{ range?:
 
     // Fetch filtered analytics and other dashboard data in parallel
     const [analyticsData, actionItems, recentCases] = await Promise.all([
-        getFilteredAnalytics(range, filterType, filterStatus),
+        getFilteredAnalytics(range, filterType, filterStatus, customStart, customEnd),
         getActionItems(),
-        getRecentCases(range, filterType, filterStatus)
+        getRecentCases(range, filterType, filterStatus, customStart, customEnd)
     ])
 
     const { stats, comparison, statusData, typeData, trendData } = analyticsData

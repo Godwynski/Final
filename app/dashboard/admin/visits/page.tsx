@@ -4,6 +4,7 @@ import { getCachedProfile } from '../../actions'
 import { getVisits, getVisitStats } from './actions'
 import VisitsClient from './VisitsClient'
 import type { Metadata } from 'next'
+import { getDateRangeFromParams } from '@/utils/dateRange'
 
 export const metadata: Metadata = {
     title: 'Visit Monitor | Dashboard',
@@ -13,12 +14,18 @@ export const metadata: Metadata = {
 type SearchParams = {
     page?: string
     limit?: string
-    filter?: string
+    visitType?: string
+    role?: string
+    device?: string
     search?: string
+    range?: string
     startDate?: string
     endDate?: string
     sortBy?: string
     sortOrder?: string
+    os?: string
+    browser?: string
+    excludeAdmins?: string
 }
 
 export default async function VisitsPage(props: { searchParams: Promise<SearchParams> }) {
@@ -28,12 +35,26 @@ export default async function VisitsPage(props: { searchParams: Promise<SearchPa
     // Parse all URL parameters with defaults
     const page = Number(searchParams.page) || 1
     const limit = Number(searchParams.limit) || 25
-    const filter = searchParams.filter || 'all'
+    const visitType = searchParams.visitType // Can still filter by type if manually added to URL
+    const role = searchParams.role || 'all'
+    const device = searchParams.device || 'all'
     const search = searchParams.search || ''
-    const startDate = searchParams.startDate || ''
-    const endDate = searchParams.endDate || ''
+    const range = searchParams.range || '30d'
+    const customStart = searchParams.startDate
+    const customEnd = searchParams.endDate
+
+    const { startDate: calculatedStart, endDate: calculatedEnd } = getDateRangeFromParams(range, customStart, customEnd)
+
+    // Format for DB/Props
+    const startDate = calculatedStart.toISOString()
+    // calculatedEnd can be null (for 'to now' logic) so we handle that
+    const endDate = calculatedEnd ? calculatedEnd.toISOString() : ''
+
     const sortBy = searchParams.sortBy || 'visited_at'
     const sortOrder = (searchParams.sortOrder as 'asc' | 'desc') || 'desc'
+    const os = searchParams.os || 'all'
+    const browser = searchParams.browser || 'all'
+    const excludeAdmins = searchParams.excludeAdmins === 'true'
 
     const {
         data: { user },
@@ -63,14 +84,19 @@ export default async function VisitsPage(props: { searchParams: Promise<SearchPa
         getVisits({
             page,
             limit,
-            visitType: filter !== 'all' ? filter : undefined,
-            startDate: startDate || undefined,
-            endDate: endDate || undefined,
+            visitType,
+            role,
+            device,
+            startDate: startDate,
+            endDate: endDate,
             search: search || undefined,
             sortBy,
-            sortOrder
+            sortOrder,
+            os,
+            browser,
+            excludeAdmins
         }),
-        getVisitStats(startDate || undefined, endDate || undefined)
+        getVisitStats(startDate, endDate)
     ])
 
     return (
@@ -98,12 +124,17 @@ export default async function VisitsPage(props: { searchParams: Promise<SearchPa
                     totalCount={total}
                     currentPage={page}
                     currentLimit={limit}
-                    currentFilter={filter}
+                    currentRole={role}
+                    currentDevice={device}
+                    currentVisitType={visitType || 'page_view'}
                     currentSearch={search}
                     currentStartDate={startDate}
                     currentEndDate={endDate}
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
+                    currentOs={os}
+                    currentBrowser={browser}
+                    currentExcludeAdmins={excludeAdmins}
                 />
             </div>
         </div>

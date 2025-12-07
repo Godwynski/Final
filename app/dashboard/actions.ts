@@ -13,7 +13,9 @@ export const getFilteredAnalytics = unstable_cache(
 async function getFilteredAnalyticsInternal(
     range: string = '30d',
     filterType?: string,
-    filterStatus?: string
+    filterStatus?: string,
+    customStartDate?: string,
+    customEndDate?: string
 ) {
     const supabase = createAdminClient()
 
@@ -60,19 +62,69 @@ async function getFilteredAnalyticsInternal(
             startDate = null
             prevStartDate = null
             break
+        case 'custom':
+        case 'specific':
+            if (customStartDate) {
+                startDate = new Date(customStartDate)
+                // If specific (same day), end date is end of that day. 
+                // If custom, use provided end date or default to end of start date
+                const end = customEndDate ? new Date(customEndDate) : new Date(customStartDate)
+
+                // Ensure end of day for end date
+                end.setHours(23, 59, 59, 999)
+                // Current start is start of day
+                startDate.setHours(0, 0, 0, 0)
+
+                // Calculate previous period
+                const duration = end.getTime() - startDate.getTime()
+                prevStartDate = new Date(startDate.getTime() - duration - 1) // 1ms buffer? No, just duration
+                // Actually to compare "same period before":
+                prevStartDate = new Date(startDate.getTime() - (duration + 1)) // Subtract duration
+            } else {
+                startDate = null
+                prevStartDate = null
+            }
+            break
+        default:
+            // Check if range is a year (e.g., "2024")
+            if (/^\d{4}$/.test(range)) {
+                startDate = new Date(parseInt(range), 0, 1)
+                prevStartDate = new Date(parseInt(range) - 1, 0, 1)
+            } else {
+                // Fallback
+                startDate.setDate(now.getDate() - 30)
+                prevStartDate.setDate(now.getDate() - 60)
+            }
+            break
+    }
+
+    // For non-custom ranges, we need to ensure endDate is handled if we want to support strict windows
+    // But existing logic passes p_end_date: null (which means "to now")
+    // For custom/specific, we MUST pass the calculated endDate.
+    let p_end_date = null
+    if (range === 'custom' || range === 'specific' || /^\d{4}$/.test(range)) {
+        // handle specific end date logic passed to RPC?
+        // RPC p_end_date usually defaults to now if null.
+        // If we have a specific window (custom/specific/year), we should determine it.
+        if (range === 'custom' || range === 'specific') {
+            p_end_date = customEndDate ? new Date(customEndDate) : (customStartDate ? new Date(customStartDate) : new Date())
+            p_end_date.setHours(23, 59, 59, 999)
+        } else if (/^\d{4}$/.test(range)) {
+            p_end_date = new Date(parseInt(range), 11, 31, 23, 59, 59)
+        }
     }
 
     // Parallelize Main Stats and Charts
     const [statsResult, chartsResult] = await Promise.all([
         supabase.rpc('get_case_stats_dynamic', {
             p_start_date: startDate?.toISOString() || null,
-            p_end_date: null, // To now
+            p_end_date: p_end_date ? p_end_date.toISOString() : null,
             p_type: filterType || null,
             p_status: filterStatus || null
         }),
         supabase.rpc('get_analytics_charts_dynamic', {
             p_start_date: startDate?.toISOString() || null,
-            p_end_date: null,
+            p_end_date: p_end_date ? p_end_date.toISOString() : null,
             p_type: filterType || null,
             p_status: filterStatus || null
         })
@@ -123,7 +175,9 @@ export const getRecentCases = unstable_cache(
 async function getRecentCasesInternal(
     range: string = '30d',
     filterType?: string,
-    filterStatus?: string
+    filterStatus?: string,
+    customStartDate?: string,
+    customEndDate?: string
 ) {
     const supabase = createAdminClient()
 
@@ -166,8 +220,24 @@ async function getRecentCasesInternal(
             break
     }
 
+    if (range === 'custom' || range === 'specific') {
+        if (customStartDate) {
+            startDate = new Date(customStartDate)
+            startDate.setHours(0, 0, 0, 0)
+        }
+    }
+
     if (range !== 'all') {
         recentCasesQuery = recentCasesQuery.gte('created_at', startDate.toISOString())
+        if ((range === 'custom' || range === 'specific' || /^\d{4}$/.test(range))) {
+            let endDate = new Date()
+            if (range === 'custom' && customEndDate) endDate = new Date(customEndDate)
+            else if (range === 'specific' && customStartDate) endDate = new Date(customStartDate)
+            else if (/^\d{4}$/.test(range)) endDate = new Date(parseInt(range), 11, 31)
+
+            endDate.setHours(23, 59, 59, 999)
+            recentCasesQuery = recentCasesQuery.lte('created_at', endDate.toISOString())
+        }
     }
     if (filterType) {
         recentCasesQuery = recentCasesQuery.eq('incident_type', filterType)

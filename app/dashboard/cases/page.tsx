@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { getDateRangeFromParams } from '@/utils/dateRange'
 import Link from 'next/link'
 import PaginationControls from '@/components/PaginationControls'
 import DateRangePicker from '@/components/DateRangePicker'
@@ -6,18 +7,22 @@ import FilterDropdown from '@/components/FilterDropdown'
 import SearchInput from '@/components/SearchInput'
 import SortableColumn from '@/components/SortableColumn'
 import type { Metadata } from 'next'
+import { X } from 'lucide-react'
+import { redirect } from 'next/navigation'
 
 export const metadata: Metadata = {
     title: 'Blotter Cases | Dashboard',
     description: 'Manage and track all reported blotter cases'
 }
 
-export default async function CasesPage(props: { searchParams: Promise<{ query?: string, status?: string, type?: string, range?: string, page?: string, sort?: string, order?: string }> }) {
+export default async function CasesPage(props: { searchParams: Promise<{ query?: string, status?: string, type?: string, range?: string, page?: string, sort?: string, order?: string, startDate?: string, endDate?: string }> }) {
     const searchParams = await props.searchParams
     const query = searchParams.query || ''
     const status = searchParams.status || ''
     const type = searchParams.type || ''
-    const range = searchParams.range || '30d'
+    const range = searchParams.range || 'all'
+    const customStart = searchParams.range === 'custom' ? searchParams.startDate : undefined
+    const customEnd = searchParams.range === 'custom' ? searchParams.endDate : undefined
     const page = Number(searchParams.page) || 1
     const sort = searchParams.sort || 'created_at'
     const order = searchParams.order || 'desc'
@@ -27,45 +32,8 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
 
     const supabase = await createClient()
 
-    // Calculate Date Range
-    const now = new Date()
-    let startDate = new Date()
-    let endDate: Date | null = null
-
-    switch (range) {
-        case 'this_week':
-            const day = now.getDay()
-            const diff = now.getDate() - day + (day === 0 ? -6 : 1) // adjust when day is sunday
-            startDate = new Date(now.setDate(diff))
-            startDate.setHours(0, 0, 0, 0)
-            break
-        case 'this_month':
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-            break
-        case 'last_month':
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-            break
-        case 'this_quarter':
-            const quarter = Math.floor((now.getMonth() + 3) / 3)
-            startDate = new Date(now.getFullYear(), (quarter - 1) * 3, 1)
-            break
-        case 'ytd':
-            startDate = new Date(now.getFullYear(), 0, 1)
-            break
-        case '30d':
-            startDate.setDate(now.getDate() - 30)
-            break
-        case 'all':
-            startDate = new Date(0)
-            break
-        default:
-            // Check if range is a year (e.g., "2024")
-            if (/^\d{4}$/.test(range)) {
-                startDate = new Date(parseInt(range), 0, 1)
-                endDate = new Date(parseInt(range), 11, 31, 23, 59, 59)
-            }
-            break
-    }
+    // Calculate Date Range using shared utility
+    const { startDate, endDate } = getDateRangeFromParams(range, customStart, customEnd)
 
     const { data: casesData, error } = await supabase
         .rpc('search_cases', {
@@ -77,6 +45,10 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
             p_limit: limit,
             p_offset: from
         })
+
+    // Clear Filter Action (Server Action logic or simple link)
+    const hasFilters = query || status || type || (range && range !== '30d')
+    const clearFiltersUrl = '/dashboard/cases'
 
     if (error) {
         console.error('Error fetching cases:', error)
@@ -120,7 +92,7 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
                         <SearchInput />
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        <DateRangePicker />
+                        <DateRangePicker defaultValue="all" />
                         <FilterDropdown
                             label="Status"
                             paramName="status"
@@ -131,6 +103,20 @@ export default async function CasesPage(props: { searchParams: Promise<{ query?:
                             paramName="type"
                             options={['Theft', 'Harassment', 'Vandalism', 'Physical Injury', 'Property Damage', 'Public Disturbance', 'Other']}
                         />
+                        <FilterDropdown
+                            label="Type"
+                            paramName="type"
+                            options={['Theft', 'Harassment', 'Vandalism', 'Physical Injury', 'Property Damage', 'Public Disturbance', 'Other']}
+                        />
+                        {hasFilters && (
+                            <Link
+                                href={clearFiltersUrl}
+                                className="flex items-center gap-1.5 px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded-lg transition-colors border border-transparent hover:border-red-100 dark:hover:border-red-900"
+                            >
+                                <X className="w-4 h-4" />
+                                Clear
+                            </Link>
+                        )}
                     </div>
                 </div>
             </div>

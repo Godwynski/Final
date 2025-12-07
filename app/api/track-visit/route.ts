@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
 
 // Parse user agent to extract browser and OS
@@ -46,19 +47,61 @@ export async function POST(request: NextRequest) {
         const sessionId = body.sessionId || null
         const isNewSession = body.isNewSession || false
         const isNewDailyVisit = body.isNewDailyVisit || false
+        const pagePath = body.page || '/'
 
         const { browser, os, deviceType } = parseUserAgent(userAgent)
+
+        // Identify Visitor
+        let userId = null
+        let visitorEmail = null
+        let visitorName = null
+        let visitorRole = 'anonymous'
+
+        // 1. Check for Authenticated User
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+            userId = user.id
+            visitorEmail = user.email
+            visitorName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
+            visitorRole = 'authenticated'
+            // Check if admin (optional, for role refinement)
+            // We could check the public.users table or custom claims if we wanted 'admin' role specifically
+        }
+
+        // 2. Check for Guest Context (if not authenticated)
+        // URL pattern: /guest/[token]
+        if (visitorRole === 'anonymous' && pagePath.startsWith('/guest/')) {
+            const token = pagePath.split('/guest/')[1]?.split('/')[0]
+            if (token) {
+                const adminClient = createAdminClient()
+                const { data: guestLink } = await adminClient
+                    .from('guest_links')
+                    .select('recipient_name, recipient_email')
+                    .eq('token', token)
+                    .single()
+
+                if (guestLink) {
+                    visitorName = guestLink.recipient_name || 'Guest'
+                    visitorEmail = guestLink.recipient_email
+                    visitorRole = 'guest'
+                }
+            }
+        }
 
         // Base visit data
         const visitData = {
             ip_address: ip,
             user_agent: userAgent,
-            page_path: body.page || '/',
+            page_path: pagePath,
             referrer,
             browser,
             os,
             device_type: deviceType,
             session_id: sessionId,
+            user_id: userId,
+            visitor_email: visitorEmail,
+            visitor_name: visitorName,
+            visitor_role: visitorRole,
         }
 
         // Always record page view

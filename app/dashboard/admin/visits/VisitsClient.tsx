@@ -3,29 +3,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { SiteVisit, VisitStats, deleteVisit, clearOldVisits, exportVisitsCSV, VisitFilters } from './actions'
 import { toast } from 'sonner'
+import Link from 'next/link'
+import DateRangePicker from '@/components/DateRangePicker'
 import {
-    Globe,
-    Monitor,
-    Smartphone,
-    Tablet,
-    Chrome,
-    Trash2,
-    RefreshCw,
-    Calendar,
-    Eye,
-    TrendingUp,
-    Activity,
-    UserCheck,
-    Filter,
-    Search,
-    Download,
-    ChevronLeft,
-    ChevronRight,
-    Clock,
-    BarChart3,
-    ArrowUpDown,
-    ArrowUp,
-    ArrowDown
+    Globe, Monitor, Smartphone, Tablet, Chrome,
+    Trash2, RefreshCw, Calendar, Eye, TrendingUp,
+    Activity, UserCheck, Filter, Search, Download, X,
+    ChevronLeft, ChevronRight, Clock, BarChart3,
+    ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react'
 
 type VisitsClientProps = {
@@ -34,12 +19,17 @@ type VisitsClientProps = {
     totalCount: number
     currentPage: number
     currentLimit: number
-    currentFilter: string
+    currentRole: string
+    currentDevice: string
+    currentVisitType: string
     currentSearch: string
     currentStartDate: string
     currentEndDate: string
     currentSortBy: string
     currentSortOrder: string
+    currentOs: string
+    currentBrowser: string
+    currentExcludeAdmins: boolean
 }
 
 const visitTypeLabels: Record<string, string> = {
@@ -54,13 +44,12 @@ const visitTypeColors: Record<string, string> = {
     'unique_daily': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
 }
 
-const datePresets = [
-    { label: 'Today', value: 'today' },
-    { label: 'Last 7 days', value: '7days' },
-    { label: 'Last 30 days', value: '30days' },
-    { label: 'This month', value: 'month' },
-    { label: 'Custom', value: 'custom' },
-]
+const roleColors: Record<string, string> = {
+    'admin': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    'authenticated': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    'guest': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+    'anonymous': 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
+}
 
 export default function VisitsClient({
     initialVisits,
@@ -68,12 +57,17 @@ export default function VisitsClient({
     totalCount,
     currentPage,
     currentLimit,
-    currentFilter,
+    currentRole,
+    currentDevice,
+    currentVisitType,
     currentSearch,
     currentStartDate,
     currentEndDate,
     currentSortBy,
-    currentSortOrder
+    currentSortOrder,
+    currentOs,
+    currentBrowser,
+    currentExcludeAdmins
 }: VisitsClientProps) {
     const [visits, setVisits] = useState(initialVisits)
     const [stats] = useState(initialStats)
@@ -82,11 +76,36 @@ export default function VisitsClient({
     const [isExporting, setIsExporting] = useState(false)
     const [searchInput, setSearchInput] = useState(currentSearch)
     const [autoRefresh, setAutoRefresh] = useState(false)
-    const [datePreset, setDatePreset] = useState<string>(
-        currentStartDate || currentEndDate ? 'custom' : ''
-    )
-    const [customStartDate, setCustomStartDate] = useState(currentStartDate)
-    const [customEndDate, setCustomEndDate] = useState(currentEndDate)
+
+    // New filter states
+    const [selectedOs, setSelectedOs] = useState(currentOs)
+    const [selectedBrowser, setSelectedBrowser] = useState(currentBrowser)
+    const [excludeAdmins, setExcludeAdmins] = useState(currentExcludeAdmins)
+
+    const hasActiveFilters = currentSearch ||
+        (currentRole && currentRole !== 'all') ||
+        (currentDevice && currentDevice !== 'all') ||
+        (currentOs && currentOs !== 'all') ||
+        (currentBrowser && currentBrowser !== 'all') ||
+        (currentStartDate || currentEndDate)
+
+    const clearFilters = () => {
+        setSearchInput('')
+        setSelectedOs('all')
+        setSelectedBrowser('all')
+        setExcludeAdmins(false)
+        updateUrl({
+            search: '',
+            role: 'all',
+            device: 'all',
+            os: 'all',
+            browser: 'all',
+            range: '30d', // Default to 30d
+            startDate: '',
+            endDate: '',
+            page: '1'
+        })
+    }
 
     const totalPages = Math.ceil(totalCount / currentLimit)
 
@@ -109,58 +128,17 @@ export default function VisitsClient({
         return () => clearTimeout(timer)
     }, [searchInput])
 
-    const updateUrl = useCallback((params: Record<string, string>) => {
+    const updateUrl = useCallback((params: Record<string, string | boolean | number>) => {
         const url = new URL(window.location.href)
         Object.entries(params).forEach(([key, value]) => {
-            if (value) {
-                url.searchParams.set(key, value)
+            if (value !== undefined && value !== null && value !== '' && value !== 'all') {
+                url.searchParams.set(key, String(value))
             } else {
                 url.searchParams.delete(key)
             }
         })
         window.location.href = url.toString()
     }, [])
-
-    const handleDatePresetChange = (preset: string) => {
-        setDatePreset(preset)
-        const today = new Date()
-        let startDate = ''
-        let endDate = today.toISOString().split('T')[0]
-
-        switch (preset) {
-            case 'today':
-                startDate = endDate
-                break
-            case '7days':
-                const week = new Date(today)
-                week.setDate(week.getDate() - 7)
-                startDate = week.toISOString().split('T')[0]
-                break
-            case '30days':
-                const month = new Date(today)
-                month.setDate(month.getDate() - 30)
-                startDate = month.toISOString().split('T')[0]
-                break
-            case 'month':
-                startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
-                break
-            case 'custom':
-                return // Don't update URL, wait for user input
-            default:
-                startDate = ''
-                endDate = ''
-        }
-
-        updateUrl({ startDate, endDate, page: '1' })
-    }
-
-    const handleCustomDateApply = () => {
-        updateUrl({
-            startDate: customStartDate,
-            endDate: customEndDate,
-            page: '1'
-        })
-    }
 
     const handleDelete = async (id: string) => {
         setIsDeleting(id)
@@ -191,7 +169,9 @@ export default function VisitsClient({
         setIsExporting(true)
         try {
             const csv = await exportVisitsCSV({
-                visitType: currentFilter,
+                visitType: currentVisitType,
+                role: currentRole,
+                device: currentDevice,
                 startDate: currentStartDate,
                 endDate: currentEndDate,
                 search: currentSearch
@@ -441,67 +421,106 @@ export default function VisitsClient({
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search IP or page..."
+                            placeholder="Search IP, page, or user..."
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         />
                     </div>
 
-                    {/* Type Filter */}
+                    {/* Role Filter */}
                     <div className="flex items-center gap-2">
                         <Filter className="w-4 h-4 text-gray-400" />
                         <select
-                            value={currentFilter}
-                            onChange={(e) => updateUrl({ filter: e.target.value, page: '1' })}
+                            value={currentRole}
+                            onChange={(e) => updateUrl({ role: e.target.value, page: '1' })}
                             className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                         >
-                            <option value="all">All Types</option>
-                            <option value="page_view">Page Views</option>
-                            <option value="session">Sessions</option>
-                            <option value="unique_daily">Daily Unique</option>
+                            <option value="all">All Roles</option>
+                            <option value="authenticated">Members</option>
+                            <option value="guest">Guests</option>
+                            <option value="anonymous">Anonymous</option>
+                            <option value="admin">Admins</option>
                         </select>
                     </div>
 
-                    {/* Date Presets */}
+                    {/* Device Filter */}
                     <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <Monitor className="w-4 h-4 text-gray-400" />
                         <select
-                            value={datePreset}
-                            onChange={(e) => handleDatePresetChange(e.target.value)}
+                            value={currentDevice}
+                            onChange={(e) => updateUrl({ device: e.target.value, page: '1' })}
                             className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                         >
-                            <option value="">All Time</option>
-                            {datePresets.map(p => (
-                                <option key={p.value} value={p.value}>{p.label}</option>
-                            ))}
+                            <option value="all">All Devices</option>
+                            <option value="Desktop">Desktop</option>
+                            <option value="Mobile">Mobile</option>
+                            <option value="Tablet">Tablet</option>
                         </select>
                     </div>
 
-                    {/* Custom Date Range */}
-                    {datePreset === 'custom' && (
+                    {/* Date Presets - Replaced with Shared Picker */}
+                    <DateRangePicker />
+
+                    {/* New Filters Row */}
+                    <div className="w-full flex flex-wrap gap-4 mt-2 lg:mt-0">
+                        {/* OS Filter */}
                         <div className="flex items-center gap-2">
-                            <input
-                                type="date"
-                                value={customStartDate}
-                                onChange={(e) => setCustomStartDate(e.target.value)}
-                                className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                            />
-                            <span className="text-gray-400">to</span>
-                            <input
-                                type="date"
-                                value={customEndDate}
-                                onChange={(e) => setCustomEndDate(e.target.value)}
-                                className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                            />
-                            <button
-                                onClick={handleCustomDateApply}
-                                className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                            <Monitor className="w-4 h-4 text-gray-400" />
+                            <select
+                                value={selectedOs}
+                                onChange={(e) => updateUrl({ os: e.target.value, page: '1' })}
+                                className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                             >
-                                Apply
-                            </button>
+                                <option value="all">All OS</option>
+                                <option value="Windows">Windows</option>
+                                <option value="Mac OS">Mac OS</option>
+                                <option value="Linux">Linux</option>
+                                <option value="Android">Android</option>
+                                <option value="iOS">iOS</option>
+                            </select>
                         </div>
-                    )}
+
+                        {/* Browser Filter */}
+                        <div className="flex items-center gap-2">
+                            <Chrome className="w-4 h-4 text-gray-400" />
+                            <select
+                                value={selectedBrowser}
+                                onChange={(e) => updateUrl({ browser: e.target.value, page: '1' })}
+                                className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                            >
+                                <option value="all">All Browsers</option>
+                                <option value="Chrome">Chrome</option>
+                                <option value="Firefox">Firefox</option>
+                                <option value="Safari">Safari</option>
+                                <option value="Edge">Edge</option>
+                            </select>
+                        </div>
+
+                        {/* Exclude Admins Toggle */}
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none bg-gray-50 dark:bg-gray-700/50 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600">
+                            <input
+                                type="checkbox"
+                                checked={excludeAdmins}
+                                onChange={(e) => updateUrl({ excludeAdmins: e.target.checked, page: '1' })}
+                                className="rounded text-blue-600 focus:ring-blue-500"
+                            />
+                            Exclude Admins
+                        </label>
+
+                        {/* Clear Filters Button */}
+                        {hasActiveFilters && (
+                            <button
+                                onClick={clearFilters}
+                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                                Clear
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Custom Date Range Removed - Handled by DateRangePicker */}
 
                     {/* Spacer */}
                     <div className="flex-1" />
@@ -531,7 +550,7 @@ export default function VisitsClient({
                             className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 rounded-lg disabled:opacity-50"
                         >
                             <Download className="w-4 h-4" />
-                            {isExporting ? 'Exporting...' : 'Export'}
+                            {isExporting ? 'Export...' : 'Export'}
                         </button>
 
                         <button
@@ -554,9 +573,7 @@ export default function VisitsClient({
                                 <th className="px-6 py-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onClick={() => handleSort('visited_at')}>
                                     <div className="flex items-center gap-1">Date/Time {getSortIcon('visited_at')}</div>
                                 </th>
-                                <th className="px-6 py-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onClick={() => handleSort('visit_type')}>
-                                    <div className="flex items-center gap-1">Type {getSortIcon('visit_type')}</div>
-                                </th>
+                                <th className="px-6 py-3">Visitor</th>
                                 <th className="px-6 py-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onClick={() => handleSort('ip_address')}>
                                     <div className="flex items-center gap-1">IP Address {getSortIcon('ip_address')}</div>
                                 </th>
@@ -583,9 +600,19 @@ export default function VisitsClient({
                                             {formatDate(visit.visited_at)}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${visitTypeColors[visit.visit_type || 'page_view']}`}>
-                                                {visitTypeLabels[visit.visit_type || 'page_view']}
-                                            </span>
+                                            <div className="flex flex-col">
+                                                <span className="font-medium text-gray-900 dark:text-white">
+                                                    {visit.visitor_name || 'Anonymous'}
+                                                </span>
+                                                {visit.visitor_email && (
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                        {visit.visitor_email}
+                                                    </span>
+                                                )}
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium w-fit mt-1 ${roleColors[visit.visitor_role || 'anonymous'] || roleColors['anonymous']}`}>
+                                                    {visit.visitor_role || 'Anonymous'}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 font-mono text-xs text-gray-600 dark:text-gray-300">
                                             {visit.ip_address || 'Unknown'}
@@ -657,8 +684,8 @@ export default function VisitsClient({
                                         key={i}
                                         onClick={() => updateUrl({ page: String(pageNum) })}
                                         className={`min-w-[32px] h-8 rounded border text-sm ${currentPage === pageNum
-                                                ? 'bg-blue-600 text-white border-blue-600'
-                                                : 'dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                            ? 'bg-blue-600 text-white border-blue-600'
+                                            : 'dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
                                             }`}
                                     >
                                         {pageNum}

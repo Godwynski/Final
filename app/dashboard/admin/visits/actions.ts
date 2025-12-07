@@ -16,12 +16,16 @@ export type SiteVisit = {
     visit_type: string | null
     session_id: string | null
     visited_at: string
+    visitor_name: string | null
+    visitor_email: string | null
+    visitor_role: string | null
 }
 
 export type VisitStats = {
     totalPageViews: number
     totalSessions: number
     uniqueDailyVisitors: number
+    uniquePeople: number
     todayPageViews: number
     todaySessions: number
     todayUniqueVisitors: number
@@ -36,11 +40,16 @@ export type VisitFilters = {
     page?: number
     limit?: number
     visitType?: string
+    role?: string
+    device?: string
     startDate?: string
     endDate?: string
     search?: string
     sortBy?: string
     sortOrder?: 'asc' | 'desc'
+    os?: string
+    browser?: string
+    excludeAdmins?: boolean
 }
 
 export async function getVisits(filters: VisitFilters = {}): Promise<{ visits: SiteVisit[]; total: number }> {
@@ -48,12 +57,17 @@ export async function getVisits(filters: VisitFilters = {}): Promise<{ visits: S
     const {
         page = 1,
         limit = 25,
-        visitType,
+        visitType = 'page_view', // Default to page_view only for cleanliness
+        role,
+        device,
         startDate,
         endDate,
         search,
         sortBy = 'visited_at',
-        sortOrder = 'desc'
+        sortOrder = 'desc',
+        os,
+        browser,
+        excludeAdmins
     } = filters
 
     const offset = (page - 1) * limit
@@ -66,6 +80,12 @@ export async function getVisits(filters: VisitFilters = {}): Promise<{ visits: S
     if (visitType && visitType !== 'all') {
         query = query.eq('visit_type', visitType)
     }
+    if (role && role !== 'all') {
+        query = query.eq('visitor_role', role)
+    }
+    if (device && device !== 'all') {
+        query = query.eq('device_type', device)
+    }
     if (startDate) {
         query = query.gte('visited_at', startDate)
     }
@@ -76,7 +96,16 @@ export async function getVisits(filters: VisitFilters = {}): Promise<{ visits: S
         query = query.lte('visited_at', endDateTime.toISOString())
     }
     if (search) {
-        query = query.or(`ip_address.ilike.%${search}%,page_path.ilike.%${search}%`)
+        query = query.or(`ip_address.ilike.%${search}%,page_path.ilike.%${search}%,visitor_email.ilike.%${search}%,visitor_name.ilike.%${search}%`)
+    }
+    if (os && os !== 'all') {
+        query = query.eq('os', os)
+    }
+    if (browser && browser !== 'all') {
+        query = query.eq('browser', browser)
+    }
+    if (excludeAdmins) {
+        query = query.neq('visitor_role', 'admin')
     }
 
     // Apply sorting
@@ -97,15 +126,50 @@ export async function getVisitStats(startDate?: string, endDate?: string): Promi
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    // Build date filter
-    let dateFilter = ''
+    // Build query for aggregation stats with filters
+    let allVisitsQuery = supabase
+        .from('site_visits')
+        .select('page_path, browser, device_type, visit_type, visited_at, visitor_email')
+
     if (startDate) {
-        dateFilter = `visited_at.gte.${startDate}`
+        allVisitsQuery = allVisitsQuery.gte('visited_at', startDate)
     }
     if (endDate) {
         const endDateTime = new Date(endDate)
         endDateTime.setHours(23, 59, 59, 999)
-        dateFilter += dateFilter ? `,visited_at.lte.${endDateTime.toISOString()}` : `visited_at.lte.${endDateTime.toISOString()}`
+        allVisitsQuery = allVisitsQuery.lte('visited_at', endDateTime.toISOString())
+    }
+
+    // Base queries for totals
+    let pageViewsQuery = supabase
+        .from('site_visits')
+        .select('*', { count: 'exact', head: true })
+        .eq('visit_type', 'page_view')
+
+    let sessionsQuery = supabase
+        .from('site_visits')
+        .select('*', { count: 'exact', head: true })
+        .eq('visit_type', 'session')
+
+    let uniqueDailyQuery = supabase
+        .from('site_visits')
+        .select('*', { count: 'exact', head: true })
+        .eq('visit_type', 'unique_daily')
+
+    // Apply date filters to totals if they exist
+    if (startDate) {
+        pageViewsQuery = pageViewsQuery.gte('visited_at', startDate)
+        sessionsQuery = sessionsQuery.gte('visited_at', startDate)
+        uniqueDailyQuery = uniqueDailyQuery.gte('visited_at', startDate)
+    }
+    if (endDate) {
+        const endDateTime = new Date(endDate)
+        endDateTime.setHours(23, 59, 59, 999)
+        const isoEnd = endDateTime.toISOString()
+
+        pageViewsQuery = pageViewsQuery.lte('visited_at', isoEnd)
+        sessionsQuery = sessionsQuery.lte('visited_at', isoEnd)
+        uniqueDailyQuery = uniqueDailyQuery.lte('visited_at', isoEnd)
     }
 
     // Parallel fetch for all stats - much faster!
@@ -118,21 +182,12 @@ export async function getVisitStats(startDate?: string, endDate?: string): Promi
         todayUniqueResult,
         allVisitsResult,
     ] = await Promise.all([
-        // Total page views
-        supabase
-            .from('site_visits')
-            .select('*', { count: 'exact', head: true })
-            .eq('visit_type', 'page_view'),
-        // Total sessions
-        supabase
-            .from('site_visits')
-            .select('*', { count: 'exact', head: true })
-            .eq('visit_type', 'session'),
-        // Unique daily visitors
-        supabase
-            .from('site_visits')
-            .select('*', { count: 'exact', head: true })
-            .eq('visit_type', 'unique_daily'),
+        // Total page views (Filtered)
+        pageViewsQuery,
+        // Total sessions (Filtered)
+        sessionsQuery,
+        // Unique daily visitors (Filtered)
+        uniqueDailyQuery,
         // Today's page views
         supabase
             .from('site_visits')
@@ -151,10 +206,8 @@ export async function getVisitStats(startDate?: string, endDate?: string): Promi
             .select('*', { count: 'exact', head: true })
             .eq('visit_type', 'unique_daily')
             .gte('visited_at', today.toISOString()),
-        // All visits for aggregation (with filters if provided)
-        supabase
-            .from('site_visits')
-            .select('page_path, browser, device_type, visit_type, visited_at')
+        // Aggregation visits (Filtered by Date Range)
+        allVisitsQuery
     ])
 
     const allVisits = allVisitsResult.data || []
@@ -166,7 +219,15 @@ export async function getVisitStats(startDate?: string, endDate?: string): Promi
     const hourCounts: Record<number, number> = {}
     const dailyPageViews: Record<string, number> = {}
 
+    // Unique People Calculation (Set of emails)
+    const uniquePeopleSet = new Set<string>()
+
     allVisits.forEach(v => {
+        // Collect unique emails
+        if (v.visitor_email) {
+            uniquePeopleSet.add(v.visitor_email)
+        }
+
         // Top pages (page views only)
         if (v.visit_type === 'page_view') {
             pageCounts[v.page_path] = (pageCounts[v.page_path] || 0) + 1
@@ -218,6 +279,7 @@ export async function getVisitStats(startDate?: string, endDate?: string): Promi
         totalPageViews: pageViewsResult.count || 0,
         totalSessions: sessionsResult.count || 0,
         uniqueDailyVisitors: uniqueDailyResult.count || 0,
+        uniquePeople: uniquePeopleSet.size,
         todayPageViews: todayPageViewsResult.count || 0,
         todaySessions: todaySessionsResult.count || 0,
         todayUniqueVisitors: todayUniqueResult.count || 0,
