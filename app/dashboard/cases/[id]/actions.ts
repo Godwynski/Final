@@ -10,6 +10,81 @@ import { generateSecurePIN, canModifyResource } from '@/utils/auth'
 import { CONFIG } from '@/constants/config'
 import { createAdminClient } from '@/utils/supabase/admin'
 
+export async function sendHearingNotice(hearingId: string, email: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
+
+    // Fetch hearing details with case info
+    const { data: hearing, error } = await supabase
+        .from('hearings')
+        .select('*, cases(title, case_number)')
+        .eq('id', hearingId)
+        .single()
+
+    if (error || !hearing) return { error: 'Hearing not found' }
+
+    try {
+        const fromEmail = process.env.MAILERSEND_FROM_EMAIL || 'info@trial-z3m5jgr209zgdpyo.mlsender.net';
+        const fromName = process.env.MAILERSEND_FROM_NAME || 'Blotter System';
+
+        const sentFrom = new Sender(fromEmail, fromName);
+        const recipients = [
+            new Recipient(email, "Participant")
+        ];
+
+        const hearingDate = new Date(hearing.hearing_date).toLocaleDateString(undefined, {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+        const hearingTime = new Date(hearing.hearing_date).toLocaleTimeString(undefined, {
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        const emailParams = new EmailParams()
+            .setFrom(sentFrom)
+            .setTo(recipients)
+            .setSubject(`📅 Notice of Hearing - Case #${hearing.cases.case_number}`)
+            .setHtml(`
+                <!DOCTYPE html>
+                <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                        <h2 style="color: #2563eb;">Notice of Hearing</h2>
+                        <p>You are hereby notified to appear for a hearing regarding:</p>
+                        <p><strong>Case:</strong> ${hearing.cases.title} (#${hearing.cases.case_number})<br>
+                        <strong>Type:</strong> ${hearing.hearing_type}<br>
+                        <strong>When:</strong> ${hearingDate} at ${hearingTime}<br>
+                        <strong>Where:</strong> ${hearing.location || 'Barangay Hall'}</p>
+                        
+                        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                            <strong>Note from Barangay:</strong><br>
+                            ${hearing.notes || 'Please be on time.'}
+                        </div>
+                        
+                        <p>This is an automated message. Please do not reply.</p>
+                    </div>
+                </body>
+                </html>
+            `)
+            .setText(`NOTICE OF HEARING\n\nCase: ${hearing.cases.title}\nWhen: ${hearingDate} at ${hearingTime}\nWhere: ${hearing.location || 'Barangay Hall'}\n\nNote: ${hearing.notes || 'Please be on time.'}`);
+
+        await mailersend.email.send(emailParams);
+
+        // Audit Log
+        await supabase.from('audit_logs').insert({
+            user_id: user.id,
+            action: 'Sent Hearing Notice',
+            details: { email, hearing_id: hearingId },
+            case_id: hearing.case_id
+        })
+
+        return { success: true, message: `Email sent to ${email}` }
+    } catch (e: any) {
+        return { error: e.message || 'Failed to send email' }
+    }
+}
+
+
 const TERMINAL_STATUSES = ['Closed', 'Settled', 'Dismissed', 'Referred']
 
 async function isCaseTerminal(supabase: any, caseId: string) {

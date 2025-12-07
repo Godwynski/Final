@@ -9,7 +9,7 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
     const [isLoading, setIsLoading] = useState(false)
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
-    const [isVisible, setIsVisible] = useState(true)
+    const [isVisible, setIsVisible] = useState(false)
 
     const isAtLimit = currentPhotoCount >= CONFIG.GUEST_LINK.MAX_UPLOADS_PER_LINK
 

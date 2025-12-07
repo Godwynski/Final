@@ -6,6 +6,8 @@ const TEMPLATES = {
     'Theft': 'Items stolen:\n- \n\nEstimated Value:\n\nPoint of Entry:\n\nSuspect Description:',
     'Physical Injury': 'Weapon used (if any):\n\nInjuries sustained:\n\nMedical attention given:',
     'Vandalism': 'Property damaged:\n\nEstimated cost of repair:\n\nDescription of damage:',
+    'Child Conflict': 'Minors involved:\n\nParents/Guardians:\n\nNature of conflict:\n\nInitial agreement:',
+    'Noise Complaint': 'Source of noise:\n\nTime started:\n\nPrevious complaints:\n\nAction taken:',
     'Default': 'Who:\nWhat:\nWhere:\nWhen:\nWhy/How:'
 }
 
@@ -61,6 +63,20 @@ export default function NarrativeEditor() {
                         className="text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50 transition-colors"
                     >
                         Injury
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleTemplateClick('Child Conflict')}
+                        className="text-xs font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-full dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50 transition-colors"
+                    >
+                        Child Conflict
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleTemplateClick('Noise Complaint')}
+                        className="text-xs font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 px-3 py-1.5 rounded-full dark:bg-orange-900/30 dark:text-orange-300 dark:hover:bg-orange-900/50 transition-colors"
+                    >
+                        Noise Complaint
                     </button>
                 </div>
             </div>

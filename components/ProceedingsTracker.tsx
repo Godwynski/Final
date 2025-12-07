@@ -203,6 +203,28 @@ export default function ProceedingsTracker({
                                         >
                                             📅 Reset
                                         </button>
+                                        <button
+                                            onClick={() => {
+                                                const email = prompt('Enter recipient email for hearing notice:')
+                                                if (email) {
+                                                    // Dynamic import to avoid client-side error if action not ready, 
+                                                    // but we imported it at top. However, we need to add it to imports.
+                                                    // For now, let's assume we can add it to imports in next step or use a prop function.
+                                                    // Better to just call the action directly if imported.
+                                                    // I will update imports in ProceedingsTracker.tsx separately.
+                                                    alert('Sending email to ' + email + '...')
+                                                    import('@/app/dashboard/cases/[id]/actions').then(mod => {
+                                                        mod.sendHearingNotice(hearing.id, email).then(res => {
+                                                            if (res.error) alert('Error: ' + res.error)
+                                                            if (res.success) alert('Success: ' + res.message)
+                                                        })
+                                                    })
+                                                }
+                                            }}
+                                            className="text-xs text-blue-600 hover:bg-blue-50 px-2 py-1 rounded border border-blue-200 dark:border-blue-800 dark:hover:bg-blue-900/30"
+                                        >
+                                            ✉️ Email Notice
+                                        </button>
                                     </div>
                                 )}
                                 {!isReadOnly && hearing.status !== 'Scheduled' && (

@@ -142,6 +142,16 @@ export default function CaseDetailsClient({
         documentType: 'summons'
     })
 
+    // PIN Visibility State
+    const [visiblePins, setVisiblePins] = useState<Record<string, boolean>>({})
+
+    const togglePinVisibility = (id: string) => {
+        setVisiblePins(prev => ({
+            ...prev,
+            [id]: !prev[id]
+        }))
+    }
+
     const openDocumentPreview = (type: DocumentType) => {
         setDocumentModalState({ isOpen: true, documentType: type })
     }
@@ -193,6 +203,7 @@ export default function CaseDetailsClient({
                 involvedParties={involvedParties}
                 settings={settings}
                 evidence={evidence}
+                hearings={hearings}
             />
 
             {/* Header */}
@@ -547,7 +558,7 @@ export default function CaseDetailsClient({
                                                         </svg>
                                                     </button>
                                                 </div>
-                                                <p className="text-green-100 text-sm mt-1">Create a secure upload link for a recipient</p>
+                                                <p className="text-white/90 text-sm mt-1">Create a secure upload link for a recipient</p>
                                             </div>
 
                                             {/* Modal Body */}
@@ -620,35 +631,44 @@ export default function CaseDetailsClient({
                                     </div>
                                 )}
 
-                                <div className="space-y-4">
+                                {guestLinks.length === 0 && <p className="text-sm text-gray-500 italic dark:text-gray-400">No links generated yet.</p>}
+                                <div className="grid gap-4">
                                     {guestLinks.map(link => (
-                                        <div key={link.id} className="mb-4">
-                                            <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 rounded-lg gap-2 border ${link.is_active ? 'bg-blue-50 border-blue-100 dark:bg-blue-900/30 dark:border-blue-800' : 'bg-gray-100 border-gray-200 dark:bg-gray-700 dark:border-gray-600 opacity-75'}`}>
-                                                <div className="flex flex-col gap-1">
-                                                    {(link.recipient_name || link.recipient_email || link.recipient_phone) && (
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                                                                {link.recipient_name || 'Unknown Recipient'}
-                                                            </span>
-                                                            {link.recipient_email && (
-                                                                <span className="text-xs text-gray-500 dark:text-gray-400">({link.recipient_email})</span>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-mono text-blue-600 dark:text-blue-400">Link: ...{link.token.slice(-8)}</span>
-                                                        <CopyButton text={`${origin}/guest/${link.token}`} label="Copy Link" />
+                                        <div key={link.id} className={`rounded-xl border shadow-sm transition-all ${link.is_active ? 'bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700' : 'bg-gray-50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-700 opacity-75'}`}>
+                                            {/* Header Portion */}
+                                            <div className="p-4 border-b border-gray-100 dark:border-gray-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`p-2 rounded-lg ${link.is_active ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                                        </svg>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">PIN: {link.pin}</span>
-                                                        <CopyButton text={link.pin} label="Copy PIN" />
+                                                    <div>
+                                                        <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                                            {link.recipient_name || 'Guest User'}
+                                                            {!link.is_active && <span className="text-[10px] uppercase font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full dark:bg-red-900/30 dark:text-red-400">Inactive</span>}
+                                                        </h4>
+                                                        <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                                            {link.recipient_email ? (
+                                                                <>
+                                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                                                    {link.recipient_email}
+                                                                </>
+                                                            ) : link.recipient_phone ? (
+                                                                <>
+                                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                                                                    {link.recipient_phone}
+                                                                </>
+                                                            ) : 'No contact info'}
+                                                        </p>
                                                     </div>
-                                                    <span className="text-xs text-gray-500 dark:text-gray-400">Expires: <span suppressHydrationWarning>{new Date(link.expires_at).toLocaleString()}</span></span>
-                                                    {!link.is_active && <span className="text-xs text-red-500 font-bold">INACTIVE</span>}
                                                 </div>
-                                                <div className="flex gap-3 items-center">
+                                                <div className="flex items-center gap-2 w-full sm:w-auto">
                                                     {link.is_active && (
-                                                        <a href={`/guest/${link.token}`} target="_blank" className="text-sm text-blue-600 hover:underline dark:text-blue-400">Open</a>
+                                                        <a href={`/guest/${link.token}`} target="_blank" className="text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline dark:text-blue-400 flex items-center gap-1">
+                                                            Open Link
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                                        </a>
                                                     )}
                                                     <form action={async () => {
                                                         if (isReadOnly) return;
@@ -656,29 +676,85 @@ export default function CaseDetailsClient({
                                                         if (result?.error) showAlert('Error', result.error, 'error')
                                                     }}>
                                                         <SubmitButton
-                                                            className={`text-xs hover:underline ${link.is_active ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                            className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${link.is_active ? 'border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/30 dark:text-red-400 dark:hover:bg-red-900/20' : 'border-green-200 text-green-600 hover:bg-green-50 dark:border-green-900/30 dark:text-green-400 dark:hover:bg-green-900/20'} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             loadingText="..."
                                                             disabled={isReadOnly}
                                                         >
-                                                            {link.is_active ? 'Close Link' : 'Re-open Link'}
+                                                            {link.is_active ? 'Deactivate' : 'Re-activate'}
                                                         </SubmitButton>
                                                     </form>
                                                 </div>
                                             </div>
-                                            {link.is_active && (
-                                                <form action={emailGuestLink} className="mt-2 flex gap-2 items-center pl-2">
-                                                    <input type="hidden" name="link" value={`${origin}/guest/${link.token}`} />
-                                                    <input type="hidden" name="pin" value={link.pin} />
-                                                    <input type="hidden" name="caseId" value={caseData.id} />
-                                                    <input type="email" name="email" placeholder="Recipient Email" required className="bg-gray-50 border border-gray-300 text-gray-900 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-48 p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
-                                                    <SubmitButton className="text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-lg text-xs px-3 py-1.5 dark:bg-blue-500 dark:hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-800" loadingText="Sending...">
-                                                        Email
-                                                    </SubmitButton>
-                                                </form>
-                                            )}
+
+                                            {/* Details Portion */}
+                                            <div className="px-4 py-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-b-xl space-y-3">
+                                                <div className="flex flex-wrap items-center gap-4 text-sm">
+                                                    <div className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1">
+                                                        <span className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">URL</span>
+                                                        <span className="font-mono text-blue-600 dark:text-blue-400 truncate max-w-[150px] sm:max-w-xs block">
+                                                            {origin}/guest/{link.token.slice(0, 8)}...
+                                                        </span>
+                                                        <CopyButton text={`${origin}/guest/${link.token}`} label="" />
+                                                    </div>
+                                                    <div className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1">
+                                                        <span className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">PIN</span>
+                                                        <span className="font-mono font-bold text-gray-700 dark:text-gray-200 min-w-[3ch] text-center">
+                                                            {visiblePins[link.id] ? link.pin : '•••'}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => togglePinVisibility(link.id)}
+                                                            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
+                                                            title={visiblePins[link.id] ? "Hide PIN" : "Show PIN"}
+                                                        >
+                                                            {visiblePins[link.id] ? (
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                                                            ) : (
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                                            )}
+                                                        </button>
+                                                        <div className="border-l border-gray-200 dark:border-gray-700 pl-2 ml-1">
+                                                            <CopyButton text={link.pin} label="" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 ml-auto">
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                        Expires: <span suppressHydrationWarning>{new Date(link.expires_at).toLocaleDateString()}</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Email Sender */}
+                                                {link.is_active && (
+                                                    <div className="pt-2 border-t border-gray-100 dark:border-gray-700/50">
+                                                        <form action={emailGuestLink} className="flex gap-2 items-center">
+                                                            <input type="hidden" name="link" value={`${origin}/guest/${link.token}`} />
+                                                            <input type="hidden" name="pin" value={link.pin} />
+                                                            <input type="hidden" name="caseId" value={caseData.id} />
+                                                            <div className="relative flex-1 max-w-sm">
+                                                                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                                                    <svg className="w-3 h-3 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 16">
+                                                                        <path d="m10.036 8.278 9.258-7.79A1.979 1.979 0 0 0 18 0H2A1.987 1.987 0 0 0 .641.541l9.395 7.737Z" />
+                                                                        <path d="M11.241 9.817c-.36.275-.801.425-1.255.427-.428 0-.845-.138-1.187-.395L0 2.6V14a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V2.5l-8.759 7.317Z" />
+                                                                    </svg>
+                                                                </div>
+                                                                <input
+                                                                    type="email"
+                                                                    name="email"
+                                                                    placeholder="Send link to email..."
+                                                                    defaultValue={link.recipient_email || ''}
+                                                                    required
+                                                                    className="bg-gray-50 border border-gray-300 text-gray-900 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-9 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                                                />
+                                                            </div>
+                                                            <SubmitButton className="text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-lg text-xs px-3 py-2 dark:bg-blue-500 dark:hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-800" loadingText="Sending...">
+                                                                Send
+                                                            </SubmitButton>
+                                                        </form>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     ))}
-                                    {guestLinks.length === 0 && <p className="text-sm text-gray-500 italic dark:text-gray-400">No links generated yet.</p>}
                                 </div>
                             </div>
                         </div>

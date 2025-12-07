@@ -66,6 +66,17 @@ export default async function GuestPage(props: { params: Promise<{ token: string
         .eq('case_id', link.case_id)
         .order('created_at', { ascending: false })
 
+    // 4. Fetch Hearings (Upcoming)
+    const { data: hearings } = await supabaseAdmin
+        .from('hearings')
+        .select('*')
+        .eq('case_id', link.case_id)
+        .gte('hearing_date', new Date().toISOString())
+        .order('hearing_date', { ascending: true })
+        .limit(1)
+
+    const nextHearing = hearings?.[0]
+
     // Filter evidence for guest visibility:
     // - Staff uploads (uploaded_by is not null)
     // - Own uploads (guest_link_id matches this link)
@@ -122,14 +133,71 @@ export default async function GuestPage(props: { params: Promise<{ token: string
                                 {caseData.status}
                             </span>
                         </div>
-                        <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
-                            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Description</h3>
-                            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                                {caseData.description}
+                    </div>
+                </div>
+
+                {/* Incident Narrative Card */}
+                <div className="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 overflow-hidden">
+                    <div className="bg-gray-50/50 dark:bg-gray-900/50 px-6 py-4 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
+                        <h3 className="flex items-center gap-2.5 text-base font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+                            <div className="p-1.5 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-md">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            Incident Narrative
+                        </h3>
+                        {caseData.incident_type && (
+                            <span className="px-3 py-1 bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-full text-xs font-semibold border border-gray-200 dark:border-gray-600">
+                                {caseData.incident_type}
+                            </span>
+                        )}
+                    </div>
+                    <div className="p-6 md:p-8">
+                        <div className="prose prose-lg prose-blue dark:prose-invert max-w-none">
+                            <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                                {(caseData.description || "No narrative provided for this case.").replace(/^\[.*?\]\s*/, '')}
                             </p>
                         </div>
                     </div>
                 </div>
+
+                {/* Upcoming Hearing Card (Moved out of header if it was there, or keep separate) */}
+                {nextHearing && (
+                    <div className="bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-800 border-l-4 border-blue-500 rounded-r-lg shadow-sm p-6 flex items-start gap-5">
+                        <div className="flex-shrink-0 p-3 bg-blue-100 dark:bg-blue-800 rounded-xl text-blue-600 dark:text-blue-300">
+                            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-2">
+                                Upcoming Hearing
+                            </h3>
+                            <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
+                                <span className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                                    {new Date(nextHearing.hearing_date).toLocaleDateString(undefined, {
+                                        weekday: 'long',
+                                        month: 'long',
+                                        day: 'numeric'
+                                    })}
+                                </span>
+                                <span className="text-lg text-gray-600 dark:text-gray-400 font-medium">
+                                    {new Date(nextHearing.hearing_date).toLocaleTimeString(undefined, {
+                                        hour: 'numeric',
+                                        minute: '2-digit'
+                                    })}
+                                </span>
+                            </div>
+                            <p className="text-gray-600 dark:text-gray-400 mt-2 flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                {nextHearing.location || 'Location TBD'}
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left Column: Evidence List */}

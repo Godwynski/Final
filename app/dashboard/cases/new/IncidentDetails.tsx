@@ -14,7 +14,7 @@ export default function IncidentDetails() {
 
             <div className="space-y-6">
                 <div>
-                    <label htmlFor="title" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Incident Title</label>
+                    <label htmlFor="title" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Incident Title <span className="text-red-500">*</span></label>
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                             <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -28,7 +28,7 @@ export default function IncidentDetails() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label htmlFor="incident_date" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Date & Time</label>
+                        <label htmlFor="incident_date" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Date & Time <span className="text-red-500">*</span></label>
                         <div className="relative">
                             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                                 <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -48,28 +48,28 @@ export default function IncidentDetails() {
                     </div>
 
                     <div>
-                        <label htmlFor="incident_type" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Incident Type</label>
+                        <label htmlFor="incident_type" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Incident Type <span className="text-red-500">*</span></label>
                         <div className="relative">
                             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                                 <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                                 </svg>
                             </div>
-                            <select name="incident_type" id="incident_type" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+                            <select name="incident_type" id="incident_type" defaultValue="Other" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+                                <option value="Other">Other</option>
                                 <option value="Theft">Theft</option>
                                 <option value="Harassment">Harassment</option>
                                 <option value="Vandalism">Vandalism</option>
                                 <option value="Physical Injury">Physical Injury</option>
                                 <option value="Property Damage">Property Damage</option>
                                 <option value="Public Disturbance">Public Disturbance</option>
-                                <option value="Other">Other</option>
                             </select>
                         </div>
                     </div>
                 </div>
 
                 <div>
-                    <label htmlFor="incident_location" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Location</label>
+                    <label htmlFor="incident_location" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Location <span className="text-red-500">*</span></label>
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                             <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

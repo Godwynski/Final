@@ -18,6 +18,7 @@ interface DocumentPreviewModalProps {
     involvedParties: any[]
     settings: any
     evidence?: any[]
+    hearings?: any[]
 }
 
 const documentTitles: Record<DocumentType, string> = {
@@ -36,7 +37,8 @@ export default function DocumentPreviewModal({
     caseData,
     involvedParties,
     settings,
-    evidence = []
+    evidence = [],
+    hearings = []
 }: DocumentPreviewModalProps) {
     const [isDownloading, setIsDownloading] = useState(false)
     const [includeEvidence, setIncludeEvidence] = useState(false)
@@ -226,7 +228,8 @@ export default function DocumentPreviewModal({
             caseData,
             complainants,
             respondents,
-            settings
+            settings,
+            hearings
         }
 
         switch (documentType) {
