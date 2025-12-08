@@ -45,6 +45,8 @@
 - **UI Components**: [Flowbite](https://flowbite.com/) & [Lucide React](https://lucide.dev/)
 - **Validation**: [Zod](https://zod.dev/)
 
+💡 **For detailed technical information, architecture patterns, security measures, and deployment guides, see [Technical Background Documentation](./docs/TECHNICAL_BACKGROUND.md)**
+
 ## 🗄️ Database Schema
 
 BlotterSys uses a PostgreSQL database hosted on Supabase with 11 interconnected tables that handle case management, user authentication, evidence storage, and system configuration. The schema is designed with Row Level Security (RLS) policies to ensure data privacy and role-based access control.
@@ -866,4 +868,3 @@ This project is proprietary software developed for Local Government Units. Unaut
 ---
 
 © 2025 BlotterSys™ Inc. All Rights Reserved.
-

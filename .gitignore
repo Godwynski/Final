@@ -16,7 +16,8 @@
 # next.js
 /.next/
 /out/
-
+/.gemini/
+/.trunk/
 # production
 /build
 
