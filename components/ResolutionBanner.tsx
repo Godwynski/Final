@@ -63,6 +63,9 @@ export default function ResolutionBanner({
       printLabel = "Print CFA";
       printUrl = `/dashboard/cases/${caseId}/print/cfa`;
       break;
+    default:
+      // For active statuses (New, Under Investigation, etc.), do not show banner
+      return null;
   }
 
   return (
