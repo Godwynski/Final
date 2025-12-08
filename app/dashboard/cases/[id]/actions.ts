@@ -1,5 +1,6 @@
 'use server'
 
+import { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -9,6 +10,8 @@ import { addInvolvedPartySchema, addCaseNoteSchema, updateCaseDetailsSchema, upd
 import { generateSecurePIN, canModifyResource } from '@/utils/auth'
 import { CONFIG } from '@/constants/config'
 import { createAdminClient } from '@/utils/supabase/admin'
+
+import { ResolutionDetails } from '@/types'
 
 export async function sendHearingNotice(hearingId: string, email: string) {
     const supabase = await createClient()
@@ -79,15 +82,15 @@ export async function sendHearingNotice(hearingId: string, email: string) {
         })
 
         return { success: true, message: `Email sent to ${email}` }
-    } catch (e: any) {
-        return { error: e.message || 'Failed to send email' }
+    } catch (e: unknown) {
+        return { error: (e as Error).message || 'Failed to send email' }
     }
 }
 
 
 const TERMINAL_STATUSES = ['Closed', 'Settled', 'Dismissed', 'Referred']
 
-async function isCaseTerminal(supabase: any, caseId: string) {
+async function isCaseTerminal(supabase: SupabaseClient, caseId: string) {
     const { data } = await supabase
         .from('cases')
         .select('status')
@@ -243,8 +246,8 @@ export async function emailGuestLink(formData: FormData) {
 
     try {
         await mailersend.email.send(emailParams);
-    } catch (error: any) {
-        redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent('Failed to send email: ' + (error.message || error))}`)
+    } catch (error: unknown) {
+        redirect(`/dashboard/cases/${caseId}?error=${encodeURIComponent('Failed to send email: ' + ((error as Error).message || String(error)))}`)
     }
 
     redirect(`/dashboard/cases/${caseId}?tab=evidence&message=Email sent to ${email}`)
@@ -731,6 +734,7 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
     }
 
     // Validate file type
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!CONFIG.FILE_UPLOAD.ALLOWED_TYPES.includes(file.type as any)) {
         return { error: `Only ${CONFIG.FILE_UPLOAD.ALLOWED_TYPES.join(', ')} files are allowed` }
     }
@@ -828,6 +832,7 @@ export async function deleteEvidence(caseId: string, evidenceId: string) {
         }
     } catch (e) {
         // Continue to delete record even if storage delete fails
+        console.error('Storage delete failed:', e)
     }
 
     // Delete Record
@@ -866,7 +871,7 @@ export async function performCaseAction(caseId: string, action: string, input?: 
     let newStatus = null;
     let narrativeUpdate = '';
     let logAction = '';
-    let resolutionDetails: any = null;
+    let resolutionDetails: ResolutionDetails | null = null;
 
     switch (action) {
         case 'accept_case':
@@ -950,6 +955,7 @@ export async function performCaseAction(caseId: string, action: string, input?: 
             } catch (e) {
                 // Fallback to simple string if not JSON (backward compatibility)
                 hearingDate = input!;
+                console.error('JSON parse error:', e)
             }
 
             newStatus = 'Hearing Scheduled';
@@ -1086,6 +1092,7 @@ export async function performCaseAction(caseId: string, action: string, input?: 
                 }
             } catch (e) {
                 reschedDate = input!;
+                console.error('JSON parse error:', e)
             }
 
             narrativeUpdate = `Hearing rescheduled to: ${new Date(reschedDate).toLocaleString()} (${reschedType}).`;
@@ -1135,7 +1142,7 @@ export async function performCaseAction(caseId: string, action: string, input?: 
             logAction = 'Issued Certificate to File Action';
             narrativeUpdate = `Certificate to File Action issued. Reason: ${input}.`;
             resolutionDetails = {
-                type: 'CFA Issued',
+                type: 'Closed',
                 reason: input,
                 date: new Date().toISOString(),
                 officer: profile?.full_name || user.email
@@ -1188,7 +1195,7 @@ export async function performCaseAction(caseId: string, action: string, input?: 
 
     // Update Case Status and Resolution Details
     if (newStatus || resolutionDetails !== undefined) {
-        const updateData: any = { updated_at: new Date().toISOString() };
+        const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
         if (newStatus) updateData.status = newStatus;
         if (resolutionDetails !== undefined) updateData.resolution_details = resolutionDetails;
 

@@ -4,7 +4,6 @@ import CaseDetailsClient from './CaseDetailsClient'
 
 export default async function CaseDetailsPage(props: { params: Promise<{ id: string }>, searchParams: Promise<{ message?: string, error?: string }> }) {
     const params = await props.params
-    const searchParams = await props.searchParams
     const supabase = await createClient()
     const { id } = params
 
@@ -33,7 +32,7 @@ export default async function CaseDetailsPage(props: { params: Promise<{ id: str
     const logs = logsRes.data || []
     const hearings = hearingsRes.data || []
     const settings = settingsRes.data || null
-    const userRole = user?.user_metadata?.role || 'staff'
+
 
     return (
         <CaseDetailsClient
@@ -43,8 +42,6 @@ export default async function CaseDetailsPage(props: { params: Promise<{ id: str
             notes={notes}
             auditLogs={logs}
             guestLinks={allLinks}
-            userRole={userRole}
-            userId={user?.id || ''}
             hearings={hearings}
             settings={settings}
         />

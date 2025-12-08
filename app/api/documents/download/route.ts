@@ -1,159 +1,175 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
-import puppeteer from 'puppeteer'
-import { createElement } from 'react'
-import SummonsForm from '@/components/documents/forms/SummonsForm'
-import NoticeOfHearingForm from '@/components/documents/forms/NoticeOfHearingForm'
-import CertificateToFileActionForm from '@/components/documents/forms/CertificateToFileActionForm'
-import AmicableSettlementForm from '@/components/documents/forms/AmicableSettlementForm'
-import ReferralForm from '@/components/documents/forms/ReferralForm'
-import AbstractForm from '@/components/documents/forms/AbstractForm'
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/utils/supabase/server";
+import puppeteer from "puppeteer";
+import { createElement } from "react";
+import SummonsForm from "@/components/documents/forms/SummonsForm";
+import NoticeOfHearingForm from "@/components/documents/forms/NoticeOfHearingForm";
+import CertificateToFileActionForm from "@/components/documents/forms/CertificateToFileActionForm";
+import AmicableSettlementForm from "@/components/documents/forms/AmicableSettlementForm";
+import ReferralForm from "@/components/documents/forms/ReferralForm";
+import AbstractForm from "@/components/documents/forms/AbstractForm";
+import { Evidence } from "@/types";
 
 // Simple function to render React elements to HTML string without react-dom/server
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function renderElement(element: any): string {
-    if (!element) return ''
-    if (typeof element === 'string' || typeof element === 'number') return String(element)
-    if (Array.isArray(element)) return element.map(renderElement).join('')
+  if (!element) return "";
+  if (typeof element === "string" || typeof element === "number")
+    return String(element);
+  if (Array.isArray(element)) return element.map(renderElement).join("");
 
-    const { type, props } = element
+  const { type, props } = element;
 
-    if (!type) return ''
-    if (typeof type === 'function') {
-        return renderElement(type(props))
-    }
+  if (!type) return "";
+  if (typeof type === "function") {
+    return renderElement(type(props));
+  }
 
-    const { children, ...attributes } = props || {}
-    const attrs = Object.entries(attributes || {})
-        .filter(([key]) => key !== 'key' && key !== 'ref')
-        .map(([key, value]) => {
-            if (key === 'className') return `class="${value}"`
-            if (typeof value === 'boolean') return value ? key : ''
-            if (typeof value === 'string' || typeof value === 'number') return `${key}="${value}"`
-            return ''
-        })
-        .filter(Boolean)
-        .join(' ')
+  const { children, ...attributes } = props || {};
+  const attrs = Object.entries(attributes || {})
+    .filter(([key]) => key !== "key" && key !== "ref")
+    .map(([key, value]) => {
+      if (key === "className") return `class="${value}"`;
+      if (typeof value === "boolean") return value ? key : "";
+      if (typeof value === "string" || typeof value === "number")
+        return `${key}="${value}"`;
+      return "";
+    })
+    .filter(Boolean)
+    .join(" ");
 
-    const childrenHtml = children ? (Array.isArray(children) ? children : [children]).map(renderElement).join('') : ''
+  const childrenHtml = children
+    ? (Array.isArray(children) ? children : [children])
+        .map(renderElement)
+        .join("")
+    : "";
 
-    // Self-closing tags
-    if (['img', 'br', 'hr', 'input', 'meta', 'link'].includes(type)) {
-        return `<${type}${attrs ? ' ' + attrs : ''} />`
-    }
+  // Self-closing tags
+  if (["img", "br", "hr", "input", "meta", "link"].includes(type)) {
+    return `<${type}${attrs ? " " + attrs : ""} />`;
+  }
 
-    return `<${type}${attrs ? ' ' + attrs : ''}>${childrenHtml}</${type}>`
+  return `<${type}${attrs ? " " + attrs : ""}>${childrenHtml}</${type}>`;
 }
 
 export async function GET(request: NextRequest) {
-    const searchParams = request.nextUrl.searchParams
-    const caseId = searchParams.get('caseId')
-    const formType = searchParams.get('formType')
-    const includeEvidence = searchParams.get('includeEvidence') === 'true'
+  const searchParams = request.nextUrl.searchParams;
+  const caseId = searchParams.get("caseId");
+  const formType = searchParams.get("formType");
+  const includeEvidence = searchParams.get("includeEvidence") === "true";
 
-    if (!caseId || !formType) {
-        return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
+  if (!caseId || !formType) {
+    return NextResponse.json(
+      { error: "Missing required parameters" },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const supabase = await createClient();
+
+    // Verify user is authenticated
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    try {
-        const supabase = await createClient()
+    // Fetch case data
+    const { data: caseData, error: caseError } = await supabase
+      .from("cases")
+      .select("*")
+      .eq("id", caseId)
+      .single();
 
-        // Verify user is authenticated
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+    if (caseError || !caseData) {
+      return NextResponse.json({ error: "Case not found" }, { status: 404 });
+    }
 
-        // Fetch case data
-        const { data: caseData, error: caseError } = await supabase
-            .from('cases')
-            .select('*')
-            .eq('id', caseId)
-            .single()
+    // Fetch parties
+    const { data: parties } = await supabase
+      .from("involved_parties")
+      .select("*")
+      .eq("case_id", caseId);
 
-        if (caseError || !caseData) {
-            return NextResponse.json({ error: 'Case not found' }, { status: 404 })
-        }
+    // Fetch settings
+    const { data: settings } = await supabase
+      .from("barangay_settings")
+      .select("*")
+      .single();
 
-        // Fetch parties
-        const { data: parties } = await supabase
-            .from('involved_parties')
-            .select('*')
-            .eq('case_id', caseId)
+    const complainants = parties?.filter((p) => p.type === "Complainant") || [];
+    const respondents = parties?.filter((p) => p.type === "Respondent") || [];
 
-        // Fetch settings
-        const { data: settings } = await supabase
-            .from('barangay_settings')
-            .select('*')
-            .single()
+    // Select the appropriate form component
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let FormComponent: React.ComponentType<any>;
+    let filename = "";
 
-        const complainants = parties?.filter(p => p.type === 'Complainant') || []
-        const respondents = parties?.filter(p => p.type === 'Respondent') || []
+    switch (formType) {
+      case "summons":
+        FormComponent = SummonsForm;
+        filename = `Summons_${caseData.case_number || caseId}.pdf`;
+        break;
+      case "hearing":
+        FormComponent = NoticeOfHearingForm;
+        filename = `Notice_of_Hearing_${caseData.case_number || caseId}.pdf`;
+        break;
+      case "cfa":
+        FormComponent = CertificateToFileActionForm;
+        filename = `Certificate_to_File_Action_${caseData.case_number || caseId}.pdf`;
+        break;
+      case "settlement":
+        FormComponent = AmicableSettlementForm;
+        filename = `Amicable_Settlement_${caseData.case_number || caseId}.pdf`;
+        break;
+      case "referral":
+        FormComponent = ReferralForm;
+        filename = `Referral_${caseData.case_number || caseId}.pdf`;
+        break;
+      case "abstract":
+        FormComponent = AbstractForm;
+        filename = `Case_Abstract_${caseData.case_number || caseId}.pdf`;
+        break;
+      default:
+        return NextResponse.json(
+          { error: "Invalid form type" },
+          { status: 400 },
+        );
+    }
 
-        // Select the appropriate form component
-        let FormComponent: any
-        let filename = ''
+    // Fetch evidence if needed for abstract form
+    let evidence: Evidence[] = [];
+    if (formType === "abstract" && includeEvidence) {
+      const { data: evidenceData } = await supabase
+        .from("evidence")
+        .select("*")
+        .eq("case_id", caseId);
+      evidence = evidenceData || [];
+    }
 
-        switch (formType) {
-            case 'summons':
-                FormComponent = SummonsForm
-                filename = `Summons_${caseData.case_number || caseId}.pdf`
-                break
-            case 'hearing':
-                FormComponent = NoticeOfHearingForm
-                filename = `Notice_of_Hearing_${caseData.case_number || caseId}.pdf`
-                break
-            case 'cfa':
-                FormComponent = CertificateToFileActionForm
-                filename = `Certificate_to_File_Action_${caseData.case_number || caseId}.pdf`
-                break
-            case 'settlement':
-                FormComponent = AmicableSettlementForm
-                filename = `Amicable_Settlement_${caseData.case_number || caseId}.pdf`
-                break
-            case 'referral':
-                FormComponent = ReferralForm
-                filename = `Referral_${caseData.case_number || caseId}.pdf`
-                break
-            case 'abstract':
-                FormComponent = AbstractForm
-                filename = `Case_Abstract_${caseData.case_number || caseId}.pdf`
-                break
-            default:
-                return NextResponse.json({ error: 'Invalid form type' }, { status: 400 })
-        }
+    // Render component to HTML string using our custom renderer
+    let formElement;
+    if (formType === "abstract") {
+      formElement = createElement(FormComponent, {
+        caseData,
+        involvedParties: parties || [],
+        settings,
+        evidence,
+      });
+    } else {
+      formElement = createElement(FormComponent, {
+        caseData,
+        complainants,
+        respondents,
+        settings,
+      });
+    }
+    const formHtml = renderElement(formElement);
 
-        // Fetch evidence if needed for abstract form
-        let evidence: any[] = []
-        if (formType === 'abstract' && includeEvidence) {
-            const { data: evidenceData } = await supabase
-                .from('evidence')
-                .select('*')
-                .eq('case_id', caseId)
-            evidence = evidenceData || []
-        }
-
-        // Render component to HTML string using our custom renderer
-        let formElement
-        if (formType === 'abstract') {
-            formElement = createElement(FormComponent, {
-                caseData,
-                involvedParties: parties || [],
-                settings,
-                evidence
-            })
-        } else {
-            formElement = createElement(FormComponent, {
-                caseData,
-                complainants,
-                respondents,
-                settings
-            })
-        }
-        const formHtml = renderElement(formElement)
-
-
-        // Create full HTML document with styles
-        const fullHtml = `
+    // Create full HTML document with styles
+    const fullHtml = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -298,45 +314,46 @@ export async function GET(request: NextRequest) {
     ${formHtml}
 </body>
 </html>
-        `
+        `;
 
-        // Launch Puppeteer and generate PDF
-        const browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        })
+    // Launch Puppeteer and generate PDF
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
 
-        const page = await browser.newPage()
-        await page.setContent(fullHtml, { waitUntil: 'networkidle0' })
+    const page = await browser.newPage();
+    await page.setContent(fullHtml, { waitUntil: "networkidle0" });
 
-        const pdfBuffer = await page.pdf({
-            format: 'Letter',
-            printBackground: true,
-            margin: {
-                top: '0.5in',
-                right: '0.5in',
-                bottom: '0.5in',
-                left: '0.5in'
-            }
-        })
+    const pdfBuffer = await page.pdf({
+      format: "Letter",
+      printBackground: true,
+      margin: {
+        top: "0.5in",
+        right: "0.5in",
+        bottom: "0.5in",
+        left: "0.5in",
+      },
+    });
 
-        await browser.close()
+    await browser.close();
 
-        // Return PDF as download
-        return new NextResponse(Buffer.from(pdfBuffer), {
-            headers: {
-                'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="${filename}"`,
-                'Content-Length': pdfBuffer.length.toString()
-            }
-        })
-
-
-    } catch (error: any) {
-        console.error('PDF Generation Error:', error)
-        return NextResponse.json({
-            error: 'Failed to generate PDF',
-            details: error.message
-        }, { status: 500 })
-    }
+    // Return PDF as download
+    return new NextResponse(Buffer.from(pdfBuffer), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Length": pdfBuffer.length.toString(),
+      },
+    });
+  } catch (error: unknown) {
+    console.error("PDF Generation Error:", error);
+    return NextResponse.json(
+      {
+        error: "Failed to generate PDF",
+        details: (error as Error).message || String(error),
+      },
+      { status: 500 },
+    );
+  }
 }

@@ -1,17 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import AlertModal from '@/components/ui/AlertModal'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import ImageModal from '@/components/ui/ImageModal'
 import DocumentPreviewModal, { type DocumentType } from '@/components/DocumentPreviewModal'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client'
 import CopyButton from '@/components/CopyButton'
 import SubmitButton from '@/components/SubmitButton'
-import { addInvolvedParty, addCaseNote, deleteCaseNote, generateCaseGuestLink, toggleGuestLinkStatus, emailGuestLink, updateActionTaken, deleteEvidence } from './actions'
+import { addInvolvedParty, addCaseNote, deleteCaseNote, generateCaseGuestLink, toggleGuestLinkStatus, emailGuestLink, deleteEvidence } from './actions'
 import DashboardEvidenceList from '@/components/DashboardEvidenceList'
 import DashboardEvidenceUploadForm from '@/components/DashboardEvidenceUploadForm'
 import CaseActionHeader from '@/components/CaseActionHeader'
@@ -19,6 +17,8 @@ import CaseTimeline from '@/components/CaseTimeline'
 import ResolutionBanner from '@/components/ResolutionBanner'
 import ProceedingsTracker from '@/components/ProceedingsTracker'
 import { CONFIG } from '@/constants/config'
+
+import { Case, InvolvedParty, Evidence, CaseNote, AuditLog, GuestLink, Hearing, BarangaySettings } from '@/types'
 
 type Tab = 'overview' | 'parties' | 'evidence' | 'notes' | 'activity'
 
@@ -29,21 +29,17 @@ export default function CaseDetailsClient({
     notes,
     auditLogs,
     guestLinks,
-    userRole,
-    userId,
     hearings = [],
     settings = null
 }: {
-    caseData: any,
-    involvedParties: any[],
-    evidence: any[],
-    notes: any[],
-    auditLogs: any[],
-    guestLinks: any[],
-    userRole: string,
-    userId: string,
-    hearings?: any[],
-    settings?: any
+    caseData: Case,
+    involvedParties: InvolvedParty[],
+    evidence: Evidence[],
+    notes: (CaseNote & { profiles?: { full_name?: string, email?: string } })[], // Join result
+    auditLogs: AuditLog[],
+    guestLinks: GuestLink[],
+    hearings?: Hearing[],
+    settings?: BarangaySettings | null
 }) {
     const searchParams = useSearchParams()
     const router = useRouter()
@@ -63,13 +59,10 @@ export default function CaseDetailsClient({
 
     // Count only image evidence for photo limit
     const imageCount = evidence.filter(e =>
-        CONFIG.FILE_UPLOAD.ALLOWED_IMAGE_TYPES.includes(e.file_type as any)
+        (CONFIG.FILE_UPLOAD.ALLOWED_IMAGE_TYPES as readonly string[]).includes(e.file_type)
     ).length
 
-    const [formattedDate, setFormattedDate] = useState<string>('')
     const [origin, setOrigin] = useState<string>('')
-
-    const [generatedDate, setGeneratedDate] = useState<string>('')
 
     // Alert Modal State
     const [alertState, setAlertState] = useState<{
@@ -163,12 +156,11 @@ export default function CaseDetailsClient({
     // Link Generation Modal State
     const [showLinkModal, setShowLinkModal] = useState(false)
 
-    // Format date on client only to avoid hydration mismatch
+    // Set origin on mount
     useEffect(() => {
-        setFormattedDate(new Date(caseData.incident_date).toLocaleString())
+        // eslint-disable-next-line
         setOrigin(window.location.origin)
-        setGeneratedDate(new Date().toLocaleString())
-    }, [caseData.incident_date])
+    }, [])
 
     return (
         <div className="p-4">
@@ -218,7 +210,7 @@ export default function CaseDetailsClient({
                         )}
                     </div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Reported on {formattedDate || new Date(caseData.incident_date).toISOString().slice(0, 10)} • {caseData.incident_location}
+                        Reported on <span suppressHydrationWarning>{new Date(caseData.incident_date).toLocaleString()}</span> • {caseData.incident_location}
                     </p>
                 </div>
                 <div className="flex gap-2 print:hidden">
@@ -255,7 +247,7 @@ export default function CaseDetailsClient({
                 {/* Resolution Banner (For Closed/Resolved Cases) */}
                 <ResolutionBanner
                     status={caseData.status}
-                    resolutionDetails={caseData.resolution_details}
+                    resolutionDetails={caseData.resolution_details || null}
                     caseId={caseData.id}
                 />
 
