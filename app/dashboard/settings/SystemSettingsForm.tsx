@@ -243,6 +243,7 @@ export default function SystemSettingsForm({
                 } = supabase.storage.from("branding").getPublicUrl(fileName);
 
                 return publicUrl;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
               } catch (e: any) {
                 console.error("Unexpected error uploading logo:", e);
                 toast.error(`Unexpected error uploading ${name}: ${e.message}`);

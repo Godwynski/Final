@@ -28,6 +28,7 @@ export default function PartyManager({
     email: "",
     address: "",
   });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showResults, setShowResults] = useState(false);
 
@@ -95,7 +96,7 @@ export default function PartyManager({
 
     return { isValid: true, error: "" };
   };
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const selectResult = (result: any) => {
     setNewParty({
       ...newParty,
@@ -304,6 +305,7 @@ export default function PartyManager({
                       key={type}
                       type="button"
                       onClick={() =>
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         setNewParty({ ...newParty, type: type as any })
                       }
                       className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${

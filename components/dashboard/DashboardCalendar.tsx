@@ -31,12 +31,9 @@ export default function DashboardCalendar() {
   const [hearings, setHearings] = useState<Hearing[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-
   // Fetch hearings when month changes
   useEffect(() => {
     const fetchHearings = async () => {
-      setLoading(true);
       try {
         const data = await getMonthlyHearings(
           currentDate.getFullYear(),
@@ -45,8 +42,6 @@ export default function DashboardCalendar() {
         setHearings(data);
       } catch (error) {
         console.error("Failed to fetch hearings:", error);
-      } finally {
-        setLoading(false);
       }
     };
     fetchHearings();

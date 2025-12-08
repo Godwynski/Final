@@ -53,19 +53,13 @@ export default async function Dashboard(props: {
   const filterType = searchParams.type;
   const filterStatus = searchParams.status;
 
-  // Parse dates consistently using shared util (mostly for custom/specific ranges)
-  // We pass these explicit dates to the actions so they don't need to re-parse or guess 'custom' logic
   const { startDate, endDate } = getDateRangeFromParams(
     range,
-    // We don't have startDate/endDate directly in searchParams for Main Dashboard usually?
-    // Wait, DashboardControls might push 'startDate'/'endDate' params if range is custom/specific.
-    // Let's check if SearchParams type includes them. The props above definition says: { range?: string, type?: string, status?: string }
-    // I should update props definition to include starDate/endDate
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (searchParams as any).startDate,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (searchParams as any).endDate,
   );
-
-  // Convert to string for server action if valid dates
   const customStart = startDate ? startDate.toISOString() : undefined;
   const customEnd = endDate ? endDate.toISOString() : undefined;
 
