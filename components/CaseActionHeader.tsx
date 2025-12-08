@@ -219,7 +219,6 @@ export default function CaseActionHeader({
         isOpen={confirmState.isOpen}
         onClose={closeConfirm}
         onConfirm={confirmState.onConfirm}
-        title={confirmState.title}
         message={confirmState.message}
       />
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
