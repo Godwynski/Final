@@ -149,6 +149,7 @@ create table if not exists guest_links (
   recipient_name text,
   recipient_email text,
   recipient_phone text,
+  terms_accepted_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
