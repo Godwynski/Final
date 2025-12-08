@@ -42,13 +42,58 @@ export default function PartyManager({
     setShowResults(true);
   }, 300);
 
-  const validateFullName = (name: string): boolean => {
-    const hasLetters = /[a-zA-Z]/.test(name);
-    const hasMinimumLetters = (name.match(/[a-zA-Z]/g) || []).length >= 2;
-    const noCommas = !name.includes(",");
-    const notOnlySpecialChars = /^[^a-zA-Z]*$/.test(name) === false;
+  // Normalize and format name to Title Case
+  const formatName = (name: string): string => {
+    return name
+      .trim() // Remove leading/trailing spaces
+      .replace(/\s+/g, " ") // Collapse multiple spaces
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
 
-    return hasLetters && hasMinimumLetters && noCommas && notOnlySpecialChars;
+  // Comprehensive name validation
+  const validateFullName = (
+    name: string,
+  ): { isValid: boolean; error: string } => {
+    const trimmedName = name.trim().replace(/\s+/g, " ");
+
+    // Required check
+    if (!trimmedName) {
+      return { isValid: false, error: "Name is required." };
+    }
+
+    // Minimum length (2 characters)
+    if (trimmedName.length < 2) {
+      return { isValid: false, error: "Name must be at least 2 characters." };
+    }
+
+    // Maximum length (100 characters)
+    if (trimmedName.length > 100) {
+      return { isValid: false, error: "Name must not exceed 100 characters." };
+    }
+
+    // No numbers allowed
+    if (/\d/.test(trimmedName)) {
+      return { isValid: false, error: "Name cannot contain numbers." };
+    }
+
+    // Only allow letters, spaces, hyphens, and apostrophes
+    if (!/^[A-Za-z\s'\-]+$/.test(trimmedName)) {
+      return {
+        isValid: false,
+        error:
+          "Name can only contain letters, spaces, hyphens, and apostrophes.",
+      };
+    }
+
+    // Must have at least 2 letter characters
+    const letterCount = (trimmedName.match(/[A-Za-z]/g) || []).length;
+    if (letterCount < 2) {
+      return { isValid: false, error: "Name must contain at least 2 letters." };
+    }
+
+    return { isValid: true, error: "" };
   };
 
   const selectResult = (result: any) => {
@@ -62,21 +107,25 @@ export default function PartyManager({
     setShowResults(false);
   };
 
+  const [nameError, setNameError] = useState<string>("");
+
   const handleAddParty = () => {
     if (!newParty.name || !newParty.type) return;
 
     // Validate full name
-    if (!validateFullName(newParty.name)) {
-      alert(
-        "Please enter a valid full name (at least 2 letters, no commas or special characters only)",
-      );
+    const validation = validateFullName(newParty.name);
+    if (!validation.isValid) {
+      setNameError(validation.error);
       return;
     }
 
+    // Clear any previous error
+    setNameError("");
+
     const party: Party = {
       id: crypto.randomUUID(),
-      name: newParty.name,
-      type: newParty.type as any,
+      name: formatName(newParty.name), // Apply Title Case formatting
+      type: newParty.type as Party["type"],
       contact_number: newParty.contact_number || "",
       email: newParty.email || "",
       address: newParty.address || "",
@@ -271,12 +320,12 @@ export default function PartyManager({
 
               <div className="relative">
                 <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-                  Full Name
+                  Full Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <svg
-                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
+                      className={`w-4 h-4 ${nameError ? "text-red-500" : "text-gray-500 dark:text-gray-400"}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -291,11 +340,16 @@ export default function PartyManager({
                   </div>
                   <input
                     type="text"
-                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className={`bg-gray-50 border text-gray-900 text-sm rounded-lg block w-full pl-10 p-2.5 dark:bg-gray-700 dark:text-white ${
+                      nameError
+                        ? "border-red-500 focus:ring-red-500 focus:border-red-500 dark:border-red-500"
+                        : "border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600"
+                    }`}
                     placeholder="Search or enter name..."
                     value={newParty.name}
                     onChange={(e) => {
                       setNewParty({ ...newParty, name: e.target.value });
+                      setNameError(""); // Clear error on input change
                       handleSearch(e.target.value);
                     }}
                     onFocus={() => {
@@ -304,6 +358,23 @@ export default function PartyManager({
                     }}
                   />
                 </div>
+                {/* Inline validation error */}
+                {nameError && (
+                  <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+                    <svg
+                      className="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    {nameError}
+                  </p>
+                )}
                 {showResults && searchResults.length > 0 && (
                   <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 dark:bg-gray-700 dark:border-gray-600 max-h-48 overflow-y-auto">
                     {searchResults.map((result, idx) => (

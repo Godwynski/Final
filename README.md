@@ -230,6 +230,35 @@ erDiagram
 - **Audit Triggers**: Case status changes auto-log to `audit_logs`
 - **Guest Link Auto-Expiry**: Links automatically deactivate when case status becomes terminal (`Settled`, `Closed`, `Dismissed`, `Referred`)
 
+### Input Validation & UX Enhancements
+
+The system implements comprehensive input validation and user experience improvements:
+
+#### Name Input Validation (Involved Parties)
+
+| Rule               | Implementation                                                                    |
+| ------------------ | --------------------------------------------------------------------------------- |
+| **Required**       | Field cannot be empty                                                             |
+| **Min Length**     | Minimum 2 characters                                                              |
+| **Max Length**     | Maximum 100 characters                                                            |
+| **Letters Only**   | Only alphabetic characters (A-Z, a-z) allowed                                     |
+| **Spaces Allowed** | Spaces permitted for first, middle, last names                                    |
+| **Special Chars**  | Hyphens (`-`) and apostrophes (`'`) allowed for names like "O'Brien", "Mary-Jane" |
+| **No Numbers**     | Numeric characters are rejected                                                   |
+| **Auto-Trim**      | Leading/trailing whitespace automatically removed                                 |
+| **Title Case**     | Names auto-formatted to Title Case (e.g., "JOHN DOE" → "John Doe")                |
+| **Inline Errors**  | Real-time validation feedback with red border and error message                   |
+
+#### Confirmation Dialogs
+
+Critical user actions require confirmation to prevent accidental operations:
+
+| Action              | Modal Type    | Description                                              |
+| ------------------- | ------------- | -------------------------------------------------------- |
+| **Sign Out**        | Warning Modal | "Are you sure you want to sign out?" with Cancel/Confirm |
+| **Delete Case**     | Danger Modal  | Requires explicit confirmation before deletion           |
+| **Terminal Status** | Warning Modal | Confirms locking case when marking as Settled/Closed     |
+
 > 💡 **For Developers**: Full schema with indexes, functions, and triggers available in [`supabase/schema.sql`](file:///c:/Users/kuyag/OneDrive/Desktop/Final/Final/supabase/schema.sql)
 
 ## 🚀 Getting Started
