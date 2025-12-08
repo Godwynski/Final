@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
     const respondents = parties?.filter((p) => p.type === "Respondent") || [];
 
     // Select the appropriate form component (using type assertion for dynamic component selection)
-    let FormComponent: React.ComponentType<Record<string, unknown>>;
+    let FormComponent: React.ComponentType<any>;
     let filename = "";
 
     switch (formType) {
@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
         settings,
       });
     }
-    const formHtml = renderElement(formElement);
+    const formHtml = renderElement(formElement as any);
 
     // Create full HTML document with styles
     const fullHtml = `
