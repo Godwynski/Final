@@ -6,7 +6,12 @@ import { redirect } from "next/navigation";
 import { createCaseSchema, addInvolvedPartySchema } from "@/utils/validation";
 import { z } from "zod";
 
-export async function createCase(prevState: any, formData: FormData) {
+// Type definition for form state
+type FormState = {
+  error?: string;
+} | null;
+
+export async function createCase(prevState: FormState, formData: FormData) {
   const supabase = await createClient();
 
   const {

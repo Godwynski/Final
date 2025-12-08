@@ -37,8 +37,11 @@ const config: Config = {
   },
   plugins: [
     flowbite,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    function ({ addUtilities }: { addUtilities: any }) {
+    function ({
+      addUtilities,
+    }: {
+      addUtilities: (utilities: Record<string, Record<string, string>>) => void;
+    }) {
       addUtilities({
         ".animation-delay-2000": {
           "animation-delay": "2s",

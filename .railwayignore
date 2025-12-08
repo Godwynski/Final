@@ -1,0 +1,17 @@
+# Ignore development files
+.git
+.next
+node_modules
+*.log
+*.txt
+lint*.json
+lint*.txt
+current_lint_errors.txt
+
+# Ignore local environment
+.env.local
+
+# Ignore development scripts
+check-buckets.js
+create-buckets.js
+check-env.ts

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { ResolutionDetails } from "@/types";
 
 export default function ResolutionBanner({
@@ -27,7 +26,6 @@ export default function ResolutionBanner({
 
   let bgColor = "bg-gray-100 border-gray-200";
   let textColor = "text-gray-800";
-  let icon = "info";
   let title = "Case Resolved";
   let printLabel = "Print Record";
   let printUrl = `/dashboard/cases/${caseId}/print/record`;
@@ -37,7 +35,6 @@ export default function ResolutionBanner({
       bgColor =
         "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800";
       textColor = "text-red-800 dark:text-red-300";
-      icon = "x-circle";
       title = "CASE DISMISSED";
       printLabel = "Print Dismissal Order";
       printUrl = `/dashboard/cases/${caseId}/print/dismissal`;
@@ -46,7 +43,6 @@ export default function ResolutionBanner({
       bgColor =
         "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800";
       textColor = "text-blue-800 dark:text-blue-300";
-      icon = "share-2";
       title = `REFERRED TO ${resolutionDetails?.agency?.toUpperCase() || "AGENCY"}`;
       printLabel = "Print Referral Letter";
       printUrl = `/dashboard/cases/${caseId}/print/referral`;
@@ -55,7 +51,6 @@ export default function ResolutionBanner({
       bgColor =
         "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800";
       textColor = "text-green-800 dark:text-green-300";
-      icon = "check-circle";
       title = "AMICABLY SETTLED";
       printLabel = "Print Settlement Agreement";
       printUrl = `/dashboard/cases/${caseId}/print/settlement`;
@@ -64,7 +59,6 @@ export default function ResolutionBanner({
       bgColor =
         "bg-gray-100 border-gray-200 dark:bg-gray-800 dark:border-gray-700";
       textColor = "text-gray-800 dark:text-gray-300";
-      icon = "archive";
       title = "CASE CLOSED (CFA ISSUED)";
       printLabel = "Print CFA";
       printUrl = `/dashboard/cases/${caseId}/print/cfa`;

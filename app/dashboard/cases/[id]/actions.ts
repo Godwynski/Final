@@ -734,8 +734,8 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
     }
 
     // Validate file type
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!CONFIG.FILE_UPLOAD.ALLOWED_TYPES.includes(file.type as any)) {
+    type AllowedFileType = typeof CONFIG.FILE_UPLOAD.ALLOWED_TYPES[number];
+    if (!CONFIG.FILE_UPLOAD.ALLOWED_TYPES.includes(file.type as AllowedFileType)) {
         return { error: `Only ${CONFIG.FILE_UPLOAD.ALLOWED_TYPES.join(', ')} files are allowed` }
     }
 

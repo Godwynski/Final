@@ -239,7 +239,7 @@ export default function ProceedingsTracker({
                   </p>
                   {hearing.notes && (
                     <p className="text-xs text-gray-500 mt-1 italic dark:text-gray-400">
-                      "{hearing.notes}"
+                      &quot;{hearing.notes}&quot;
                     </p>
                   )}
                 </div>

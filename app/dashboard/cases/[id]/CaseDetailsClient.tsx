@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import AlertModal from '@/components/ui/AlertModal'
 import ConfirmModal from '@/components/ui/ConfirmModal'
@@ -62,7 +62,7 @@ export default function CaseDetailsClient({
         (CONFIG.FILE_UPLOAD.ALLOWED_IMAGE_TYPES as readonly string[]).includes(e.file_type)
     ).length
 
-    const [origin, setOrigin] = useState<string>('')
+    const [origin] = useState<string>(() => typeof window !== 'undefined' ? window.location.origin : '')
 
     // Alert Modal State
     const [alertState, setAlertState] = useState<{
@@ -88,18 +88,16 @@ export default function CaseDetailsClient({
     // Confirm Modal State
     const [confirmState, setConfirmState] = useState<{
         isOpen: boolean
-        title: string
         message: string
         onConfirm: () => void
     }>({
         isOpen: false,
-        title: '',
         message: '',
         onConfirm: () => { }
     })
 
-    const showConfirm = (title: string, message: string, onConfirm: () => void) => {
-        setConfirmState({ isOpen: true, title, message, onConfirm })
+    const showConfirm = (message: string, onConfirm: () => void) => {
+        setConfirmState({ isOpen: true, message, onConfirm })
     }
 
     const closeConfirm = () => {
@@ -156,11 +154,7 @@ export default function CaseDetailsClient({
     // Link Generation Modal State
     const [showLinkModal, setShowLinkModal] = useState(false)
 
-    // Set origin on mount
-    useEffect(() => {
-        // eslint-disable-next-line
-        setOrigin(window.location.origin)
-    }, [])
+
 
     return (
         <div className="p-4">
@@ -176,7 +170,6 @@ export default function CaseDetailsClient({
                 isOpen={confirmState.isOpen}
                 onClose={closeConfirm}
                 onConfirm={confirmState.onConfirm}
-                title={confirmState.title}
                 message={confirmState.message}
             />
 
@@ -491,7 +484,7 @@ export default function CaseDetailsClient({
                                             showAlert('Action Denied', 'Cannot delete evidence in a closed case.', 'error')
                                             return
                                         }
-                                        showConfirm('Delete Evidence', 'Are you sure you want to delete this evidence? This action cannot be undone.', async () => {
+                                        showConfirm('Are you sure you want to delete this evidence? This action cannot be undone.', async () => {
                                             const result = await deleteEvidence(caseData.id, id)
                                             if (result?.error) showAlert('Error', result.error, 'error')
                                         })
@@ -769,7 +762,7 @@ export default function CaseDetailsClient({
                                                                 showAlert('Action Denied', 'Cannot delete notes in a closed case.', 'error')
                                                                 return
                                                             }
-                                                            showConfirm('Delete Note', 'Are you sure you want to delete this note?', async () => {
+                                                            showConfirm('Are you sure you want to delete this note?', async () => {
                                                                 const result = await deleteCaseNote(caseData.id, note.id)
                                                                 if (result?.error) showAlert('Error', result.error, 'error')
                                                             })

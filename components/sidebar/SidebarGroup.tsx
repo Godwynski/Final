@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 type SidebarGroupProps = {
   label: string;
@@ -15,18 +15,13 @@ export default function SidebarGroup({
   children,
   groupKey,
 }: SidebarGroupProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    const storedState = localStorage.getItem(`sidebar-group-${groupKey}`);
-    if (storedState) {
-      // eslint-disable-next-line
-      setIsOpen(storedState === "true");
-    } else {
-      // Auto-expand if we are in this section (heuristic)
-      // For simplicity, let's just default to closed unless stored
+  const [isOpen, setIsOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      const storedState = localStorage.getItem(`sidebar-group-${groupKey}`);
+      return storedState === "true";
     }
-  }, [groupKey]);
+    return false;
+  });
 
   const toggle = () => {
     const newState = !isOpen;

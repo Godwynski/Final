@@ -143,7 +143,60 @@ export interface AuditLog {
   user_id?: string;
   case_id?: string;
   action: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   created_at: string;
+}
+
+// Document and Settings Types
+export type SystemSettings = BarangaySettings;
+
+// Analytics and Dashboard Types
+export interface StatusDataItem {
+  name: string;
+  value: number;
+  color?: string;
+}
+
+export interface TypeDataItem {
+  name: string;
+  value: number;
+  color?: string;
+}
+
+export interface TrendDataItem {
+  name: string;
+  cases: number;
+  month?: string;
+}
+
+export interface AnalyticsData {
+  statusData: StatusDataItem[];
+  typeData: TypeDataItem[];
+  trendData: TrendDataItem[];
+}
+
+// Document Component Types
+export interface DocumentProps {
+  caseData: Case;
+  involvedParties: InvolvedParty[];
+  settings: SystemSettings;
+  evidence?: Evidence[];
+  hearings?: Hearing[];
+}
+
+export interface PrintableDocumentProps extends DocumentProps {
+  complainants: InvolvedParty[];
+  respondents: InvolvedParty[];
+  details: Case;
+}
+
+// Timeline Types
+export interface TimelineEvent {
+  id: string;
+  type: "note" | "audit" | "evidence" | "hearing" | "status_change";
+  timestamp: string;
+  title: string;
+  description?: string;
+  metadata?: Record<string, unknown>;
+  user?: string;
 }

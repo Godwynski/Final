@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { Calendar, ChevronDown, ArrowRight } from "lucide-react";
+import { Calendar, ChevronDown } from "lucide-react";
 
 const presets = [
   { label: "All Time", value: "all" },

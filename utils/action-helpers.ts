@@ -67,8 +67,9 @@ export function getErrorMessage(error: unknown): string {
 /**
  * Format validation errors from Zod
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function formatZodError(error: any): string {
+export function formatZodError(error: {
+  issues?: Array<{ message?: string }>;
+}): string {
   if (error?.issues && Array.isArray(error.issues)) {
     return error.issues[0]?.message || "Validation failed";
   }

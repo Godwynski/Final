@@ -18,9 +18,10 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
 
   const fetchNotifications = useCallback(async () => {
+    const supabase = supabaseRef.current;
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -37,9 +38,10 @@ export default function NotificationBell() {
       setNotifications(data);
       setUnreadCount(data.filter((n) => !n.is_read).length);
     }
-  }, [supabase]);
+  }, []);
 
   const markAsRead = async (id: string) => {
+    const supabase = supabaseRef.current;
     await supabase.from("notifications").update({ is_read: true }).eq("id", id);
 
     // Optimistic update
@@ -50,6 +52,7 @@ export default function NotificationBell() {
   };
 
   const markAllAsRead = async () => {
+    const supabase = supabaseRef.current;
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -66,7 +69,9 @@ export default function NotificationBell() {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line
+    const supabase = supabaseRef.current;
+
+    // Initial fetch
     fetchNotifications();
 
     // Real-time subscription
@@ -79,11 +84,7 @@ export default function NotificationBell() {
           schema: "public",
           table: "notifications",
         },
-        (payload) => {
-          // We can't easily filter by user_id in the subscription without RLS applied to the socket,
-          // but usually the client only receives what it's allowed to see if RLS is on.
-          // However, 'postgres_changes' broadcasts can be tricky.
-          // Safest is to refetch or check payload.new.user_id if available.
+        () => {
           fetchNotifications();
         },
       )
@@ -92,7 +93,7 @@ export default function NotificationBell() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchNotifications, supabase]);
+  }, [fetchNotifications]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

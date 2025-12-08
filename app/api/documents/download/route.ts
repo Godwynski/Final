@@ -11,8 +11,20 @@ import AbstractForm from "@/components/documents/forms/AbstractForm";
 import { Evidence } from "@/types";
 
 // Simple function to render React elements to HTML string without react-dom/server
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function renderElement(element: any): string {
+type ReactElementLike = {
+  type: string | ((props: Record<string, unknown>) => ReactElementLike);
+  props: Record<string, unknown>;
+};
+
+function renderElement(
+  element:
+    | ReactElementLike
+    | string
+    | number
+    | null
+    | undefined
+    | Array<ReactElementLike | string | number>,
+): string {
   if (!element) return "";
   if (typeof element === "string" || typeof element === "number")
     return String(element);
@@ -102,9 +114,8 @@ export async function GET(request: NextRequest) {
     const complainants = parties?.filter((p) => p.type === "Complainant") || [];
     const respondents = parties?.filter((p) => p.type === "Respondent") || [];
 
-    // Select the appropriate form component
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let FormComponent: React.ComponentType<any>;
+    // Select the appropriate form component (using type assertion for dynamic component selection)
+    let FormComponent: React.ComponentType<Record<string, unknown>>;
     let filename = "";
 
     switch (formType) {
@@ -319,7 +330,13 @@ export async function GET(request: NextRequest) {
     // Launch Puppeteer and generate PDF
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+      ],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     });
 
     const page = await browser.newPage();
