@@ -45,7 +45,184 @@
 - **UI Components**: [Flowbite](https://flowbite.com/) & [Lucide React](https://lucide.dev/)
 - **Validation**: [Zod](https://zod.dev/)
 
-💡 **For detailed technical information, architecture patterns, security measures, and deployment guides, see [Technical Background Documentation](./docs/TECHNICAL_BACKGROUND.md)**
+<details>
+<summary><strong>📋 Scope and Limitations (Click to Expand)</strong></summary>
+
+### 1. System Scope
+
+The system handles the digital management of barangay blotter cases, specifically focusing on the _Katarungang Pambarangay_ process.
+
+#### 1.1 Core Functionalities
+
+- **Digital Blotter**: Full lifecycle management of cases from filing to resolution (Filed → Hearing → Amicable Settlement/CFA → Closed).
+- **Search & Retrieval**: Advanced filtering of cases by Case Number, Title, Date, Status, or Involved Parties.
+- **Dashboard & Analytics**: Real-time visualization of case statistics, status distribution, and incident trends.
+- **Audit Trails**: automatic logging of critical system actions (login, status changes, document generation) for accountability.
+
+#### 1.2 User Roles & Access Control
+
+- **Admin (Barangay Captain/Secretary)**: Full access to system settings, user management, audit logs, and all operational features.
+- **Staff (Desk Officer/Kagawad)**: Operational access to file cases, schedule hearings, managing evidence, and generating documents.
+- **Guest (Residents)**: Temporary, secure access to specific case details updates and an evidence upload portal via Magic Links.
+
+#### 1.3 Document Handling
+
+- **Automated Generation**: Instant creation of DILG-compliant PDF documents:
+  - Summons
+  - Notice of Hearing
+  - Amicable Settlement
+  - Certificate to File Action (CFA)
+- **PDF Export**: Documents are rendered server-side and available for download/printing.
+
+#### 1.4 Evidence Management
+
+- **Secure Vault**: Encrypted cloud storage for case-related files.
+- **Guest Portal**: A specialized, PIN-protected interface allowing non-users (residents) to upload evidence without creating an account.
+- **Visibility Control**: Granular control over which evidence files are visible to other parties.
+
+### 2. System Limitations
+
+The following constraints define the boundaries of the system's capabilities, determined by technical architecture and configuration.
+
+#### 2.1 Technical Constraints
+
+- **Connectivity**: The system is cloud-native and requires an active internet connection to function; there is no offline mode.
+- **Platform**: The system is a web application accessible via modern browsers (Chrome, Edge, Firefox, Safari). There is no native mobile application (iOS/Android), though the interface is responsive.
+- **Dependencies**: The system relies on third-party services:
+  - **Supabase**: For database, authentication, and file storage.
+  - **MailerSend**: For sending transactional emails (magic links, notifications).
+
+#### 2.2 Storage & Upload Limits
+
+Strict limits are enforced to maintain system performance and storage quotas:
+
+| Feature               | Limit Description                         | Value                                        |
+| :-------------------- | :---------------------------------------- | :------------------------------------------- |
+| **Guest Upload Size** | Maximum file size for guest uploads       | **5 MB** per file                            |
+| **Guest file Count**  | Maximum files a guest can upload per link | **3 files**                                  |
+| **Staff Upload Size** | Maximum file size for staff/admin uploads | **10 MB** per file                           |
+| **Staff File Count**  | Maximum files staff can attach to a case  | **20 files**                                 |
+| **File Types**        | Allowed formats for Evidence              | **JPEG, PNG, WebP** (Images), **PDF** (Docs) |
+
+#### 2.3 Operational Constraints
+
+- **Guest Access Duration**: Guest links are temporary. They default to **24 hours** and cannot exceed **7 days**.
+- **Guest Link Limit**: A maximum of **5 active guest links** can be generated per case at any one time.
+- **Terminal States**: Once a case is marked as _Settled_, _Closed_, _Dismissed_, or _Referred_, it becomes **read-only**. No further edits or uploads are permitted unless reopened.
+- **Rate Limiting**:
+  - **Login**: Max **5 failed attempts** per 15 minutes.
+  - **Guest PIN**: Max **3 failed attempts** per 10 minutes.
+
+#### 2.4 Jurisdiction
+
+- **Legal Scope**: The system is designed specifically for the _Katarungang Pambarangay_ law (RA 7160) and is not intended for police blotters or court-level case management.
+
+</details>
+
+<details>
+<summary><strong>🔧 Technical Background (Click to Expand)</strong></summary>
+
+### 1. Technology Stack
+
+This section outlines the software development tools, frameworks, and libraries utilized in the development of _BlotterSys_. The selection of these technologies was driven by the requirements for performance, scalability, type safety, and rapid development.
+
+#### 1.1 Frontend Technologies
+
+The client-side architecture is built upon a modern React ecosystem, leveraging server-side rendering for optimal performance and SEO.
+
+| Technology       | Version | Role / Justification                                                                                                                                            |
+| :--------------- | :------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Next.js**      | 16.0.7  | **Core Framework.** Selected for its App Router architecture, server-side rendering (SSR), and built-in API routes, which unify the frontend and backend logic. |
+| **React**        | 19.2.1  | **UI Library.** Provides the component-based architecture. Version 19 introduces improved concurrency and server action support.                                |
+| **TypeScript**   | 5.x     | **Language.** Enforces static typing to reduce runtime errors and improve code maintainability for complex logic like case management.                          |
+| **Tailwind CSS** | 4.0     | **Styling Engine.** A utility-first CSS framework used for rapid UI development and ensuring consistent design tokens.                                          |
+| **Flowbite**     | 4.0.1   | **Component Library.** Provides pre-built, accessible UI components (modals, tables) compatible with Tailwind CSS.                                              |
+| **Recharts**     | 3.5.1   | **Data Visualization.** Used for rendering responsive charts in the analytics dashboard.                                                                        |
+| **Zod**          | 4.1.13  | **Schema Validation.** Ensures runtime data integrity for form inputs and API request payloads.                                                                 |
+| **Lucide React** | 0.555.0 | **Iconography.** A lightweight, consistent icon set used throughout the interface.                                                                              |
+
+#### 1.2 Backend Services & Infrastructure
+
+The system employs a serverless and cloud-native approach to minimize infrastructure maintenance while ensuring high availability.
+
+| Technology           | Version | Role / Justification                                                                                                  |
+| :------------------- | :------ | :-------------------------------------------------------------------------------------------------------------------- |
+| **Node.js**          | 20+     | **Runtime Environment.** Executes JavaScript code on the server side.                                                 |
+| **Supabase**         | Cloud   | **Backend-as-a-Service (BaaS).** Provides the PostgreSQL database, authentication system, and object storage.         |
+| **PostgreSQL**       | 15+     | **Database.** An advanced, open-source relational database used for structured data storage (cases, users, evidence). |
+| **Supabase Auth**    | v2      | **Identity Management.** Handles secure user authentication, session management, and JWT issuance.                    |
+| **Supabase Storage** | v2      | **Object Storage.** Securely stores binary large objects (BLOBs) such as evidence photos and PDF documents.           |
+| **MailerSend**       | 2.6.0   | **Email Service.** A transactional email API used for sending secure guest links and system notifications.            |
+| **Puppeteer**        | 24.32.0 | **PDF Engine.** A headless Chrome Node.js API used to generate high-fidelity PDF legal documents from HTML templates. |
+
+#### 1.3 Development & Quality Assurance Tools
+
+| Tool                      | Role                                                                                    |
+| :------------------------ | :-------------------------------------------------------------------------------------- |
+| **ESLint**                | Static code analysis tool for identifying patterns found in ECMAScript/JavaScript code. |
+| **Git**                   | Distributed version control system for tracking changes in source code.                 |
+| **Rate-Limiter-Flexible** | Library used to implement DDoS protection and bruteforce prevention on login endpoints. |
+
+### 2. Software Architecture
+
+The system follows a **Monolithic implementation within a Serverless environment**, utilizing the **Next.js App Router** pattern. This architecture blends frontend UI and backend logic into a single cohesive codebase while leveraging cloud services for persistence and state.
+
+#### 2.1 Architectural Patterns
+
+1.  **Server Components (RSC):**
+    - _Description:_ Components that render exclusively on the server.
+    - _Usage:_ Used for data fetching (e.g., retrieving case lists) to reduce client-side JavaScript bundles and improve initial page load (FCP).
+
+2.  **Server Actions:**
+    - _Description:_ Asynchronous functions executed on the server, callable directly from client components.
+    - _Usage:_ Replaces traditional REST API endpoints for form submissions (e.g., `createCase`, `updateStatus`), ensuring type safety and reducing boilerplate.
+
+3.  **Row-Level Security (RLS):**
+    - _Description:_ A security pattern where access policies are defined directly on the database tables.
+    - _Usage:_ Ensures that users can strictly access only the data permitted by their role (Admin vs. Staff) and tenant (Barangay), regardless of the access vector (API or Dashboard).
+
+### 3. Database Schema Design
+
+The persistence layer is built on a **Relational Database Management System (RDBMS)** schema.
+
+#### 3.1 Core Entities
+
+- **Profiles**: Extends the auth system with application-specific user data (Roles: Admin/Staff).
+- **Blotter_Cases**: The central entity storing incident details, status, and metadata.
+- **Involved_Parties**: Stores normalized data about complainants, respondents, and witnesses, linked to cases via Foreign Key.
+- **Evidence**: Metadata for files stored in the object storage, linked to specific cases.
+- **Guest_Links**: Validates and tracks the temporary access tokens issued to non-system users.
+
+#### 3.2 Security Implementation
+
+- **Encryption at Rest**: Data is stored on encrypted volumes.
+- **Encryption in Transit**: All connections are enforced via TLS 1.2+.
+- **Audit Logging**: Database triggers automatically record `INSERT`, `UPDATE`, and `DELETE` operations into an immutable `audit_logs` table for forensic capability.
+
+### 4. External Interfaces
+
+#### 4.1 MailerSend API
+
+Restful API integration for delivering transactional emails. It is used primarily for the **Guest Evidence Upload** workflow, delivering time-sensitive "Magic Links" to residents.
+
+#### 4.2 Puppeteer Renderer
+
+An internal micro-service abstraction that launches a headless Chromium instance to render HTML/CSS templates into PDF buffers. This ensures that legal documents (Summons, CFA) match exact formatting requirements regardless of the client device.
+
+### 5. System Requirements
+
+#### 5.1 Deployment Environment
+
+- **Runtime**: Node.js 18.x or higher.
+- **Memory**: Minimum 1GB RAM (for Puppeteer PDF generation).
+- **Storage**: Ephemeral filesystem support (for temporary file processing).
+
+#### 5.2 Client Requirements
+
+- **Browser**: Modern evergreen browser (Chrome 90+, Firefox 90+, Safari 14+, Edge).
+- **Network**: Broadband internet connection (required for real-time database connectivity).
+
+</details>
 
 ## 🗄️ Database Schema
 

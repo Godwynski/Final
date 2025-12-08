@@ -1,0 +1,27 @@
+# 📚 Documentation Index
+
+Welcome to the **BlotterSys** documentation. This folder is organized into chapters to guide you through the system's specifications, architecture, and scope.
+
+## 📖 Table of Contents
+
+### [01. Quick Start (README)](../README.md)
+
+The main entry point for the project.
+
+- **Go here for:** Installation, Project Overview, and Getting Started.
+
+### [02. Scope and Limitations](./02_SCOPE_AND_LIMITATIONS.md)
+
+A formal definition of what the system does (and does not do).
+
+- **Go here for:** Functional Requirements, Storage Limits, User Roles, and Boundaries.
+
+### [03. Technical Background](./03_TECHNICAL_BACKGROUND.md)
+
+A detailed breakdown of the technology stack and architecture.
+
+- **Go here for:** Frontend/Backend Tech, Database Schema, Security Measures, and Deployment info.
+
+---
+
+> 💡 **Tip:** Start with the **README** to get the app running, then consult **Scope and Limitations** for feature details, and **Technical Background** for architectural insights.
