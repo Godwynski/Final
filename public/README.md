@@ -411,383 +411,283 @@ graph TB
 
 ---
 
-### 🔄 System Flowchart
+### 🔄 System Flowcharts
 
-The BlotterSys workflow is organized into modular subprocesses for clarity. The main overview shows high-level system flow, with detailed subprocesses below for each major operation.
-
----
-
-#### 📋 Main System Overview
-
-This diagram shows the entry points and main process routing:
-
-```mermaid
-flowchart TD
-    Start([🚀 START]) --> UserType{User Type?}
-
-    UserType -->|Admin/Staff| AuthFlow[🔐 Authentication Process]
-    UserType -->|Guest| GuestFlow[📧 Guest Access Process]
-
-    AuthFlow --> Dashboard[📊 Dashboard]
-    Dashboard --> Menu{Select Action}
-
-    Menu -->|File Case| CaseFilingFlow[📝 Case Filing Process]
-    Menu -->|Manage Case| CaseManageFlow[🔄 Case Management Process]
-    Menu -->|Generate Docs| DocGenFlow[📄 Document Generation Process]
-    Menu -->|Create Guest Link| GuestLinkFlow[🔗 Guest Link Creation Process]
-    Menu -->|View Analytics| AnalyticsFlow[📊 Analytics Process]
-
-    CaseFilingFlow --> End([✅ END])
-    CaseManageFlow --> End
-    DocGenFlow --> End
-    GuestLinkFlow --> End
-    AnalyticsFlow --> End
-    GuestFlow --> End
-
-    style Start fill:#4CAF50,color:#fff
-    style End fill:#2196F3,color:#fff
-    style AuthFlow fill:#e3f2fd
-    style GuestFlow fill:#fff3e0
-    style CaseFilingFlow fill:#e8f5e9
-    style CaseManageFlow fill:#e8f5e9
-    style DocGenFlow fill:#f3e5f5
-    style GuestLinkFlow fill:#fff3e0
-    style AnalyticsFlow fill:#fce4ec
-```
+BlotterSys workflows are organized into **4 connected flowcharts** based on user roles and system entry points. Each flowchart represents a distinct path through the system.
 
 ---
 
-#### 🔐 Subprocess 1: Authentication Process
+#### 🌐 Flowchart 1: System Entry & Authentication
 
-Staff and Admin login workflow with security controls:
+**Purpose:** How all users enter the system and get authenticated/routed
 
 ```mermaid
 flowchart TD
-    AuthStart([Start: Login]) --> EnterCreds[Enter Email & Password]
-    EnterCreds --> Validate{Credentials Valid?}
+    Start([🚀 User Visits System]) --> Landing[🏠 Landing Page]
+    Landing --> UserType{User Type?}
 
-    Validate -->|No| CheckAttempts{Login Attempts ≥ 5?}
-    CheckAttempts -->|Yes| LockAccount[🔒 Lock Account<br/>15 minutes]
-    CheckAttempts -->|No| EnterCreds
-    LockAccount --> AuthEnd([End: Locked])
+    UserType -->|Admin/Staff| LoginPage[🔐 Login Page]
+    UserType -->|Guest| HasLink{Has Magic Link?}
 
-    Validate -->|Yes| LoadProfile[Load User Profile]
-    LoadProfile --> CheckRole{Role?}
+    HasLink -->|Yes| GuestFlow[Go to Flowchart 4:<br/>Guest Portal]
+    HasLink -->|No| Landing
 
-    CheckRole -->|Admin| AdminDash[📊 Admin Dashboard<br/>All Features]
+    LoginPage --> EnterCreds[Enter Email & Password]
+    EnterCreds --> ValidateCreds{Valid<br/>Credentials?}
+
+    ValidateCreds -->|No| AttemptsCheck{Login Attempts<br/>≥ 5?}
+    AttemptsCheck -->|Yes| AccountLocked[🔒 Account Locked<br/>15 minutes]
+    AttemptsCheck -->|No| LoginPage
+    AccountLocked --> End1([❌ Access Denied])
+
+    ValidateCreds -->|Yes| LoadProfile[Load User Profile]
+    LoadProfile --> CheckRole{User Role?}
+
+    CheckRole -->|Admin| AdminDash[📊 Admin Dashboard<br/>All Features Unlocked]
     CheckRole -->|Staff| StaffDash[📊 Staff Dashboard<br/>Operational Features]
 
-    AdminDash --> AuthEnd([End: Authenticated])
-    StaffDash --> AuthEnd
+    AdminDash --> AdminChoice{Admin Action?}
+    StaffDash --> OpsFlow[Go to Flowchart 3:<br/>Operational Features]
 
-    style AuthStart fill:#4CAF50,color:#fff
-    style AuthEnd fill:#2196F3,color:#fff
-    style LockAccount fill:#ff6b6b,color:#fff
-    style Validate fill:#ffd93d
+    AdminChoice -->|Admin Features| AdminFlow[Go to Flowchart 2:<br/>Admin-Only Features]
+    AdminChoice -->|Operational| OpsFlow
+
+    AdminFlow --> End2([✅ Complete])
+    OpsFlow --> End2
+
+    style Start fill:#4CAF50,color:#fff
+    style End1 fill:#f44336,color:#fff
+    style End2 fill:#2196F3,color:#fff
+    style AdminDash fill:#ffccbc
+    style StaffDash fill:#c5e1a5
+    style ValidateCreds fill:#ffd93d
+    style CheckRole fill:#ffd93d
 ```
 
 ---
 
-#### 📝 Subprocess 2: Case Filing Process
+#### 👑 Flowchart 2: Admin-Only Features
 
-Creating a new case with automatic notifications:
-
-```mermaid
-flowchart TD
-    FileStart([Start: File Case]) --> OpenForm[Open Case Form]
-    OpenForm --> EnterParties[Enter Complainant &<br/>Respondent Details]
-    EnterParties --> EnterIncident[Select Incident Type &<br/>Date/Location]
-    EnterIncident --> WriteNarrative[Write Narrative<br/>Facts & Action Taken]
-    WriteNarrative --> ValidateForm{Form Complete?}
-
-    ValidateForm -->|No| ShowErrors[Display Validation Errors]
-    ShowErrors --> OpenForm
-
-    ValidateForm -->|Yes| SaveCase[💾 Save Case<br/>Status: New<br/>Generate Case Number]
-    SaveCase --> CheckPriority{High Priority<br/>Incident?}
-
-    CheckPriority -->|Yes: Theft,<br/>Physical Injury,<br/>Harassment| NotifyAdmins[📧 Email All Admins<br/>Urgent Case Alert]
-    CheckPriority -->|No| SkipNotify[No Notification]
-
-    NotifyAdmins --> LogAudit[📋 Log to Audit Logs]
-    SkipNotify --> LogAudit
-    LogAudit --> FileEnd([End: Case Created])
-
-    style FileStart fill:#4CAF50,color:#fff
-    style FileEnd fill:#2196F3,color:#fff
-    style CheckPriority fill:#ffd93d
-    style NotifyAdmins fill:#ffccbc
-```
-
----
-
-#### 🔄 Subprocess 3: Case Management Process
-
-Updating case status, adding notes, and handling terminal states:
+**Purpose:** Features exclusively available to administrators
 
 ```mermaid
 flowchart TD
-    ManageStart([Start: Manage Case]) --> SearchCase[🔍 Search & Select Case]
-    SearchCase --> ViewDetails[View Case Details]
-    ViewDetails --> SelectAction{Select Action}
+    Start([Admin Dashboard]) --> AdminMenu{Select Admin Feature}
 
-    SelectAction -->|Update Status| ChangeStatus[Change Status:<br/>New → Investigation<br/>→ Hearing → Resolution]
-    SelectAction -->|Add Note| WriteNote[💬 Write Internal Note]
-    SelectAction -->|View History| ShowHistory[📜 Display Audit Trail]
+    AdminMenu -->|System Settings| Settings[⚙️ System Settings]
+    AdminMenu -->|User Management| Users[👥 User Management]
+    AdminMenu -->|Audit Logs| Audit[📋 Audit Logs]
+    AdminMenu -->|Site Analytics| SiteVisits[📈 Site Visit Analytics]
 
-    ChangeStatus --> CheckTerminal{Terminal Status?}
-    CheckTerminal -->|Yes: Settled,<br/>Closed, Dismissed,<br/>Referred| LockCase[🔒 Lock Case<br/>Read-Only Mode]
-    CheckTerminal -->|No| SaveStatus[💾 Save Status Update]
+    Settings --> SettingsAction{Action?}
+    SettingsAction -->|Update Barangay Info| UpdateInfo[Edit Province/City/Barangay]
+    SettingsAction -->|Upload Logos| UploadLogo[Upload Barangay/City Logos]
+    SettingsAction -->|Save| SaveSettings[💾 Save to Database]
 
-    LockCase --> DeactivateLinks[⛔ Deactivate All<br/>Guest Links for Case]
-    DeactivateLinks --> LogChange[📋 Log Status Change]
-    SaveStatus --> LogChange
+    SaveSettings --> SettingsSuccess[✅ Settings Updated]
 
-    WriteNote --> SaveNote[💾 Save Note]
-    SaveNote --> LogChange
+    Users --> UserAction{Action?}
+    UserAction -->|Create User| CreateUser[Create New Staff/Admin Account]
+    UserAction -->|Edit User| EditUser[Modify User Role/Details]
+    UserAction -->|Deactivate| DeactivateUser[Deactivate User Account]
 
-    ShowHistory --> ManageEnd([End: Return to Dashboard])
-    LogChange --> ManageEnd
+    CreateUser --> UserSuccess[✅ User Created]
+    EditUser --> UserSuccess
+    DeactivateUser --> UserSuccess
 
-    style ManageStart fill:#4CAF50,color:#fff
-    style ManageEnd fill:#2196F3,color:#fff
-    style LockCase fill:#ff6b6b,color:#fff
-    style DeactivateLinks fill:#ff6b6b,color:#fff
-    style CheckTerminal fill:#ffd93d
-```
+    Audit --> SelectFilters[Select Filters:<br/>Date Range, User, Action Type]
+    SelectFilters --> FetchLogs[📡 Fetch Audit Logs from DB]
+    FetchLogs --> DisplayLogs[Display Audit Trail<br/>User, Action, Timestamp, Details]
 
----
+    SiteVisits --> ViewVisits[View Site Visit Metrics<br/>Unique Visitors, Page Views, Devices]
 
-#### 📄 Subprocess 4: Document Generation Process
+    SettingsSuccess --> End([Return to Dashboard])
+    UserSuccess --> End
+    DisplayLogs --> End
+    ViewVisits --> End
 
-Generating DILG-compliant PDF documents:
-
-```mermaid
-flowchart TD
-    DocStart([Start: Generate Document]) --> SelectCase[Select Case]
-    SelectCase --> SelectType{Document Type?}
-
-    SelectType -->|Summons| LoadSummons[Load Summons Template]
-    SelectType -->|Notice of Hearing| LoadNotice[Load Notice Template]
-    SelectType -->|Amicable Settlement| LoadSettlement[Load Settlement Template]
-    SelectType -->|Certificate to<br/>File Action| LoadCFA[Load CFA Template]
-
-    LoadSummons --> FillData[Fill Case Data<br/>Parties, Incident, Dates]
-    LoadNotice --> FillData
-    LoadSettlement --> FillData
-    LoadCFA --> FillData
-
-    FillData --> GeneratePDF[🖨️ Generate PDF<br/>with Puppeteer]
-    GeneratePDF --> DownloadPDF[⬇️ Download PDF]
-    DownloadPDF --> LogGeneration[📋 Log Document<br/>Generation]
-    LogGeneration --> DocEnd([End: Document Ready])
-
-    style DocStart fill:#4CAF50,color:#fff
-    style DocEnd fill:#2196F3,color:#fff
-    style SelectType fill:#ffd93d
-```
-
----
-
-#### 🔗 Subprocess 5: Guest Link Creation Process
-
-Creating secure magic links for evidence upload:
-
-```mermaid
-flowchart TD
-    LinkStart([Start: Create Link]) --> SelectCase[Select Case]
-    SelectCase --> EnterGuest[Enter Guest Details:<br/>Name, Email, Phone]
-    EnterGuest --> SetDuration[Set Link Duration<br/>1-168 hours, default 24h]
-    SetDuration --> Generate[Generate:<br/>✓ Unique Token UUID<br/>✓ 6-Digit PIN 100000-999999]
-    Generate --> SaveLink[💾 Save Guest Link<br/>Status: Active]
-    SaveLink --> ComposeEmail[Compose Email:<br/>Magic Link URL<br/>PIN Code<br/>Case Details<br/>Expiration Time]
-    ComposeEmail --> SendEmail[📧 Send via MailerSend]
-    SendEmail --> CheckSent{Email Sent?}
-
-    CheckSent -->|Yes| LogSuccess[📋 Log Link Creation]
-    CheckSent -->|No| ShowError[❌ Display Error<br/>Check Email/API]
-
-    LogSuccess --> LinkEnd([End: Link Active])
-    ShowError --> LinkEnd
-
-    style LinkStart fill:#4CAF50,color:#fff
-    style LinkEnd fill:#2196F3,color:#fff
-    style CheckSent fill:#ffd93d
-```
-
----
-
-#### 📤 Subprocess 6: Guest Evidence Upload Process
-
-Guest access and file upload workflow with security validation:
-
-```mermaid
-flowchart TD
-    GuestStart([Start: Guest Access]) --> ReceiveEmail[📧 Receive Email<br/>with Link & PIN]
-    ReceiveEmail --> ClickLink[🖱️ Click Magic Link]
-    ClickLink --> EnterPIN[🔢 Enter 6-Digit PIN]
-    EnterPIN --> ValidatePIN{PIN Correct?}
-
-    ValidatePIN -->|No| CheckPINAttempts{PIN Attempts ≥ 3?}
-    CheckPINAttempts -->|Yes| LockPIN[🔒 Lock for 10 minutes]
-    CheckPINAttempts -->|No| EnterPIN
-    LockPIN --> GuestEnd([End: Access Denied])
-
-    ValidatePIN -->|Yes| CheckExpiry{Link Expired?}
-    CheckExpiry -->|Yes| ShowExpired[❌ Link Expired Message]
-    ShowExpired --> GuestEnd
-
-    CheckExpiry -->|No| LoadPortal[🏠 Load Guest Portal]
-    LoadPortal --> ShowCase[View:<br/>✓ Case Narrative<br/>✓ Hearing Schedule<br/>✓ Existing Evidence]
-    ShowCase --> UserAction{Action?}
-
-    UserAction -->|Upload| SelectFile[📁 Select Photo<br/>JPEG/PNG/WebP]
-    UserAction -->|Exit| GuestEnd
-
-    SelectFile --> ValidateFile{Valid File?<br/>Size ≤ 5MB<br/>Count ≤ 5}
-    ValidateFile -->|No| FileError[❌ File Rejected<br/>Show Error]
-    FileError --> ShowCase
-
-    ValidateFile -->|Yes| UploadStorage[☁️ Upload to<br/>Supabase Storage<br/>evidence/ bucket]
-    UploadStorage --> LinkToCase[🔗 Create Evidence<br/>Record in Database]
-    LinkToCase --> UploadSuccess[✅ Evidence Saved]
-    UploadSuccess --> ShowCase
-
-    style GuestStart fill:#4CAF50,color:#fff
-    style GuestEnd fill:#2196F3,color:#fff
-    style LockPIN fill:#ff6b6b,color:#fff
-    style ValidatePIN fill:#ffd93d
-    style CheckExpiry fill:#ffd93d
-    style ValidateFile fill:#ffd93d
-```
-
----
-
-#### 📊 Subprocess 7: Analytics Dashboard Process
-
-Viewing system metrics and reports:
-
-```mermaid
-flowchart TD
-    AnalyticsStart([Start: View Analytics]) --> OpenDashboard[Open Analytics Page]
-    OpenDashboard --> ShowFilters[Display Filters:<br/>Date Range, Status,<br/>Incident Type]
-    ShowFilters --> ApplyFilters[User Selects Filters]
-    ApplyFilters --> FetchData[📡 Call RPC:<br/>get_analytics_charts_dynamic]
-    FetchData --> ProcessData[Process Data:<br/>✓ Status Distribution<br/>✓ Incident Types<br/>✓ Monthly Trends]
-    ProcessData --> RenderCharts[📈 Render Charts<br/>with Recharts]
-    RenderCharts --> DisplayMetrics[Show Metrics:<br/>Total Cases<br/>Active vs Resolved<br/>Comparison with<br/>Previous Period]
-    DisplayMetrics --> UserAction{User Action?}
-
-    UserAction -->|Change Filter| ApplyFilters
-    UserAction -->|Export| ExportData[⬇️ Export to CSV]
-    UserAction -->|Exit| AnalyticsEnd([End: Return to Dashboard])
-
-    ExportData --> AnalyticsEnd
-
-    style AnalyticsStart fill:#4CAF50,color:#fff
-    style AnalyticsEnd fill:#2196F3,color:#fff
+    style Start fill:#ffccbc
+    style End fill:#2196F3,color:#fff
+    style SettingsAction fill:#ffd93d
     style UserAction fill:#ffd93d
 ```
 
 ---
 
-### 📋 Step-by-Step Flow Explanations
+#### 📂 Flowchart 3: Operational Features (Admin & Staff)
 
-#### **Flow 1: Admin/Staff Files a New Case**
+**Purpose:** Core case management features shared by both Admin and Staff
 
-1. **Login** → Admin/Staff enters email and password
-2. **Authentication** → System validates credentials (5 attempts allowed per 15 minutes)
-3. **Dashboard** → User lands on the main dashboard
-4. **File New Case** → Click "New Case" button
-5. **Enter Details** → Fill out form:
-   - Complainant and Respondent information
-   - Incident type (Theft, Harassment, etc.)
-   - Incident date and location
-   - Narrative description
-6. **Save** → Case is created with status "New"
-7. **Auto-Notification** → If incident type is Theft, Physical Injury, or Harassment, system auto-emails all admins
-8. **Case Created** → User can now manage the case
+```mermaid
+flowchart TD
+    Start([Dashboard]) --> Menu{Select Feature}
 
-#### **Flow 2: Staff Generates Legal Documents**
+    Menu -->|File Case| FileCase[📝 File New Case]
+    Menu -->|Manage Case| ManageCase[🔍 Search/View Cases]
+    Menu -->|Generate Document| GenDoc[📄 Generate Document]
+    Menu -->|Create Guest Link| GuestLink[🔗 Create Guest Link]
+    Menu -->|View Analytics| Analytics[📊 View Analytics]
 
-1. **Search Case** → Find case by case number or name
-2. **View Case Details** → Open case detail page
-3. **Select Document** → Choose document type:
-   - **Summons** - Initial notification to respondent
-   - **Notice of Hearing** - Hearing schedule notification
-   - **Amicable Settlement** - Settlement agreement
-   - **Certificate to File Action** - Court referral
-4. **Generate PDF** → System uses Puppeteer to create PDF with case data
-5. **Download** → PDF is downloaded to user's device
+    %% File Case Flow
+    FileCase --> EnterCaseInfo[Enter Case Information:<br/>Parties, Incident Type, Date, Narrative]
+    EnterCaseInfo --> ValidateCase{Form Valid?}
+    ValidateCase -->|No| ShowErrors[❌ Show Validation Errors]
+    ShowErrors --> FileCase
+    ValidateCase -->|Yes| SaveCase[💾 Save Case<br/>Generate Case Number<br/>Status: New]
+    SaveCase --> CheckPriority{High Priority<br/>Incident?}
+    CheckPriority -->|Yes<br/>Theft/Injury/Harassment| NotifyAdmins[📧 Email All Admins]
+    CheckPriority -->|No| CaseCreated[✅ Case Created]
+    NotifyAdmins --> CaseCreated
 
-#### **Flow 3: Admin Creates Guest Link for Evidence Collection**
+    %% Manage Case Flow
+    ManageCase --> SearchCase[Search by Case#/Name/Date]
+    SearchCase --> ViewCase[View Case Details]
+    ViewCase --> CaseAction{Action?}
+    CaseAction -->|Update Status| UpdateStatus[Change Case Status]
+    CaseAction -->|Add Note| AddNote[💬 Add Internal Note]
+    CaseAction -->|Schedule Hearing| ScheduleHearing[📅 Schedule Hearing]
+    CaseAction -->|View Evidence| ViewEvidence[📎 View Uploaded Evidence]
 
-1. **Open Case** → Navigate to specific case
-2. **Click "Create Guest Link"** → Open guest link form
-3. **Enter Guest Details**:
-   - Guest name
-   - Email address
-   - Link duration (1-168 hours, default 24h)
-4. **System Generates**:
-   - Unique token (UUID)
-   - Random 6-digit PIN (100000-999999)
-5. **Email Sent** → MailerSend delivers email with:
-   - Magic link URL
-   - 6-digit PIN
-   - Case details
-   - Expiration time
-6. **Link Active** → Guest can now access upload portal
+    UpdateStatus --> TerminalCheck{Terminal Status?<br/>Settled/Closed/<br/>Dismissed/Referred}
+    TerminalCheck -->|Yes| LockCase[🔒 Lock Case Read-Only<br/>Deactivate Guest Links]
+    TerminalCheck -->|No| StatusUpdated[✅ Status Updated]
+    LockCase --> LogAudit[📋 Log to Audit Trail]
+    StatusUpdated --> LogAudit
 
-#### **Flow 4: Guest Uploads Evidence**
+    AddNote --> NoteSaved[✅ Note Added]
+    ScheduleHearing --> HearingSaved[✅ Hearing Scheduled]
+    ViewEvidence --> EvidenceList[Display Evidence Files]
 
-1. **Receive Email** → Guest gets email notification
-2. **Click Link** → Opens guest upload portal
-3. **Enter PIN** → Guest enters 6-digit PIN (3 attempts allowed)
-4. **PIN Validation** → System verifies PIN via cookie
-5. **Check Expiration** → System verifies link hasn't expired
-6. **Access Granted** → Guest sees:
-   - Case narrative (incident description)
-   - Next hearing date (if scheduled)
-   - Existing evidence (own + staff uploads)
-7. **Select Photo** → Guest chooses image file
-8. **Validation** → System checks:
-   - File type (JPEG, PNG, WebP only)
-   - File size (≤ 5MB)
-   - Photo count (max 5 per link)
-9. **Upload** → File is uploaded to Supabase `evidence` bucket
-10. **Link to Case** → Evidence is associated with case ID
-11. **Success** → File appears in evidence list
+    %% Document Generation Flow
+    GenDoc --> SelectDoc{Document Type?}
+    SelectDoc -->|Summons| GenSummons[Generate Summons PDF]
+    SelectDoc -->|Notice of Hearing| GenNotice[Generate Notice PDF]
+    SelectDoc -->|Amicable Settlement| GenSettlement[Generate Settlement PDF]
+    SelectDoc -->|Certificate to File Action| GenCFA[Generate CFA PDF]
 
-#### **Flow 5: Admin Updates Case Status to Terminal State**
+    GenSummons --> RenderPDF[🖨️ Render PDF with Puppeteer]
+    GenNotice --> RenderPDF
+    GenSettlement --> RenderPDF
+    GenCFA --> RenderPDF
+    RenderPDF --> DownloadPDF[⬇️ Download PDF]
 
-1. **Open Case** → Select case to close
-2. **Update Status** → Change status to:
-   - **Settled** - Parties reached agreement
-   - **Closed** - Case administratively closed
-   - **Dismissed** - Case dismissed
-   - **Referred** - Escalated to court
-3. **Confirmation** → Admin confirms status change
-4. **Case Locked** → Case becomes read-only (no edits allowed)
-5. **Guest Links Deactivated** → All active guest links for this case are automatically disabled
-6. **Audit Logged** → Status change is recorded in audit_logs table
+    %% Guest Link Flow
+    GuestLink --> EnterGuestInfo[Enter Guest Details:<br/>Name, Email, Phone, Duration]
+    EnterGuestInfo --> GenerateToken[Generate:<br/>Unique Token UUID<br/>6-Digit PIN 100000-999999]
+    GenerateToken --> SaveLink[💾 Save Guest Link<br/>Expiration Date]
+    SaveLink --> SendEmail[📧 Send Email via MailerSend<br/>Magic Link + PIN]
+    SendEmail --> EmailCheck{Email Sent?}
+    EmailCheck -->|Yes| LinkCreated[✅ Guest Link Created]
+    EmailCheck -->|No| EmailError[❌ Email Failed<br/>Check API/Email]
 
-#### **Flow 6: Staff Views Analytics Dashboard**
+    %% Analytics Flow
+    Analytics --> AnalyticsFilters[Select Filters:<br/>Date Range, Status, Incident Type]
+    AnalyticsFilters --> FetchData[📡 Fetch Analytics Data via RPC]
+    FetchData --> RenderCharts[📈 Render Charts:<br/>Status Distribution<br/>Incident Types<br/>Monthly Trends]
+    RenderCharts --> DisplayMetrics[Show KPIs:<br/>Total Cases, Active, Resolved,<br/>Comparison with Previous Period]
 
-1. **Navigate to Dashboard** → Click "Analytics" in sidebar
-2. **Select Filters**:
-   - Date range (7d, 30d, This Month, Custom, etc.)
-   - Incident type filter
-   - Status filter
-3. **Fetch Data** → System calls `get_analytics_charts_dynamic()` RPC
-4. **Display Charts**:
-   - **Status Distribution** - Pie chart of case statuses
-   - **Incident Types** - Bar chart of incident categories
-   - **Monthly Trends** - Line chart of case volume over time
-5. **View Metrics**:
-   - Total cases
-   - Active cases
-   - Resolved cases
-   - Comparison with previous period
+    %% End States
+    CaseCreated --> End([Return to Dashboard])
+    LogAudit --> End
+    NoteSaved --> End
+    HearingSaved --> End
+    EvidenceList --> End
+    DownloadPDF --> End
+    LinkCreated --> End
+    EmailError --> End
+    DisplayMetrics --> End
+
+    style Start fill:#c5e1a5
+    style End fill:#2196F3,color:#fff
+    style LockCase fill:#ff6b6b,color:#fff
+    style ValidateCase fill:#ffd93d
+    style CheckPriority fill:#ffd93d
+    style TerminalCheck fill:#ffd93d
+    style EmailCheck fill:#ffd93d
+```
+
+---
+
+#### 👤 Flowchart 4: Guest Portal
+
+**Purpose:** Guest evidence upload workflow via magic link
+
+```mermaid
+flowchart TD
+    Start([📧 Guest Receives Email]) --> ClickLink[🖱️ Click Magic Link]
+    ClickLink --> LoadPortal[Load Guest Portal]
+    LoadPortal --> EnterPIN[🔢 Enter 6-Digit PIN]
+    EnterPIN --> ValidatePIN{PIN Correct?}
+
+    ValidatePIN -->|No| PINAttempts{PIN Attempts<br/>≥ 3?}
+    PINAttempts -->|Yes| PINLocked[🔒 Locked for 10 Minutes]
+    PINAttempts -->|No| EnterPIN
+    PINLocked --> End1([❌ Access Denied])
+
+    ValidatePIN -->|Yes| CheckExpiry{Link Active &<br/>Not Expired?}
+    CheckExpiry -->|No| ShowExpired[❌ Link Expired or<br/>Case Closed]
+    ShowExpired --> End1
+
+    CheckExpiry -->|Yes| ShowTerms[📜 Show Terms & Conditions]
+    ShowTerms --> AcceptTerms{Terms<br/>Accepted?}
+    AcceptTerms -->|No| End1
+
+    AcceptTerms -->|Yes| LogAcceptance[💾 Log Terms Acceptance<br/>with Timestamp]
+    LogAcceptance --> GrantAccess[✅ Access Granted]
+    GrantAccess --> ShowCaseInfo[Display:<br/>📋 Case Narrative<br/>📅 Hearing Schedule<br/>📎 Existing Evidence]
+
+    ShowCaseInfo --> GuestAction{Action?}
+    GuestAction -->|Upload Photo| SelectFile[📁 Select Photo File<br/>JPEG/PNG/WebP]
+    GuestAction -->|View Only| ShowCaseInfo
+    GuestAction -->|Exit| End2([Exit Portal])
+
+    SelectFile --> ValidateFile{Valid File?<br/>Type: JPEG/PNG/WebP<br/>Size: ≤ 5MB<br/>Count: ≤ 5}
+    ValidateFile -->|No| FileError[❌ File Rejected<br/>Show Error Message]
+    FileError --> ShowCaseInfo
+
+    ValidateFile -->|Yes| UploadToStorage[☁️ Upload to Supabase<br/>evidence/ bucket]
+    UploadToStorage --> CreateRecord[🔗 Create Evidence Record<br/>Link to Case + Guest Link]
+    CreateRecord --> UploadSuccess[✅ Evidence Uploaded Successfully]
+    UploadSuccess --> ShowCaseInfo
+
+    style Start fill:#fff3e0
+    style End1 fill:#f44336,color:#fff
+    style End2 fill:#2196F3,color:#fff
+    style ValidatePIN fill:#ffd93d
+    style CheckExpiry fill:#ffd93d
+    style ValidateFile fill:#ffd93d
+    style AcceptTerms fill:#ffd93d
+```
+
+---
+
+### 🔗 Flowchart Connections
+
+**How the 4 flowcharts connect:**
+
+```
+┌──────────────────────────────────────────────┐
+│  Flowchart 1: System Entry & Authentication │
+│  (All users start here)                      │
+└─────────┬────────────────────┬───────────────┘
+          │                    │
+    ┌─────▼────────┐    ┌──────▼────────┐
+    │ Admin        │    │ Guest         │
+    │ Dashboard    │    │ with Link     │
+    └─────┬────────┘    └───────┬───────┘
+          │                     │
+    ┌─────▼────────┐            │
+    │ Flowchart 2: │     ┌──────▼────────────┐
+    │ Admin-Only   │     │ Flowchart 4:      │
+    │ Features     │     │ Guest Portal      │
+    └─────┬────────┘     └───────────────────┘
+          │
+    ┌─────▼────────────────────────┐
+    │ Flowchart 3:               │
+    │ Operational Features       │
+    │ (Admin & Staff Share This) │
+    └──────────────────────────────┘
+```
 
 ---
 
@@ -807,40 +707,155 @@ Throughout the system, these security measures are enforced:
 
 ---
 
-### 🎬 Common User Journeys
+## 📋 Functional Requirements
 
-#### **Journey A: Complainant Reports Noise Dispute**
+### FR-1: User Authentication & Authorization
 
-1. **Complainant visits Barangay Hall** → Speaks with Desk Officer (Staff)
-2. **Staff logs into BlotterSys** → Opens dashboard
-3. **Staff files new case**:
-   - Incident Type: Public Disturbance
-   - Complainant: Juan dela Cruz
-   - Respondent: Pedro Santos
-   - Narrative: "Loud karaoke at 2 AM"
-4. **System creates Case #00123** → Status: New
-5. **Staff schedules hearing** → Adds hearing entry for next week
-6. **Staff generates Summons** → Downloads PDF, prints for respondent
-7. **Staff creates guest link** → Sends to complainant for photo evidence
-8. **Complainant uploads photos** → Via magic link (valid for 24 hours)
-9. **Hearing occurs** → Parties reach agreement
-10. **Staff updates status to "Settled"** → Generates Amicable Settlement document
-11. **Case locked** → Guest link auto-deactivates
+| ID     | Requirement                                                          | Priority |
+| ------ | -------------------------------------------------------------------- | -------- |
+| FR-1.1 | System shall support email/password authentication via Supabase Auth | High     |
+| FR-1.2 | System shall implement role-based access control (Admin, Staff)      | High     |
+| FR-1.3 | System shall force password change on first login                    | Medium   |
+| FR-1.4 | System shall rate-limit login attempts (max 5 per 15 minutes)        | High     |
+| FR-1.5 | System shall maintain user sessions with automatic expiration        | High     |
 
-#### **Journey B: Admin Reviews System Analytics**
+### FR-2: Case Management
 
-1. **Admin logs in** → Views dashboard
-2. **Clicks "Analytics"** → Opens analytics page
-3. **Selects "This Month" filter** → Views current month data
-4. **Reviews metrics**:
-   - 45 total cases this month
-   - 30 active, 15 resolved
-   - Most common: Property Damage (12 cases)
-5. **Checks action items**:
-   - 3 stale cases (>15 days without update)
-   - 2 hearings scheduled this week
-6. **Navigates to Audit Logs** → Reviews staff activity
-7. **Verifies site visits** → Checks system usage analytics
+| ID     | Requirement                                                            | Priority |
+| ------ | ---------------------------------------------------------------------- | -------- |
+| FR-2.1 | System shall allow filing of new blotter cases with incident details   | High     |
+| FR-2.2 | System shall generate unique sequential case numbers                   | High     |
+| FR-2.3 | System shall track case status through defined lifecycle               | High     |
+| FR-2.4 | System shall support multiple involved parties per case                | High     |
+| FR-2.5 | System shall allow adding internal notes to cases                      | Medium   |
+| FR-2.6 | System shall prevent editing of terminal cases (Settled, Closed, etc.) | High     |
+| FR-2.7 | System shall support advanced search by case number, name, date        | High     |
+| FR-2.8 | System shall auto-notify admins for high-priority incidents            | Medium   |
+
+### FR-3: Document Generation
+
+| ID     | Requirement                                                 | Priority |
+| ------ | ----------------------------------------------------------- | -------- |
+| FR-3.1 | System shall generate DILG-compliant Summons documents      | High     |
+| FR-3.2 | System shall generate Notice of Hearing documents           | High     |
+| FR-3.3 | System shall generate Amicable Settlement agreements        | High     |
+| FR-3.4 | System shall generate Certificate to File Action documents  | High     |
+| FR-3.5 | System shall output documents in PDF format                 | High     |
+| FR-3.6 | System shall populate documents with case and barangay data | High     |
+
+### FR-4: Evidence Management
+
+| ID     | Requirement                                                                | Priority |
+| ------ | -------------------------------------------------------------------------- | -------- |
+| FR-4.1 | System shall allow secure file uploads (JPEG, PNG, WebP)                   | High     |
+| FR-4.2 | System shall enforce file size limit of 5MB per upload                     | Medium   |
+| FR-4.3 | System shall generate time-limited guest upload links                      | High     |
+| FR-4.4 | System shall protect guest links with 6-digit PIN codes                    | High     |
+| FR-4.5 | System shall auto-expire guest links after configured duration             | High     |
+| FR-4.6 | System shall auto-deactivate guest links when case reaches terminal status | High     |
+| FR-4.7 | System shall store evidence in encrypted cloud storage                     | High     |
+
+### FR-5: Hearing Scheduling
+
+| ID     | Requirement                                                                 | Priority |
+| ------ | --------------------------------------------------------------------------- | -------- |
+| FR-5.1 | System shall allow scheduling hearings with date and type                   | High     |
+| FR-5.2 | System shall support multiple hearing types (Mediation, Conciliation, etc.) | Medium   |
+| FR-5.3 | System shall display upcoming hearings in dashboard calendar                | High     |
+| FR-5.4 | System shall track hearing status (Scheduled, Completed, etc.)              | Medium   |
+| FR-5.5 | System shall allow adding notes to hearing records                          | Low      |
+
+### FR-6: Analytics & Reporting
+
+| ID     | Requirement                                          | Priority |
+| ------ | ---------------------------------------------------- | -------- |
+| FR-6.1 | System shall display case status distribution charts | Medium   |
+| FR-6.2 | System shall display incident type frequency charts  | Medium   |
+| FR-6.3 | System shall display monthly case trends             | Medium   |
+| FR-6.4 | System shall allow filtering analytics by date range | Medium   |
+| FR-6.5 | System shall show comparison with previous period    | Low      |
+| FR-6.6 | System shall track site visit analytics              | Low      |
+
+### FR-7: System Configuration
+
+| ID     | Requirement                                                 | Priority |
+| ------ | ----------------------------------------------------------- | -------- |
+| FR-7.1 | System shall allow admins to configure barangay information | High     |
+| FR-7.2 | System shall support uploading barangay and city logos      | Medium   |
+| FR-7.3 | System shall allow managing user accounts                   | High     |
+| FR-7.4 | System shall maintain audit logs of all critical actions    | High     |
+| FR-7.5 | System shall allow viewing audit trail by user and date     | Medium   |
+
+---
+
+## ⚙️ Non-Functional Requirements
+
+### NFR-1: Performance
+
+| ID      | Requirement                                                           | Target    |
+| ------- | --------------------------------------------------------------------- | --------- |
+| NFR-1.1 | Page load time shall not exceed 3 seconds on average                  | ≤ 3s      |
+| NFR-1.2 | Database queries shall execute in under 500ms for standard operations | ≤ 500ms   |
+| NFR-1.3 | PDF generation shall complete within 5 seconds                        | ≤ 5s      |
+| NFR-1.4 | File uploads shall support up to 5MB files                            | 5MB max   |
+| NFR-1.5 | System shall handle up to 100 concurrent users                        | 100 users |
+
+### NFR-2: Security
+
+| ID      | Requirement                                                     | Standard |
+| ------- | --------------------------------------------------------------- | -------- |
+| NFR-2.1 | All data transmission shall use HTTPS/TLS encryption            | TLS 1.2+ |
+| NFR-2.2 | Passwords shall be hashed using bcrypt or equivalent            | Bcrypt   |
+| NFR-2.3 | Row-level security policies shall be enforced at database level | RLS      |
+| NFR-2.4 | System shall implement CSRF protection on all forms             | CSRF     |
+| NFR-2.5 | Sensitive files shall be stored in private, encrypted buckets   | AES-256  |
+| NFR-2.6 | System shall log all authentication attempts                    | Audit    |
+| NFR-2.7 | Guest access shall be time-limited and PIN-protected            | Required |
+
+### NFR-3: Reliability
+
+| ID      | Requirement                                                  | Target    |
+| ------- | ------------------------------------------------------------ | --------- |
+| NFR-3.1 | System uptime shall be at least 99.5%                        | 99.5%     |
+| NFR-3.2 | Data backups shall occur daily                               | Daily     |
+| NFR-3.3 | System shall handle database connection failures gracefully  | Resilient |
+| NFR-3.4 | Failed operations shall provide user-friendly error messages | Required  |
+
+### NFR-4: Usability
+
+| ID      | Requirement                                                  | Standard |
+| ------- | ------------------------------------------------------------ | -------- |
+| NFR-4.1 | Interface shall be responsive on desktop, tablet, and mobile | Required |
+| NFR-4.2 | Forms shall provide real-time validation feedback            | Required |
+| NFR-4.3 | Critical actions shall require confirmation dialogs          | Required |
+| NFR-4.4 | System shall provide loading indicators for async operations | Required |
+| NFR-4.5 | Error messages shall be clear and actionable                 | Required |
+
+### NFR-5: Maintainability
+
+| ID      | Requirement                                              | Standard |
+| ------- | -------------------------------------------------------- | -------- |
+| NFR-5.1 | Code shall follow TypeScript best practices              | Required |
+| NFR-5.2 | Database schema shall support migration versioning       | Required |
+| NFR-5.3 | System shall use environment variables for configuration | Required |
+| NFR-5.4 | Components shall be modular and reusable                 | Required |
+
+### NFR-6: Scalability
+
+| ID      | Requirement                                               | Target |
+| ------- | --------------------------------------------------------- | ------ |
+| NFR-6.1 | Database shall support at least 100,000 cases             | 100K+  |
+| NFR-6.2 | File storage shall support at least 1TB of evidence files | 1TB+   |
+| NFR-6.3 | System architecture shall support horizontal scaling      | Cloud  |
+
+### NFR-7: Compliance
+
+| ID      | Requirement                                                        | Standard |
+| ------- | ------------------------------------------------------------------ | -------- |
+| NFR-7.1 | Documents shall comply with DILG formatting standards              | DILG     |
+| NFR-7.2 | System shall comply with Data Privacy Act of 2012 (Philippines)    | DPA 2012 |
+| NFR-7.3 | Audit logs shall be retained for at least 2 years                  | 2 years  |
+| NFR-7.4 | Guest terms and conditions must be accepted before evidence upload | Required |
 
 ---
 
