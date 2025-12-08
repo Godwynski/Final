@@ -53,30 +53,24 @@ BlotterSys uses a PostgreSQL database hosted on Supabase with 11 interconnected 
 
 ```mermaid
 erDiagram
-    %% ==========================================
-    %% AUTH & USER MANAGEMENT
-    %% ==========================================
     profiles {
-        uuid id PK "references auth.users"
+        uuid id PK
         text email
         text full_name
-        text role "admin | staff"
+        text role
         boolean force_password_change
         timestamp created_at
     }
 
-    %% ==========================================
-    %% CORE CASE MANAGEMENT
-    %% ==========================================
     cases {
         uuid id PK
-        serial case_number "auto-increment"
+        serial case_number
         text title
         text description
         timestamp incident_date
         text incident_location
-        case_status status "enum: New, Under Investigation, etc."
-        incident_type incident_type "enum: Theft, Harassment, etc."
+        case_status status
+        incident_type incident_type
         text narrative_facts
         text narrative_action
         jsonb resolution_details
@@ -89,7 +83,7 @@ erDiagram
         uuid id PK
         uuid case_id FK
         text name
-        party_type type "enum: Complainant, Respondent, Witness"
+        party_type type
         text contact_number
         text email
         text address
@@ -108,20 +102,17 @@ erDiagram
         uuid id PK
         uuid case_id FK
         timestamp hearing_date
-        text hearing_type "Mediation | Conciliation | Arbitration"
-        text status "Scheduled | Completed | No Show | etc."
+        text hearing_type
+        text status
         text notes
         timestamp created_at
     }
 
-    %% ==========================================
-    %% EVIDENCE & GUEST ACCESS
-    %% ==========================================
     guest_links {
         uuid id PK
         uuid case_id FK
-        text token "unique"
-        text pin "6-digit"
+        text token
+        text pin
         uuid created_by FK
         timestamp expires_at
         boolean is_active
@@ -135,23 +126,20 @@ erDiagram
     evidence {
         uuid id PK
         uuid case_id FK
-        text file_path "Supabase storage path"
+        text file_path
         text file_name
         text file_type
         text description
-        uuid uploaded_by FK "nullable for guest uploads"
-        uuid guest_link_id FK "nullable"
+        uuid uploaded_by FK
+        uuid guest_link_id FK
         boolean is_visible_to_others
         timestamp created_at
     }
 
-    %% ==========================================
-    %% AUDIT & NOTIFICATIONS
-    %% ==========================================
     audit_logs {
         uuid id PK
-        uuid user_id FK "nullable"
-        uuid case_id FK "nullable"
+        uuid user_id FK
+        uuid case_id FK
         text action
         jsonb details
         timestamp created_at
@@ -162,14 +150,11 @@ erDiagram
         uuid user_id FK
         text title
         text message
-        text link "nullable"
+        text link
         boolean is_read
         timestamp created_at
     }
 
-    %% ==========================================
-    %% SYSTEM CONFIGURATION
-    %% ==========================================
     barangay_settings {
         uuid id PK
         text province
@@ -177,8 +162,8 @@ erDiagram
         text barangay_name
         text punong_barangay
         text barangay_secretary
-        text logo_barangay_url "nullable, Supabase storage"
-        text logo_city_url "nullable, Supabase storage"
+        text logo_barangay_url
+        text logo_city_url
         timestamp updated_at
     }
 
@@ -193,36 +178,30 @@ erDiagram
         text device_type
         text browser
         text os
-        text visit_type "page_view | session | unique_daily"
+        text visit_type
         text session_id
-        uuid user_id FK "nullable, references auth.users"
+        uuid user_id FK
         text visitor_email
         text visitor_name
-        text visitor_role "default: anonymous"
+        text visitor_role
         timestamp visited_at
     }
 
-    %% ==========================================
-    %% RELATIONSHIPS
-    %% ==========================================
-    %% Profiles (User Management)
-    profiles ||--o{ cases : "reports (reported_by)"
-    profiles ||--o{ case_notes : "creates (created_by)"
-    profiles ||--o{ evidence : "uploads (uploaded_by)"
-    profiles ||--o{ guest_links : "creates (created_by)"
-    profiles ||--o{ audit_logs : "performs action (user_id)"
-    profiles ||--o{ notifications : "receives (user_id)"
+    profiles ||--o{ cases : reports
+    profiles ||--o{ case_notes : creates
+    profiles ||--o{ evidence : uploads
+    profiles ||--o{ guest_links : creates
+    profiles ||--o{ audit_logs : logs
+    profiles ||--o{ notifications : receives
 
-    %% Cases (Core Entity)
-    cases ||--o{ involved_parties : "has parties"
-    cases ||--o{ case_notes : "has notes"
-    cases ||--o{ hearings : "has hearings"
-    cases ||--o{ evidence : "has evidence"
-    cases ||--o{ guest_links : "has guest links"
-    cases ||--o{ audit_logs : "tracked in (case_id)"
+    cases ||--o{ involved_parties : has
+    cases ||--o{ case_notes : has
+    cases ||--o{ hearings : schedules
+    cases ||--o{ evidence : contains
+    cases ||--o{ guest_links : generates
+    cases ||--o{ audit_logs : tracked
 
-    %% Guest Links & Evidence
-    guest_links ||--o{ evidence : "enables upload (guest_link_id)"
+    guest_links ||--o{ evidence : enables
 ```
 
 ### Key Enumerations
