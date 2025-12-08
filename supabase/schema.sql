@@ -1,4 +1,10 @@
 -- ==========================================
+-- CONSOLIDATED SCHEMA
+-- Generated: 2025-12-08
+-- Description: Single source of truth for database schema
+-- ==========================================
+
+-- ==========================================
 -- 1. PROFILES & AUTH
 -- ==========================================
 
@@ -15,7 +21,7 @@ create table if not exists profiles (
 -- Enable RLS
 alter table profiles enable row level security;
 
--- Policies
+-- Policies (Optimized)
 drop policy if exists "Public profiles are viewable by everyone." on profiles;
 create policy "Public profiles are viewable by everyone." on profiles
   for select using (true);
@@ -131,6 +137,21 @@ create table if not exists case_notes (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- Guest Links Table (Pre-defined for reference in Evidence)
+create table if not exists guest_links (
+  id uuid default gen_random_uuid() primary key,
+  case_id uuid references cases(id) on delete cascade,
+  token text unique not null,
+  pin text not null,
+  created_by uuid references profiles(id) not null,
+  expires_at timestamp with time zone not null,
+  is_active boolean default true,
+  recipient_name text,
+  recipient_email text,
+  recipient_phone text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- Evidence Table
 create table if not exists evidence (
   id uuid default gen_random_uuid() primary key,
@@ -155,49 +176,6 @@ create table if not exists audit_logs (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Enable RLS for Audit Logs
-alter table audit_logs enable row level security;
-
--- Policy: Admins/Staff can view audit logs (or maybe just Admins?)
--- Let's allow authenticated users to view for now, or restrict to admins.
--- Given the requirements, let's restrict to Admins for viewing, but allow insertion via service role or functions.
--- Actually, the app inserts via service role or authenticated user.
--- Let's allow insert for authenticated users (since they trigger actions) but select only for admins.
-drop policy if exists "Allow insert for authenticated users" on audit_logs;
-drop policy if exists "System insert audit logs" on audit_logs;
-create policy "Allow insert for authenticated users" on audit_logs for insert to authenticated with check ((select auth.uid()) = user_id);
-
--- Consolidated policy for admin access to audit logs
-drop policy if exists "Allow select for admins" on audit_logs;
-drop policy if exists "Admins view audit logs" on audit_logs;
-create policy "Admins view audit logs" on audit_logs for select using (
-  exists (select 1 from profiles where id = (select auth.uid()) and role = 'admin')
-);
-
--- Guest Links Table
-create table if not exists guest_links (
-  id uuid default gen_random_uuid() primary key,
-  case_id uuid references cases(id) on delete cascade,
-  token text unique not null,
-  pin text not null,
-  created_by uuid references profiles(id) not null,
-  expires_at timestamp with time zone not null,
-  is_active boolean default true,
-  recipient_name text,
-  recipient_email text,
-  recipient_phone text,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- Enable RLS for Guest Links
-alter table guest_links enable row level security;
-
--- Policy: Public access via token (handled by function mostly, but maybe direct select needed?)
--- Actually, get_guest_link_by_token is SECURITY DEFINER, so we might not need public select policy if we only use that.
--- But let's allow authenticated users to view/manage links.
-drop policy if exists "Allow authenticated to manage guest links" on guest_links;
-create policy "Allow authenticated to manage guest links" on guest_links for all to authenticated using (true);
-
 -- Notifications Table
 create table if not exists notifications (
   id uuid default gen_random_uuid() primary key,
@@ -209,83 +187,7 @@ create table if not exists notifications (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-
--- ==========================================
--- 4. RLS POLICIES & SECURITY
--- ==========================================
-
--- Cases
-alter table cases enable row level security;
-
-drop policy if exists "Staff/Admin view all cases" on cases;
-create policy "Staff/Admin view all cases" on cases for select using (true);
-
-drop policy if exists "Staff/Admin insert cases" on cases;
-create policy "Staff/Admin insert cases" on cases for insert with check ((select auth.uid()) is not null);
-
-drop policy if exists "Staff/Admin update cases" on cases;
-create policy "Staff/Admin update cases" on cases for update using ((select auth.uid()) is not null);
-
--- Involved Parties
-alter table involved_parties enable row level security;
-
-drop policy if exists "Staff/Admin manage parties" on involved_parties;
-create policy "Staff/Admin manage parties" on involved_parties for all using ((select auth.uid()) is not null);
-
--- Notes
-alter table case_notes enable row level security;
-
-drop policy if exists "Staff/Admin manage notes" on case_notes;
-create policy "Staff/Admin manage notes" on case_notes for all using ((select auth.uid()) is not null);
-
--- Evidence
-alter table evidence enable row level security;
-
-drop policy if exists "Staff/Admin view evidence" on evidence;
-create policy "Staff/Admin view evidence" on evidence for select using ((select auth.uid()) is not null);
-
-drop policy if exists "Staff/Admin upload evidence" on evidence;
-create policy "Staff/Admin upload evidence" on evidence
-  for insert to authenticated
-  with check ((select auth.uid()) = uploaded_by);
-
--- Notifications
-alter table notifications enable row level security;
-
-drop policy if exists "Users can view own notifications" on notifications;
-create policy "Users can view own notifications" on notifications
-  for select using ((select auth.uid()) = user_id);
-
-drop policy if exists "Users can update own notifications" on notifications;
-create policy "Users can update own notifications" on notifications
-  for update using ((select auth.uid()) = user_id);
-
--- Cases DELETE Policy
-drop policy if exists "Admins delete cases" on cases;
-create policy "Admins delete cases" on cases for delete using (
-  exists (select 1 from profiles where id = (select auth.uid()) and role = 'admin')
-);
-
-
--- ==========================================
--- 5. UTILITY FUNCTIONS
--- ==========================================
-
--- Function to verify guest token securely
-create or replace function get_guest_link_by_token(token_input text)
-returns setof guest_links
-language sql
-security definer set search_path = public
-as $$
-  select * from guest_links where token = token_input;
-$$;
-
-
--- ==========================================
--- 6. BARANGAY SETTINGS
--- ==========================================
-
--- Create barangay_settings table
+-- Barangay Settings Table
 CREATE TABLE IF NOT EXISTS barangay_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     province TEXT NOT NULL DEFAULT '',
@@ -298,35 +200,12 @@ CREATE TABLE IF NOT EXISTS barangay_settings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Enable RLS
-ALTER TABLE barangay_settings ENABLE ROW LEVEL SECURITY;
-
--- Create policy for viewing settings (all authenticated users)
-DROP POLICY IF EXISTS "Allow read access for authenticated users" ON barangay_settings;
-CREATE POLICY "Allow read access for authenticated users" ON barangay_settings
-    FOR SELECT
-    TO authenticated
-    USING (true);
-
--- Create policy for updating settings (admin only)
-DROP POLICY IF EXISTS "Allow update for authenticated users" ON barangay_settings;
-CREATE POLICY "Allow update for authenticated users" ON barangay_settings
-    FOR UPDATE
-    TO authenticated
-    USING (true)
-    WITH CHECK (true);
-
 -- Insert default row if not exists
 INSERT INTO barangay_settings (province, city_municipality, barangay_name, punong_barangay, barangay_secretary)
 SELECT '[Province Name]', '[City Name]', '[Barangay Name]', '[Punong Barangay Name]', '[Secretary Name]'
 WHERE NOT EXISTS (SELECT 1 FROM barangay_settings);
 
-
--- ==========================================
--- 7. HEARINGS
--- ==========================================
-
--- Create hearings table
+-- Hearings Table
 CREATE TABLE IF NOT EXISTS hearings (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   case_id UUID REFERENCES cases(id) ON DELETE CASCADE NOT NULL,
@@ -337,138 +216,233 @@ CREATE TABLE IF NOT EXISTS hearings (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Enable RLS
-ALTER TABLE hearings ENABLE ROW LEVEL SECURITY;
+-- Site Visits Table (with tracking extensions)
+CREATE TABLE IF NOT EXISTS site_visits (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  ip_address TEXT,
+  user_agent TEXT,
+  page_path TEXT NOT NULL,
+  referrer TEXT,
+  country TEXT,
+  city TEXT,
+  device_type TEXT,
+  browser TEXT,
+  os TEXT,
+  visit_type TEXT DEFAULT 'page_view' CHECK (visit_type IN ('page_view', 'session', 'unique_daily')),
+  session_id TEXT,
+  user_id UUID REFERENCES auth.users(id),
+  visitor_email TEXT,
+  visitor_name TEXT,
+  visitor_role TEXT DEFAULT 'anonymous',
+  visited_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
--- Policies
+
+-- ==========================================
+-- 4. RLS POLICIES & SECURITY
+-- ==========================================
+
+-- Enable RLS on all tables
+alter table cases enable row level security;
+alter table involved_parties enable row level security;
+alter table case_notes enable row level security;
+alter table evidence enable row level security;
+alter table audit_logs enable row level security;
+alter table guest_links enable row level security;
+alter table notifications enable row level security;
+alter table barangay_settings enable row level security;
+alter table hearings enable row level security;
+alter table site_visits enable row level security;
+
+-- Audit Logs Policies
+DROP POLICY IF EXISTS "Allow insert for authenticated users" ON audit_logs;
+DROP POLICY IF EXISTS "System insert audit logs" ON audit_logs;
+DROP POLICY IF EXISTS "Allow select for admins" ON audit_logs;
+DROP POLICY IF EXISTS "Admins view audit logs" ON audit_logs;
+
+CREATE POLICY "Allow insert for authenticated users" ON audit_logs 
+  FOR INSERT TO authenticated 
+  WITH CHECK ((SELECT auth.uid()) = user_id);
+
+CREATE POLICY "Admins view audit logs" ON audit_logs 
+  FOR SELECT 
+  USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = (SELECT auth.uid()) AND role = 'admin')
+  );
+
+-- Cases Policies
+DROP POLICY IF EXISTS "Staff/Admin view all cases" ON cases;
+create policy "Staff/Admin view all cases" on cases for select using (true);
+
+DROP POLICY IF EXISTS "Staff/Admin insert cases" ON cases;
+CREATE POLICY "Staff/Admin insert cases" ON cases 
+  FOR INSERT WITH CHECK ((SELECT auth.uid()) IS NOT NULL);
+
+DROP POLICY IF EXISTS "Staff/Admin update cases" ON cases;
+CREATE POLICY "Staff/Admin update cases" ON cases 
+  FOR UPDATE USING ((SELECT auth.uid()) IS NOT NULL);
+
+DROP POLICY IF EXISTS "Admins delete cases" ON cases;
+CREATE POLICY "Admins delete cases" ON cases 
+  FOR DELETE USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = (SELECT auth.uid()) AND role = 'admin')
+  );
+
+-- Involved Parties Policies
+DROP POLICY IF EXISTS "Staff/Admin manage parties" ON involved_parties;
+CREATE POLICY "Staff/Admin manage parties" ON involved_parties 
+  FOR ALL USING ((SELECT auth.uid()) IS NOT NULL);
+
+-- Case Notes Policies
+DROP POLICY IF EXISTS "Staff/Admin manage notes" ON case_notes;
+CREATE POLICY "Staff/Admin manage notes" ON case_notes 
+  FOR ALL USING ((SELECT auth.uid()) IS NOT NULL);
+
+-- Evidence Policies
+DROP POLICY IF EXISTS "Staff/Admin view evidence" ON evidence;
+CREATE POLICY "Staff/Admin view evidence" ON evidence 
+  FOR SELECT USING ((SELECT auth.uid()) IS NOT NULL);
+
+DROP POLICY IF EXISTS "Staff/Admin upload evidence" ON evidence;
+CREATE POLICY "Staff/Admin upload evidence" ON evidence
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = uploaded_by);
+
+-- Notifications Policies
+DROP POLICY IF EXISTS "Users can view own notifications" ON notifications;
+CREATE POLICY "Users can view own notifications" ON notifications
+  FOR SELECT USING ((SELECT auth.uid()) = user_id);
+
+DROP POLICY IF EXISTS "Users can update own notifications" ON notifications;
+CREATE POLICY "Users can update own notifications" ON notifications
+  FOR UPDATE USING ((SELECT auth.uid()) = user_id);
+
+-- Guest Links Policies
+DROP POLICY IF EXISTS "Allow authenticated to manage guest links" on guest_links;
+create policy "Allow authenticated to manage guest links" on guest_links for all to authenticated using (true);
+
+-- Barangay Settings Policies
+DROP POLICY IF EXISTS "Allow read access for authenticated users" ON barangay_settings;
+CREATE POLICY "Allow read access for authenticated users" ON barangay_settings
+    FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow update for authenticated users" ON barangay_settings;
+CREATE POLICY "Allow update for authenticated users" ON barangay_settings
+    FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+
+-- Hearings Policies
 DROP POLICY IF EXISTS "Enable read access for authenticated users" ON hearings;
 CREATE POLICY "Enable read access for authenticated users" ON hearings
-    FOR SELECT
-    TO authenticated
-    USING (true);
+    FOR SELECT TO authenticated USING (true);
 
 DROP POLICY IF EXISTS "Enable insert access for authenticated users" ON hearings;
 CREATE POLICY "Enable insert access for authenticated users" ON hearings
-    FOR INSERT
-    TO authenticated
-    WITH CHECK (true);
+    FOR INSERT TO authenticated WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Enable update access for authenticated users" ON hearings;
 CREATE POLICY "Enable update access for authenticated users" ON hearings
-    FOR UPDATE
-    TO authenticated
-    USING (true);
+    FOR UPDATE TO authenticated USING (true);
 
 DROP POLICY IF EXISTS "Enable delete access for authenticated users" ON hearings;
 CREATE POLICY "Enable delete access for authenticated users" ON hearings
-    FOR DELETE
-    TO authenticated
-    USING (true);
+    FOR DELETE TO authenticated USING (true);
+
+-- Site Visits Policies
+DROP POLICY IF EXISTS "Admins can view site visits" ON site_visits;
+CREATE POLICY "Admins can view site visits" ON site_visits
+    FOR SELECT TO authenticated
+    USING (EXISTS (SELECT 1 FROM profiles WHERE id = (SELECT auth.uid()) AND role = 'admin'));
+
+DROP POLICY IF EXISTS "Anyone can insert site visits" ON site_visits;
+CREATE POLICY "Anyone can insert site visits" ON site_visits
+    FOR INSERT TO anon, authenticated
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Admins can delete site visits" ON site_visits;
+CREATE POLICY "Admins can delete site visits" ON site_visits
+    FOR DELETE TO authenticated
+    USING (EXISTS (SELECT 1 FROM profiles WHERE id = (SELECT auth.uid()) AND role = 'admin'));
 
 
 -- ==========================================
--- 8. INDEXES
+-- 5. STORAGE BUCKETS
 -- ==========================================
 
--- Notifications
-CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+-- Branding Bucket
+INSERT INTO storage.buckets (id, name, public) VALUES ('branding', 'branding', true) ON CONFLICT (id) DO NOTHING;
+DROP POLICY IF EXISTS "Allow authenticated uploads" on storage.objects;
+CREATE POLICY "Allow authenticated uploads" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'branding');
+DROP POLICY IF EXISTS "Allow public view" on storage.objects;
+CREATE POLICY "Allow public view" ON storage.objects FOR SELECT TO public USING (bucket_id = 'branding');
+DROP POLICY IF EXISTS "Allow authenticated update" on storage.objects;
+CREATE POLICY "Allow authenticated update" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'branding');
+DROP POLICY IF EXISTS "Allow authenticated delete" on storage.objects;
+CREATE POLICY "Allow authenticated delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'branding');
 
--- Performance Indexes
--- These indexes are critical for dashboard filtering and sorting performance
-CREATE INDEX IF NOT EXISTS idx_cases_reported_by ON cases(reported_by);
+-- Evidence Bucket
+INSERT INTO storage.buckets (id, name, public) VALUES ('evidence', 'evidence', false) ON CONFLICT (id) DO NOTHING;
+DROP POLICY IF EXISTS "Allow authenticated uploads evidence" on storage.objects;
+CREATE POLICY "Allow authenticated uploads evidence" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'evidence');
+DROP POLICY IF EXISTS "Allow authenticated view evidence" on storage.objects;
+CREATE POLICY "Allow authenticated view evidence" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'evidence');
+DROP POLICY IF EXISTS "Allow authenticated update evidence" on storage.objects;
+CREATE POLICY "Allow authenticated update evidence" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'evidence');
+DROP POLICY IF EXISTS "Allow authenticated delete evidence" on storage.objects;
+CREATE POLICY "Allow authenticated delete evidence" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'evidence');
+
+
+-- ==========================================
+-- 6. INDEXES
+-- ==========================================
+
+-- Cases
+CREATE INDEX IF NOT EXISTS idx_cases_created_at ON cases(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status);
 CREATE INDEX IF NOT EXISTS idx_cases_incident_type ON cases(incident_type);
-CREATE INDEX IF NOT EXISTS idx_cases_created_at ON cases(created_at);
+CREATE INDEX IF NOT EXISTS idx_cases_reported_by ON cases(reported_by);
+CREATE INDEX IF NOT EXISTS idx_cases_title_search ON cases USING GIN(to_tsvector('english', coalesce(title, '')));
+CREATE INDEX IF NOT EXISTS idx_cases_location_search ON cases USING GIN(to_tsvector('english', coalesce(incident_location, '')));
+
+-- Involved Parties
 CREATE INDEX IF NOT EXISTS idx_involved_parties_case_id ON involved_parties(case_id);
+CREATE INDEX IF NOT EXISTS idx_involved_parties_name_search ON involved_parties USING GIN(to_tsvector('english', coalesce(name, '')));
+
+-- Hearings
+CREATE INDEX IF NOT EXISTS idx_hearings_hearing_date ON hearings(hearing_date);
+CREATE INDEX IF NOT EXISTS idx_hearings_case_id ON hearings(case_id);
+
+-- Other Tables
 CREATE INDEX IF NOT EXISTS idx_case_notes_case_id ON case_notes(case_id);
 CREATE INDEX IF NOT EXISTS idx_evidence_case_id ON evidence(case_id);
+CREATE INDEX IF NOT EXISTS idx_evidence_guest_link_id ON evidence(guest_link_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_case_id ON audit_logs(case_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_guest_links_case_id ON guest_links(case_id);
-CREATE INDEX IF NOT EXISTS idx_hearings_case_id ON hearings(case_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+
+-- Site Visits
+CREATE INDEX IF NOT EXISTS idx_site_visits_visited_at ON site_visits(visited_at DESC);
+CREATE INDEX IF NOT EXISTS idx_site_visits_page_path ON site_visits(page_path);
+CREATE INDEX IF NOT EXISTS idx_site_visits_ip_address ON site_visits(ip_address);
+CREATE INDEX IF NOT EXISTS idx_site_visits_user_id ON site_visits(user_id);
 
 
 -- ==========================================
--- 9. STORAGE BUCKETS
+-- 7. FUNCTIONS & RPCs
 -- ==========================================
 
--- Create a new storage bucket for branding (logos)
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('branding', 'branding', true)
-ON CONFLICT (id) DO NOTHING;
-
--- Policy: Allow authenticated users (staff/admin) to upload logos
-drop policy if exists "Allow authenticated uploads" on storage.objects;
-CREATE POLICY "Allow authenticated uploads"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'branding');
-
--- Policy: Allow public view
-drop policy if exists "Allow public view" on storage.objects;
-CREATE POLICY "Allow public view"
-ON storage.objects FOR SELECT
-TO public
-USING (bucket_id = 'branding');
-
--- Policy: Allow authenticated update
-drop policy if exists "Allow authenticated update" on storage.objects;
-CREATE POLICY "Allow authenticated update"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (bucket_id = 'branding');
-
-drop policy if exists "Allow authenticated delete" on storage.objects;
-CREATE POLICY "Allow authenticated delete"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (bucket_id = 'branding');
+-- Function to verify guest token securely
+create or replace function get_guest_link_by_token(token_input text)
+returns setof guest_links
+language sql
+security definer set search_path = public
+as $$
+  select * from guest_links where token = token_input;
+$$;
 
 
-
--- ==========================================
--- 10. DASHBOARD ANALYTICS FUNCTIONS
--- ==========================================
-
--- Create a new storage bucket for evidence
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('evidence', 'evidence', false)
-ON CONFLICT (id) DO NOTHING;
-
--- Policy: Allow authenticated users to upload evidence
-drop policy if exists "Allow authenticated uploads evidence" on storage.objects;
-CREATE POLICY "Allow authenticated uploads evidence"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'evidence');
-
--- Policy: Allow authenticated users to view evidence
-drop policy if exists "Allow authenticated view evidence" on storage.objects;
-CREATE POLICY "Allow authenticated view evidence"
-ON storage.objects FOR SELECT
-TO authenticated
-USING (bucket_id = 'evidence');
-
--- Policy: Allow authenticated users to update evidence
-drop policy if exists "Allow authenticated update evidence" on storage.objects;
-CREATE POLICY "Allow authenticated update evidence"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (bucket_id = 'evidence');
-
--- Policy: Allow authenticated users to delete evidence
-drop policy if exists "Allow authenticated delete evidence" on storage.objects;
-CREATE POLICY "Allow authenticated delete evidence"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (bucket_id = 'evidence');
-
-
--- ==========================================
--- 11. DASHBOARD ANALYTICS FUNCTIONS
--- ==========================================
-
--- 1. Dynamic Case Stats RPC
+-- 1. Dynamic Case Stats RPC (Improved from fix_data_accuracy)
 CREATE OR REPLACE FUNCTION get_case_stats_dynamic(
   p_start_date timestamp with time zone DEFAULT NULL,
   p_end_date timestamp with time zone DEFAULT NULL,
@@ -487,8 +461,10 @@ DECLARE
 BEGIN
   SELECT
     count(*),
-    count(*) FILTER (WHERE status IN ('New', 'Under Investigation')),
-    count(*) FILTER (WHERE status IN ('Settled', 'Closed', 'Dismissed')),
+    -- Active: New, Under Investigation, plus Hearing Scheduled
+    count(*) FILTER (WHERE status IN ('New', 'Under Investigation', 'Hearing Scheduled')),
+    -- Resolved: Settled, Closed, Dismissed, plus Referred
+    count(*) FILTER (WHERE status IN ('Settled', 'Closed', 'Dismissed', 'Referred')),
     count(*) FILTER (WHERE status = 'New')
   INTO
     total_count,
@@ -511,8 +487,10 @@ BEGIN
 END;
 $$;
 
+GRANT EXECUTE ON FUNCTION get_case_stats_dynamic TO anon;
 GRANT EXECUTE ON FUNCTION get_case_stats_dynamic TO authenticated;
 GRANT EXECUTE ON FUNCTION get_case_stats_dynamic TO service_role;
+
 
 -- 2. Dynamic Charts RPC
 CREATE OR REPLACE FUNCTION get_analytics_charts_dynamic(
@@ -578,8 +556,10 @@ BEGIN
 END;
 $$;
 
+GRANT EXECUTE ON FUNCTION get_analytics_charts_dynamic TO anon;
 GRANT EXECUTE ON FUNCTION get_analytics_charts_dynamic TO authenticated;
 GRANT EXECUTE ON FUNCTION get_analytics_charts_dynamic TO service_role;
+
 
 -- 3. Party Statistics View
 CREATE OR REPLACE VIEW party_statistics WITH (security_invoker = true) AS
@@ -593,27 +573,11 @@ SELECT
 FROM involved_parties
 GROUP BY name;
 
-
--- Grant access to the view
 GRANT SELECT ON party_statistics TO service_role;
 
--- CLEANUP: Drop legacy functions and views that might cause security warnings
-DO $$
-DECLARE
-    r RECORD;
-BEGIN
-    FOR r IN SELECT oid::regprocedure AS func_signature
-             FROM pg_proc
-             WHERE proname IN ('create_case_with_parties', 'get_analytics_summary', 'get_dashboard_stats')
-             AND pronamespace = 'public'::regnamespace
-    LOOP
-        EXECUTE 'DROP FUNCTION IF EXISTS ' || r.func_signature || ' CASCADE';
-    END LOOP;
-END $$;
 
-DROP VIEW IF EXISTS public.view_involved_parties_summary;
-
--- 4. Advanced Search RPC
+-- 4. Advanced Search RPC (Redefined with Pagination Fix from 002 and Sorting from 003)
+DROP FUNCTION IF EXISTS search_cases(text, text, text, timestamp with time zone, timestamp with time zone, integer, integer);
 CREATE OR REPLACE FUNCTION search_cases(
   p_query text DEFAULT '',
   p_status text DEFAULT NULL,
@@ -621,7 +585,9 @@ CREATE OR REPLACE FUNCTION search_cases(
   p_start_date timestamp with time zone DEFAULT NULL,
   p_end_date timestamp with time zone DEFAULT NULL,
   p_limit integer DEFAULT 10,
-  p_offset integer DEFAULT 0
+  p_offset integer DEFAULT 0,
+  p_sort_by text DEFAULT 'created_at',
+  p_sort_order text DEFAULT 'desc'
 )
 RETURNS TABLE (
   id uuid,
@@ -638,52 +604,74 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 SECURITY DEFINER set search_path = public
 AS $$
+DECLARE
+  sort_column text;
+  sort_direction text;
 BEGIN
-  RETURN QUERY
-  SELECT DISTINCT
-    c.id,
-    c.case_number,
-    c.title,
-    c.status,
-    c.incident_date,
-    c.created_at,
-    c.incident_type,
-    c.incident_location,
-    ts_rank(
-      setweight(to_tsvector('english', coalesce(c.title, '')), 'A') ||
-      setweight(to_tsvector('english', coalesce(c.incident_location, '')), 'B') ||
-      setweight(to_tsvector('english', coalesce(c.narrative_facts, '')), 'C'),
-      plainto_tsquery('english', p_query)
-    ) as match_rank,
-    count(*) OVER() as full_count
-  FROM cases c
-  LEFT JOIN involved_parties ip ON c.id = ip.case_id
-  WHERE
-    (p_query = '' OR 
-      c.title ILIKE '%' || p_query || '%' OR
-      c.incident_location ILIKE '%' || p_query || '%' OR
-      c.case_number::text ILIKE '%' || p_query || '%' OR
-      ip.name ILIKE '%' || p_query || '%'
-    ) AND
-    (p_status IS NULL OR c.status::text = p_status) AND
-    (p_type IS NULL OR c.incident_type::text = p_type) AND
-    (p_start_date IS NULL OR c.created_at >= p_start_date) AND
-    (p_end_date IS NULL OR c.created_at <= p_end_date)
-  ORDER BY 
-    match_rank DESC,
-    c.created_at DESC
-  LIMIT p_limit
-  OFFSET p_offset;
+  -- Validate and sanitize sort column to prevent SQL injection
+  sort_column := CASE p_sort_by
+    WHEN 'case_number' THEN 'c.case_number'
+    WHEN 'title' THEN 'c.title'
+    WHEN 'status' THEN 'c.status'
+    WHEN 'incident_date' THEN 'c.incident_date'
+    WHEN 'created_at' THEN 'c.created_at'
+    ELSE 'c.created_at'  -- Default fallback
+  END;
+
+  -- Validate sort direction
+  sort_direction := CASE LOWER(p_sort_order)
+    WHEN 'asc' THEN 'ASC'
+    WHEN 'desc' THEN 'DESC'
+    ELSE 'DESC'  -- Default fallback
+  END;
+
+  -- Use dynamic SQL to apply sorting
+  RETURN QUERY EXECUTE format('
+    SELECT
+      c.id,
+      c.case_number,
+      c.title,
+      c.status,
+      c.incident_date,
+      c.created_at,
+      c.incident_type,
+      c.incident_location,
+      ts_rank(
+        setweight(to_tsvector(''english'', coalesce(c.title, '''')), ''A'') ||
+        setweight(to_tsvector(''english'', coalesce(c.incident_location, '''')), ''B'') ||
+        setweight(to_tsvector(''english'', coalesce(c.narrative_facts, '''')), ''C''),
+        plainto_tsquery(''english'', $1)
+      ) as match_rank,
+      count(*) OVER() as full_count
+    FROM cases c
+    LEFT JOIN involved_parties ip ON c.id = ip.case_id
+    WHERE
+      ($1 = '''' OR 
+        c.title ILIKE ''%%'' || $1 || ''%%'' OR
+        c.incident_location ILIKE ''%%'' || $1 || ''%%'' OR
+        c.case_number::text ILIKE ''%%'' || $1 || ''%%'' OR
+        ip.name ILIKE ''%%'' || $1 || ''%%''
+      ) AND
+      ($2 IS NULL OR c.status::text = $2) AND
+      ($3 IS NULL OR c.incident_type::text = $3) AND
+      ($4 IS NULL OR c.created_at >= $4) AND
+      ($5 IS NULL OR c.created_at <= $5)
+    GROUP BY c.id
+    ORDER BY %s %s, c.created_at DESC
+    LIMIT $6
+    OFFSET $7
+  ', sort_column, sort_direction)
+  USING p_query, p_status, p_type, p_start_date, p_end_date, p_limit, p_offset;
 END;
 $$;
 
+GRANT EXECUTE ON FUNCTION search_cases TO anon;
 GRANT EXECUTE ON FUNCTION search_cases TO authenticated;
 GRANT EXECUTE ON FUNCTION search_cases TO service_role;
 
 
-
 -- ==========================================
--- 11. BUSINESS LOGIC TRIGGERS
+-- 8. BUSINESS LOGIC TRIGGERS
 -- ==========================================
 
 -- Function to close guest links when case is closed
@@ -708,3 +696,19 @@ create trigger on_case_closed
   after update on cases
   for each row
   execute procedure public.close_guest_links_on_case_closure();
+
+-- CLEANUP: Drop legacy functions and views that might cause security warnings
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN SELECT oid::regprocedure AS func_signature
+             FROM pg_proc
+             WHERE proname IN ('create_case_with_parties', 'get_analytics_summary', 'get_dashboard_stats')
+             AND pronamespace = 'public'::regnamespace
+    LOOP
+        EXECUTE 'DROP FUNCTION IF EXISTS ' || r.func_signature || ' CASCADE';
+    END LOOP;
+END $$;
+
+DROP VIEW IF EXISTS public.view_involved_parties_summary;

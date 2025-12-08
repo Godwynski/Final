@@ -10,6 +10,19 @@ import type { Metadata } from "next";
 import { X } from "lucide-react";
 import { redirect } from "next/navigation";
 
+type CaseRow = {
+  id: string;
+  case_number: number;
+  title: string;
+  status: string;
+  incident_date: string;
+  created_at: string;
+  incident_type: string;
+  incident_location: string;
+  match_rank: number;
+  full_count: number;
+};
+
 export const metadata: Metadata = {
   title: "Blotter Cases | Dashboard",
   description: "Manage and track all reported blotter cases",
@@ -42,7 +55,6 @@ export default async function CasesPage(props: {
   const order = searchParams.order || "desc";
   const limit = 10;
   const from = (page - 1) * limit;
-  const to = from + limit - 1;
 
   const supabase = await createClient();
 
@@ -61,6 +73,8 @@ export default async function CasesPage(props: {
     p_end_date: endDate ? endDate.toISOString() : null,
     p_limit: limit,
     p_offset: from,
+    p_sort_by: sort,
+    p_sort_order: order,
   });
 
   // Clear Filter Action (Server Action logic or simple link)
@@ -158,19 +172,7 @@ export default async function CasesPage(props: {
                 "Other",
               ]}
             />
-            <FilterDropdown
-              label="Type"
-              paramName="type"
-              options={[
-                "Theft",
-                "Harassment",
-                "Vandalism",
-                "Physical Injury",
-                "Property Damage",
-                "Public Disturbance",
-                "Other",
-              ]}
-            />
+
             {hasFilters && (
               <Link
                 href={clearFiltersUrl}
@@ -200,7 +202,7 @@ export default async function CasesPage(props: {
               </tr>
             </thead>
             <tbody>
-              {(cases || []).map((c: any) => (
+              {(cases || []).map((c: CaseRow) => (
                 <tr
                   key={c.id}
                   className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
