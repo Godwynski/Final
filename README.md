@@ -12,7 +12,7 @@
 ### 📂 Smart Case Management
 
 - **Digital Blotter**: Record and track incidents with a structured workflow (Filed -> Hearing -> Amicable Settlement -> Certificate to File Action).
-- **Real-time Updates**: Live status tracking for complainants and respondents.
+- **Status Tracking**: Track case progress from filing to resolution.
 - **Search & Filter**: Instantly retrieve cases by case number, name, or date.
 
 ### 🖨️ Automated Document Generation
@@ -384,38 +384,38 @@ The following diagram shows all possible interactions between actors and the sys
 
 ```mermaid
 graph TB
-    subgraph Actors["👥 ACTORS"]
-        Admin["👤 Admin<br/>(Barangay Captain/Secretary)"]
-        Staff["👤 Staff<br/>(Desk Officer/Kagawad)"]
-        Guest["👤 Guest<br/>(Complainant/Respondent)"]
+    subgraph Actors["ACTORS"]
+        Admin["Admin<br/>(Barangay Captain/Secretary)"]
+        Staff["Staff<br/>(Desk Officer/Kagawad)"]
+        Guest["Guest<br/>(Complainant/Respondent)"]
     end
 
-    subgraph SharedFeatures["📂 SHARED FEATURES (Admin + Staff)"]
-        Login[🔐 Login/Logout]
-        FileCase[📝 File New Case]
-        ManageCase[🔍 View/Search Cases]
-        UpdateStatus[🔄 Update Case Status]
-        AddNotes[💬 Add Case Notes]
-        ScheduleHearing[📅 Schedule Hearing]
-        GenerateDocs[📄 Generate Documents]
-        ManageEvidence[📎 Manage Evidence]
-        CreateGuestLink[🔗 Create Guest Link]
-        ViewAnalytics[📊 View Analytics]
-        PeopleDirectory[👥 People Directory]
+    subgraph SharedFeatures["SHARED FEATURES (Admin + Staff)"]
+        Login[Login/Logout]
+        FileCase[File New Case]
+        ManageCase[View/Search Cases]
+        UpdateStatus[Update Case Status]
+        AddNotes[Add Case Notes]
+        ScheduleHearing[Schedule Hearing]
+        GenerateDocs[Generate Documents]
+        ManageEvidence[Manage Evidence]
+        CreateGuestLink[Create Guest Link]
+        ViewAnalytics[View Analytics]
+        PeopleDirectory[People Directory]
     end
 
-    subgraph AdminFeatures["🔒 ADMIN-ONLY FEATURES"]
-        SystemSettings[⚙️ System Settings]
-        UserManagement[👤 User Management]
-        AuditLogs[📋 Audit Logs]
-        SiteAnalytics[📈 Site Analytics]
+    subgraph AdminFeatures["ADMIN-ONLY FEATURES"]
+        SystemSettings[System Settings]
+        UserManagement[User Management]
+        AuditLogs[Audit Logs]
+        SiteAnalytics[Site Analytics]
     end
 
-    subgraph GuestFeatures["🌐 GUEST FEATURES (Magic Link)"]
-        ViewCaseInfo[👁️ View Case Narrative]
-        ViewHearings[📅 View Hearing Schedule]
-        UploadEvidence[📤 Upload Evidence]
-        AcceptTerms[✅ Accept Terms]
+    subgraph GuestFeatures["GUEST FEATURES (Magic Link)"]
+        ViewCaseInfo[View Case Narrative]
+        ViewHearings[View Hearing Schedule]
+        UploadEvidence[Upload Evidence]
+        AcceptTerms[Accept Terms]
     end
 
     %% Admin connections
@@ -493,29 +493,29 @@ BlotterSys workflows are organized into **4 role-based subprocess flowcharts**. 
 
 ```mermaid
 flowchart TD
-    subgraph Entry["🌐 SUBPROCESS 1: ENTRY & AUTHENTICATION"]
-        Start([🚀 User Visits System]) --> Landing[🏠 Landing Page]
+    subgraph Entry["SUBPROCESS 1: ENTRY & AUTHENTICATION"]
+        Start([User Visits System]) --> Landing[Landing Page]
         Landing --> UserType{User Type?}
 
-        UserType -->|Admin/Staff| LoginPage[🔐 Login Page]
+        UserType -->|Admin/Staff| LoginPage[Login Page]
         UserType -->|Guest with Link| GuestEntry[Go to Subprocess 4]
 
         LoginPage --> EnterCreds[Enter Email & Password]
         EnterCreds --> ValidateCreds{Valid Credentials?}
 
         ValidateCreds -->|No| AttemptsCheck{Attempts >= 5?}
-        AttemptsCheck -->|Yes| AccountLocked[🔒 Locked 15 min]
+        AttemptsCheck -->|Yes| AccountLocked[Locked 15 min]
         AttemptsCheck -->|No| ShowError[Show Error] --> LoginPage
-        AccountLocked --> AccessDenied([❌ Access Denied])
+        AccountLocked --> AccessDenied([Access Denied])
 
         ValidateCreds -->|Yes| CheckFirstLogin{First Login?}
-        CheckFirstLogin -->|Yes| ForcePassword[🔑 Force Password Change]
+        CheckFirstLogin -->|Yes| ForcePassword[Force Password Change]
         ForcePassword --> LoadProfile
         CheckFirstLogin -->|No| LoadProfile[Load User Profile]
 
         LoadProfile --> CheckRole{User Role?}
-        CheckRole -->|Admin| AdminDash[📊 Admin Dashboard]
-        CheckRole -->|Staff| StaffDash[📊 Staff Dashboard]
+        CheckRole -->|Admin| AdminDash[Admin Dashboard]
+        CheckRole -->|Staff| StaffDash[Staff Dashboard]
 
         AdminDash --> AdminChoice{Select Path}
         AdminChoice -->|Admin Functions| AdminSub[Go to Subprocess 2]
@@ -541,35 +541,35 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    subgraph Admin["👑 SUBPROCESS 2: ADMIN FUNCTIONS"]
+    subgraph Admin["SUBPROCESS 2: ADMIN FUNCTIONS"]
         Start([Admin Dashboard]) --> Menu{Select Function}
 
-        Menu -->|System Settings| Settings[⚙️ System Settings]
-        Menu -->|User Management| Users[👥 User Management]
-        Menu -->|Audit Logs| Audit[📋 Audit Logs]
-        Menu -->|Site Analytics| Analytics[📈 Site Analytics]
+        Menu -->|System Settings| Settings[System Settings]
+        Menu -->|User Management| Users[User Management]
+        Menu -->|Audit Logs| Audit[Audit Logs]
+        Menu -->|Site Analytics| Analytics[Site Analytics]
         Menu -->|Return| ReturnOps[Go to Subprocess 3]
 
         %% System Settings
         Settings --> SettingsAction{Action?}
         SettingsAction -->|Edit Info| EditBarangay[Edit Barangay Info<br/>Province/City/Officials]
         SettingsAction -->|Upload Logo| UploadLogo[Upload Logos<br/>Barangay/City]
-        EditBarangay --> SaveSettings[💾 Save Settings]
+        EditBarangay --> SaveSettings[Save Settings]
         UploadLogo --> SaveSettings
-        SaveSettings --> SettingsOK[✅ Settings Updated]
+        SaveSettings --> SettingsOK[Settings Updated]
 
         %% User Management
         Users --> UserAction{Action?}
         UserAction -->|Create| CreateUser[Create User<br/>Email/Role/Name]
         UserAction -->|Edit| EditUser[Edit User Details]
         UserAction -->|Delete| DeleteUser[Delete User]
-        CreateUser --> UserOK[✅ User Saved]
+        CreateUser --> UserOK[User Saved]
         EditUser --> UserOK
         DeleteUser --> UserOK
 
         %% Audit Logs
         Audit --> AuditFilters[Filter by:<br/>Date/User/Action]
-        AuditFilters --> ViewLogs[📋 View Audit Trail<br/>Action/User/Timestamp]
+        AuditFilters --> ViewLogs[View Audit Trail<br/>Action/User/Timestamp]
 
         %% Site Analytics
         Analytics --> ViewAnalytics[View Metrics:<br/>Visits/Devices/Pages]
@@ -596,43 +596,43 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    subgraph Operations["📂 SUBPROCESS 3: CASE OPERATIONS"]
+    subgraph Operations["SUBPROCESS 3: CASE OPERATIONS"]
         Start([Dashboard]) --> Menu{Select Operation}
 
-        Menu -->|New Case| NewCase[📝 File New Case]
-        Menu -->|Manage Cases| ManageCases[🔍 Search Cases]
-        Menu -->|Documents| Documents[📄 Generate Documents]
-        Menu -->|Guest Links| GuestLinks[🔗 Create Guest Link]
-        Menu -->|Analytics| CaseAnalytics[📊 View Analytics]
+        Menu -->|New Case| NewCase[File New Case]
+        Menu -->|Manage Cases| ManageCases[Search Cases]
+        Menu -->|Documents| Documents[Generate Documents]
+        Menu -->|Guest Links| GuestLinks[Create Guest Link]
+        Menu -->|Analytics| CaseAnalytics[View Analytics]
 
         %% NEW CASE FLOW
         NewCase --> CaseForm[Enter Case Details]
         CaseForm --> AddParties[Add Involved Parties<br/>Name Validation Applied]
         AddParties --> ValidateForm{Form Valid?}
-        ValidateForm -->|No| ShowErrors[❌ Show Errors] --> CaseForm
-        ValidateForm -->|Yes| SaveCase[💾 Save Case<br/>Auto-Generate Case#]
+        ValidateForm -->|No| ShowErrors[Show Errors] --> CaseForm
+        ValidateForm -->|Yes| SaveCase[Save Case<br/>Auto-Generate Case#]
         SaveCase --> CheckPriority{High Priority?<br/>Theft/Injury}
-        CheckPriority -->|Yes| NotifyAdmin[📧 Email Admins]
+        CheckPriority -->|Yes| NotifyAdmin[Email Admins]
         CheckPriority -->|No| CaseCreated
-        NotifyAdmin --> CaseCreated[✅ Case Created]
+        NotifyAdmin --> CaseCreated[Case Created]
 
         %% MANAGE CASES FLOW
         ManageCases --> SearchCase[Search: Case#/Name/Date]
         SearchCase --> ViewCase[View Case Details]
         ViewCase --> CaseAction{Action?}
         CaseAction -->|Update Status| UpdateStatus[Change Status]
-        CaseAction -->|Add Note| AddNote[💬 Add Note]
-        CaseAction -->|Schedule Hearing| AddHearing[📅 Add Hearing]
-        CaseAction -->|View Evidence| ViewEvidence[📎 View Files]
+        CaseAction -->|Add Note| AddNote[Add Note]
+        CaseAction -->|Schedule Hearing| AddHearing[Add Hearing]
+        CaseAction -->|View Evidence| ViewEvidence[View Files]
 
         UpdateStatus --> IsTerminal{Terminal Status?<br/>Settled/Closed/<br/>Dismissed/Referred}
-        IsTerminal -->|Yes| LockCase[🔒 Lock Case<br/>Deactivate Links]
+        IsTerminal -->|Yes| LockCase[Lock Case<br/>Deactivate Links]
         IsTerminal -->|No| StatusOK
-        LockCase --> LogAudit[📋 Log Audit]
-        StatusOK[✅ Updated] --> LogAudit
+        LockCase --> LogAudit[Log Audit]
+        StatusOK[Updated] --> LogAudit
 
-        AddNote --> NoteOK[✅ Note Saved]
-        AddHearing --> HearingOK[✅ Hearing Scheduled]
+        AddNote --> NoteOK[Note Saved]
+        AddHearing --> HearingOK[Hearing Scheduled]
         ViewEvidence --> ShowFiles[Display Evidence]
 
         %% DOCUMENT GENERATION
@@ -641,25 +641,25 @@ flowchart TD
         SelectDoc -->|Notice| GenNotice[Generate Notice]
         SelectDoc -->|Settlement| GenSettlement[Generate Settlement]
         SelectDoc -->|CFA| GenCFA[Generate CFA]
-        GenSummons --> RenderPDF[🖨️ Render PDF]
+        GenSummons --> RenderPDF[Render PDF]
         GenNotice --> RenderPDF
         GenSettlement --> RenderPDF
         GenCFA --> RenderPDF
-        RenderPDF --> DownloadPDF[⬇️ Download]
+        RenderPDF --> DownloadPDF[Download]
 
         %% GUEST LINKS
         GuestLinks --> EnterRecipient[Enter Recipient:<br/>Name/Email/Phone]
         EnterRecipient --> SetExpiry[Set Expiration<br/>24-72 hours]
         SetExpiry --> GenerateLink[Generate Token + PIN]
         GenerateLink --> SendEmail{Send Email?}
-        SendEmail -->|Yes| EmailSent[📧 Email Sent]
-        SendEmail -->|Failed| EmailFail[❌ Email Failed]
-        EmailSent --> LinkOK[✅ Link Created]
+        SendEmail -->|Yes| EmailSent[Email Sent]
+        SendEmail -->|Failed| EmailFail[Email Failed]
+        EmailSent --> LinkOK[Link Created]
 
         %% ANALYTICS
         CaseAnalytics --> SetFilters[Set Filters:<br/>Date/Status/Type]
-        SetFilters --> FetchStats[📡 Fetch Stats]
-        FetchStats --> ShowCharts[📈 Display Charts]
+        SetFilters --> FetchStats[Fetch Stats]
+        FetchStats --> ShowCharts[Display Charts]
 
         %% END STATES
         CaseCreated --> End([Return])
@@ -690,43 +690,43 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    subgraph Guest["👤 SUBPROCESS 4: GUEST PORTAL"]
-        Start([📧 Receive Email]) --> ClickLink[🖱️ Click Magic Link]
+    subgraph Guest["SUBPROCESS 4: GUEST PORTAL"]
+        Start([Receive Email]) --> ClickLink[Click Magic Link]
         ClickLink --> LoadPortal[Load Guest Portal]
 
-        LoadPortal --> EnterPIN[🔢 Enter 6-Digit PIN]
+        LoadPortal --> EnterPIN[Enter 6-Digit PIN]
         EnterPIN --> ValidatePIN{PIN Correct?}
 
         ValidatePIN -->|No| CheckAttempts{Attempts >= 3?}
-        CheckAttempts -->|Yes| PINLocked[🔒 Locked 10 min]
+        CheckAttempts -->|Yes| PINLocked[Locked 10 min]
         CheckAttempts -->|No| EnterPIN
-        PINLocked --> Denied([❌ Access Denied])
+        PINLocked --> Denied([Access Denied])
 
         ValidatePIN -->|Yes| CheckLink{Link Valid?<br/>Active & Not Expired}
-        CheckLink -->|No| LinkExpired[❌ Link Expired]
+        CheckLink -->|No| LinkExpired[Link Expired]
         LinkExpired --> Denied
 
         CheckLink -->|Yes| CheckTerms{Terms Already<br/>Accepted?}
-        CheckTerms -->|No| ShowTerms[📜 Show Terms & Conditions]
+        CheckTerms -->|No| ShowTerms[Show Terms & Conditions]
         ShowTerms --> AcceptTerms{Accept?}
         AcceptTerms -->|No| Denied
-        AcceptTerms -->|Yes| LogTerms[💾 Log Acceptance<br/>Timestamp + IP]
+        AcceptTerms -->|Yes| LogTerms[Log Acceptance<br/>Timestamp + IP]
         LogTerms --> GrantAccess
-        CheckTerms -->|Yes| GrantAccess[✅ Access Granted]
+        CheckTerms -->|Yes| GrantAccess[Access Granted]
 
-        GrantAccess --> ShowCase[Display Case Info:<br/>📋 Narrative<br/>📅 Hearings<br/>📎 Evidence]
+        GrantAccess --> ShowCase[Display Case Info:<br/>Narrative<br/>Hearings<br/>Evidence]
 
         ShowCase --> GuestAction{Action?}
-        GuestAction -->|Upload| SelectFile[📁 Select File<br/>JPEG/PNG/WebP]
+        GuestAction -->|Upload| SelectFile[Select File<br/>JPEG/PNG/WebP]
         GuestAction -->|View| ShowCase
-        GuestAction -->|Exit| ExitPortal([🚪 Exit])
+        GuestAction -->|Exit| ExitPortal([Exit])
 
         SelectFile --> ValidateFile{File Valid?<br/>Type: Image<br/>Size: ≤5MB<br/>Count: ≤5}
-        ValidateFile -->|No| FileError[❌ Invalid File]
+        ValidateFile -->|No| FileError[Invalid File]
         FileError --> ShowCase
-        ValidateFile -->|Yes| UploadFile[☁️ Upload to Storage]
-        UploadFile --> SaveRecord[💾 Save Evidence Record]
-        SaveRecord --> UploadOK[✅ Upload Success]
+        ValidateFile -->|Yes| UploadFile[Upload to Storage]
+        UploadFile --> SaveRecord[Save Evidence Record]
+        SaveRecord --> UploadOK[Upload Success]
         UploadOK --> ShowCase
     end
 
@@ -795,31 +795,30 @@ The following diagram shows the high-level system architecture and component rel
 
 ```mermaid
 flowchart TB
-    subgraph Client["🖥️ CLIENT LAYER"]
+    subgraph Client["CLIENT LAYER"]
         Browser["Web Browser<br/>(Chrome, Firefox, Safari)"]
         Mobile["Mobile Browser<br/>(Responsive PWA)"]
     end
 
-    subgraph NextJS["⚡ APPLICATION LAYER (Next.js 16)"]
+    subgraph NextJS["APPLICATION LAYER (Next.js 16)"]
         AppRouter["App Router<br/>(Server Components)"]
         ServerActions["Server Actions<br/>(Form Handling)"]
         APIRoutes["API Routes<br/>(/api/*)"]
         Middleware["Middleware<br/>(Auth, Rate Limiting)"]
     end
 
-    subgraph Supabase["🔐 BACKEND SERVICES (Supabase)"]
+    subgraph Supabase["BACKEND SERVICES (Supabase)"]
         Auth["Supabase Auth<br/>(JWT, Sessions)"]
         Database["PostgreSQL<br/>(RLS Enabled)"]
         Storage["Supabase Storage<br/>(Evidence Bucket)"]
-        Realtime["Realtime<br/>(Notifications)"]
     end
 
-    subgraph External["🌐 EXTERNAL SERVICES"]
+    subgraph External["EXTERNAL SERVICES"]
         MailerSend["MailerSend<br/>(Email API)"]
         Puppeteer["Puppeteer<br/>(PDF Generation)"]
     end
 
-    subgraph Security["🛡️ SECURITY LAYER"]
+    subgraph Security["SECURITY LAYER"]
         RLS["Row Level Security"]
         RateLimiter["Rate Limiter"]
         Encryption["TLS/HTTPS"]
