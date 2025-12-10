@@ -228,6 +228,9 @@ An internal micro-service abstraction that launches a headless Chromium instance
 
 BlotterSys uses a PostgreSQL database hosted on Supabase with 11 interconnected tables that handle case management, user authentication, evidence storage, and system configuration. The schema is designed with Row Level Security (RLS) policies to ensure data privacy and role-based access control.
 
+<details>
+<summary><strong>🗄️ Database Schema & ERD (Click to Expand)</strong></summary>
+
 ### Entity Relationship Diagram
 
 ```mermaid
@@ -407,6 +410,8 @@ erDiagram
 - **Audit Triggers**: Case status changes auto-log to `audit_logs`
 - **Guest Link Auto-Expiry**: Links automatically deactivate when case status becomes terminal (`Settled`, `Closed`, `Dismissed`, `Referred`)
 
+</details>
+
 ### Input Validation & UX Enhancements
 
 The system implements comprehensive input validation and user experience improvements:
@@ -506,6 +511,9 @@ Critical user actions require confirmation to prevent accidental operations:
 - **Data Encryption**: Sensitive data is encrypted in transit and at rest.
 
 ## 📊 Use Case Diagram & System Flowchart
+
+<details>
+<summary><strong>📊 Use Case Diagram & System Flowchart (Click to Expand)</strong></summary>
 
 This section provides a visual overview of how different users interact with BlotterSys and how the system processes cases from start to finish.
 
@@ -1037,6 +1045,88 @@ flowchart TB
 | Email          | MailerSend API          | Transactional emails (guest links) |
 | PDF Generation | Puppeteer               | Server-side document rendering     |
 | Validation     | Zod                     | Runtime type validation            |
+
+</details>
+
+<details>
+<summary><strong>🔄 Data Flow Diagram (Click to Expand)</strong></summary>
+
+### System Data Flow
+
+This diagram illustrates how data moves through the **BlotterSys** ecosystem, connecting users, internal processes, and external services.
+
+```mermaid
+graph TD
+    %% Entities
+    UserAdmin[Admin]
+    UserStaff[Staff]
+    UserGuest[Guest / Resident]
+
+    %% External Services
+    MailerSend[MailerSend API]
+
+    %% System Boundaries
+    subgraph "BlotterSys System"
+        direction TB
+
+        %% Processes
+        ProcAuth[Authentication & RBAC]
+        ProcCaseMgmt[Case Management]
+        ProcDocGen[Document Generator]
+        ProcEvidence[Evidence Handler]
+        ProcNotify[Notification Service]
+
+        %% Data Stores
+        DB[(Supabase DB)]
+        Storage[(Supabase Storage)]
+    end
+
+    %% Data Flows
+
+    %% Auth Flow
+    UserAdmin & UserStaff -->|Credentials| ProcAuth
+    ProcAuth <-->|Verify / Create Session| DB
+    ProcAuth -->|Token| UserAdmin & UserStaff
+
+    %% Case Management Flow
+    UserStaff -->|File Case / Update Status| ProcCaseMgmt
+    ProcCaseMgmt -->|Persist Case Data| DB
+    DB -->|Retrieved Case Data| ProcCaseMgmt
+
+    %% Document Generation Flow
+    UserStaff -->|Request Document| ProcDocGen
+    ProcDocGen -->|Fetch Template Data| DB
+    ProcDocGen -->|Generate PDF| UserStaff
+
+    %% Evidence Flow (Staff)
+    UserStaff -->|Upload Files| ProcEvidence
+    ProcEvidence -->|Store Metadata| DB
+    ProcEvidence -->|Store Binary| Storage
+
+    %% Evidence Flow (Guest)
+    UserAdmin & UserStaff -->|Generate Magic Link| ProcEvidence
+    ProcEvidence -->|Link Details| DB
+    ProcEvidence -->|Send Link via Email| ProcNotify
+    ProcNotify -->|Dispatch Request| MailerSend
+    MailerSend -->|Email Delivery| UserGuest
+
+    UserGuest -->|Access Link + Upload| ProcEvidence
+    ProcEvidence -->|Validate Token| DB
+
+    %% Read / View Flows
+    UserAdmin -->|View Audit Logs| DB
+    UserStaff -->|Search Cases| DB
+
+    %% Styling
+    style UserAdmin fill:#e3f2fd,stroke:#1976d2
+    style UserStaff fill:#fff3e0,stroke:#f57c00
+    style UserGuest fill:#f3e5f5,stroke:#7b1fa2
+    style DB fill:#e0f2f1,stroke:#00695c
+    style Storage fill:#e0f2f1,stroke:#00695c
+    style MailerSend fill:#ffebee,stroke:#c62828
+```
+
+</details>
 
 ---
 
