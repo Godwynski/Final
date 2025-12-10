@@ -9,27 +9,27 @@ This diagram illustrates how data moves through the **BlotterSys** ecosystem, co
 ```mermaid
 graph TD
     %% Entities
-    UserAdmin[👤 Admin]
-    UserStaff[👤 Staff]
-    UserGuest[👤 Guest / Resident]
+    UserAdmin[Admin]
+    UserStaff[Staff]
+    UserGuest[Guest / Resident]
 
     %% External Services
-    MailerSend[📧 MailerSend API]
+    MailerSend[MailerSend API]
 
     %% System Boundaries
     subgraph "BlotterSys System"
         direction TB
 
         %% Processes
-        ProcAuth[🔐 Authentication & RBAC]
-        ProcCaseMgmt[📂 Case Management]
-        ProcDocGen[🖨️ Document Generator]
-        ProcEvidence[📸 Evidence Handler]
-        ProcNotify[🔔 Notification Service]
+        ProcAuth[Authentication & RBAC]
+        ProcCaseMgmt[Case Management]
+        ProcDocGen[Document Generator]
+        ProcEvidence[Evidence Handler]
+        ProcNotify[Notification Service]
 
         %% Data Stores
-        DB[(🗄️ Supabase DB)]
-        Storage[(☁️ Supabase Storage)]
+        DB[(Supabase DB)]
+        Storage[(Supabase Storage)]
     end
 
     %% Data Flows
