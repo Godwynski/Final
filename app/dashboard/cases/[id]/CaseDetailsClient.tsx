@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import AlertModal from '@/components/ui/AlertModal'
 import ConfirmModal from '@/components/ui/ConfirmModal'
@@ -62,7 +62,13 @@ export default function CaseDetailsClient({
         (CONFIG.FILE_UPLOAD.ALLOWED_IMAGE_TYPES as readonly string[]).includes(e.file_type)
     ).length
 
-    const [origin] = useState<string>(() => typeof window !== 'undefined' ? window.location.origin : '')
+    const [origin, setOrigin] = useState('')
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setOrigin(window.location.origin)
+        }
+    }, [])
 
     // Alert Modal State
     const [alertState, setAlertState] = useState<{

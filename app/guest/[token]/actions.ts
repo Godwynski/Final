@@ -89,18 +89,22 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
         return { error: 'Failed to upload file to storage.' }
     }
 
-    // Get Public URL
-    const { data: { publicUrl } } = supabaseAdmin
+    // Get Signed URL (valid for 1 year)
+    const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin
         .storage
         .from('evidence')
-        .getPublicUrl(fileName)
+        .createSignedUrl(fileName, 31536000) // 1 year = 31536000 seconds
+
+    if (signedUrlError || !signedUrlData) {
+        return { error: 'Failed to generate access URL for file.' }
+    }
 
     // Insert into Evidence Table with guest_link_id and visibility
     const { error: insertError } = await supabaseAdmin
         .from('evidence')
         .insert({
             case_id: caseId,
-            file_path: publicUrl,
+            file_path: signedUrlData.signedUrl,
             file_name: file.name,
             file_type: file.type,
             description: description,
@@ -121,7 +125,7 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
             case_id: caseId,
             token_id: links.id,
             file_name: file.name,
-            file_path: publicUrl,
+            file_path: signedUrlData.signedUrl,
             description: description,
             is_visible_to_others: isVisibleToOthers
         },
@@ -138,6 +142,73 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
 
     revalidatePath(`/guest/${token}`)
     return { success: true }
+}
+
+export async function getGuestEvidenceSignedUrl(token: string, evidenceId: string) {
+    const supabaseAdmin = createAdminClient()
+
+    // Verify token
+    const { data: link, error: linkError } = await supabaseAdmin
+        .from('guest_links')
+        .select('*')
+        .eq('token', token)
+        .single()
+
+    if (linkError || !link) {
+        return { error: 'Invalid token' }
+    }
+
+    if (new Date(link.expires_at) < new Date() || !link.is_active) {
+        return { error: 'Link expired' }
+    }
+
+    // Verify PIN from cookie
+    const cookieStore = await cookies()
+    const pinCookie = cookieStore.get(`guest_pin_${token}`)
+    if (!pinCookie || pinCookie.value !== link.pin) {
+        return { error: 'Invalid PIN' }
+    }
+
+    // Fetch evidence record
+    const { data: evidence, error: fetchError } = await supabaseAdmin
+        .from('evidence')
+        .select('file_path, case_id')
+        .eq('id', evidenceId)
+        .single()
+
+    if (fetchError || !evidence) {
+        return { error: 'Evidence not found' }
+    }
+
+    // Verify evidence belongs to this case
+    if (evidence.case_id !== link.case_id) {
+        return { error: 'Unauthorized' }
+    }
+
+    // Extract storage path and generate signed URL
+    try {
+        const url = new URL(evidence.file_path)
+        const pathParts = url.pathname.split('/evidence/')
+        if (pathParts.length <= 1) {
+            return { error: 'Invalid file path format' }
+        }
+        
+        const storagePath = pathParts[1].split('?')[0]
+
+        const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin
+            .storage
+            .from('evidence')
+            .createSignedUrl(storagePath, 3600) // 1 hour
+
+        if (signedUrlError || !signedUrlData) {
+            return { error: 'Failed to generate signed URL' }
+        }
+
+        return { url: signedUrlData.signedUrl }
+    } catch (e) {
+        console.error('Error parsing file path:', e)
+        return { error: 'Failed to parse file path' }
+    }
 }
 
 

@@ -755,18 +755,22 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
         return { error: `Storage upload failed: ${uploadError.message}` }
     }
 
-    // Get Public URL
-    const { data: { publicUrl } } = supabaseAdmin
+    // Get Signed URL (valid for 1 year)
+    const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin
         .storage
         .from('evidence')
-        .getPublicUrl(fileName)
+        .createSignedUrl(fileName, 31536000) // 1 year = 31536000 seconds
+
+    if (signedUrlError || !signedUrlData) {
+        return { error: `Failed to generate access URL: ${signedUrlError?.message}` }
+    }
 
     // Insert Record
     const { error: insertError } = await supabaseAdmin
         .from('evidence')
         .insert({
             case_id: caseId,
-            file_path: publicUrl,
+            file_path: signedUrlData.signedUrl,
             file_name: file.name,
             file_type: file.type,
             description: description,
@@ -783,7 +787,7 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
         action: 'Uploaded Evidence',
         details: {
             file_name: file.name,
-            file_path: publicUrl,
+            file_path: signedUrlData.signedUrl,
             description
         },
         case_id: caseId
@@ -792,6 +796,52 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
 
     revalidatePath(`/dashboard/cases/${caseId}`)
     return { success: true }
+}
+
+export async function getEvidenceSignedUrl(evidenceId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
+
+    const supabaseAdmin = createAdminClient()
+
+    // Fetch evidence record to get the file_path
+    const { data: evidence, error: fetchError } = await supabaseAdmin
+        .from('evidence')
+        .select('file_path')
+        .eq('id', evidenceId)
+        .single()
+
+    if (fetchError || !evidence) {
+        return { error: 'Evidence not found' }
+    }
+
+    // Extract storage path from the URL
+    // The file_path contains a signed URL, we need to extract the path part
+    try {
+        const url = new URL(evidence.file_path)
+        const pathParts = url.pathname.split('/evidence/')
+        if (pathParts.length <= 1) {
+            return { error: 'Invalid file path format' }
+        }
+        
+        const storagePath = pathParts[1].split('?')[0] // Remove any query params
+
+        // Generate new signed URL (valid for 1 hour)
+        const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin
+            .storage
+            .from('evidence')
+            .createSignedUrl(storagePath, 3600) // 1 hour = 3600 seconds
+
+        if (signedUrlError || !signedUrlData) {
+            return { error: 'Failed to generate signed URL' }
+        }
+
+        return { url: signedUrlData.signedUrl }
+    } catch (e) {
+        console.error('Error parsing file path:', e)
+        return { error: 'Failed to parse file path' }
+    }
 }
 
 export async function deleteEvidence(caseId: string, evidenceId: string) {
