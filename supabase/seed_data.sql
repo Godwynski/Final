@@ -2,34 +2,69 @@
 -- SEED DATA GENERATOR FOR BLOTTER SYSTEM
 -- ==========================================
 -- This script generates hundreds of realistic test data entries
--- Run this after setting up your schema and creating at least one user
+-- Run this AFTER `user.sql` (so Admin exists)
 
--- First, let's create some helper data arrays
+-- Enable pgcrypto for password hashing if not already enabled
+create extension if not exists "pgcrypto";
+
 DO $$
 DECLARE
     user_ids UUID[];
+    staff_ids UUID[];
     case_id UUID;
     party_id UUID;
+    guest_link_id UUID;
     i INT;
     j INT;
     random_user UUID;
+    random_staff UUID;
     random_date TIMESTAMP;
     random_status TEXT;
     random_type TEXT;
+    random_resolution JSONB;
 BEGIN
-    -- Get existing user IDs
-    SELECT ARRAY_AGG(id) INTO user_ids FROM profiles LIMIT 10;
+    -- ==========================================
+    -- 0. CRITICAL: ENSURE STAFF USERS EXIST
+    -- ==========================================
+    -- We want a mix of Admin (from user.sql) and Staff users.
+    -- Let's create 5 dummy staff users if they don't exist.
     
-    -- If no users exist, exit
+    FOR i IN 1..5 LOOP
+        IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'staff' || i || '@barangay.gov.ph') THEN
+            INSERT INTO auth.users (
+                instance_id, id, aud, role, email, encrypted_password, 
+                email_confirmed_at, raw_app_meta_data, raw_user_meta_data, 
+                created_at, updated_at
+            ) VALUES (
+                '00000000-0000-0000-0000-000000000000',
+                gen_random_uuid(),
+                'authenticated',
+                'authenticated',
+                'staff' || i || '@barangay.gov.ph',
+                crypt('staff123', gen_salt('bf')), -- Password: staff123
+                now(),
+                '{"provider": "email", "providers": ["email"]}',
+                jsonb_build_object('full_name', 'Staff Member ' || i, 'role', 'staff'),
+                now(),
+                now()
+            );
+        END IF;
+    END LOOP;
+
+    -- Refresh user_ids array with ALL users (Admin + Staff)
+    SELECT ARRAY_AGG(id) INTO user_ids FROM profiles;
+    
+    -- Get just staff IDs for specific staff actions
+    SELECT ARRAY_AGG(id) INTO staff_ids FROM profiles WHERE role = 'staff';
+
     IF user_ids IS NULL OR array_length(user_ids, 1) = 0 THEN
-        RAISE NOTICE 'No users found. Please create at least one user before running this seed script.';
-        RETURN;
+        RAISE EXCEPTION 'No users found. Something went wrong with user generation.';
     END IF;
 
-    RAISE NOTICE 'Generating seed data...';
+    RAISE NOTICE 'Generating seed data with % users...', array_length(user_ids, 1);
 
     -- ==========================================
-    -- GENERATE 200 CASES
+    -- 1. GENERATE 200 CASES
     -- ==========================================
     FOR i IN 1..200 LOOP
         -- Random status
@@ -38,12 +73,29 @@ BEGIN
         -- Random incident type
         random_type := (ARRAY['Theft', 'Harassment', 'Vandalism', 'Physical Injury', 'Property Damage', 'Public Disturbance', 'Other'])[1 + floor(random() * 7)];
         
-        -- Random user
+        -- Random user (reporter/handler)
         random_user := user_ids[1 + floor(random() * array_length(user_ids, 1))];
         
         -- Random date in the last 365 days
         random_date := NOW() - (random() * INTERVAL '365 days');
         
+        -- Generate Resolution Details if case is resolved
+        IF random_status IN ('Settled', 'Closed', 'Dismissed', 'Referred') THEN
+            random_resolution := jsonb_build_object(
+                'resolution_date', random_date + INTERVAL '5 days',
+                'resolved_by', (SELECT full_name FROM profiles WHERE id = random_user),
+                'terms', CASE random_status
+                    WHEN 'Settled' THEN 'Both parties agreed to monetary compensation of P5,000 and public apology.'
+                    WHEN 'Dismissed' THEN 'Complaint withdrawn by the complainant.'
+                    WHEN 'Referred' THEN 'Case referred to PNP for criminal filing.'
+                    ELSE 'Case closed after successful mediation.'
+                END,
+                'notes', 'Resolution reached peacefully.'
+            );
+        ELSE
+            random_resolution := NULL;
+        END IF;
+
         -- Insert case
         INSERT INTO cases (
             title,
@@ -54,6 +106,7 @@ BEGIN
             incident_type,
             narrative_facts,
             narrative_action,
+            resolution_details, 
             reported_by,
             created_at,
             updated_at
@@ -101,6 +154,7 @@ BEGIN
                 WHEN random_status = 'Dismissed' THEN 'Case dismissed due to lack of evidence/withdrawal of complaint.'
                 ELSE 'Case referred to higher authorities for further action.'
             END,
+            random_resolution, -- Insert resolution details
             random_user,
             random_date,
             random_date + (random() * INTERVAL '30 days')
@@ -123,7 +177,7 @@ BEGIN
                     'Juan Dela Cruz', 'Maria Santos', 'Jose Rizal', 'Pedro Garcia',
                     'Ana Reyes', 'Carlos Mendoza', 'Sofia Torres', 'Miguel Fernandez',
                     'Isabel Ramos', 'Antonio Lopez', 'Carmen Gonzales', 'Roberto Aquino',
-                    'Lucia Bautista', 'Fernando Cruz', 'Elena Villanueva', 'Ramon Diaz',
+                    'Lucia Bautisa', 'Fernando Cruz', 'Elena Villanueva', 'Ramon Diaz',
                     'Teresa Martinez', 'Diego Sanchez', 'Angelica Rivera', 'Manuel Castro'
                 ])[1 + floor(random() * 20)],
                 (ARRAY['Complainant', 'Respondent', 'Witness'])[1 + floor(random() * 3)]::party_type,
@@ -133,43 +187,52 @@ BEGIN
                 ELSE NULL END,
                 'Blk ' || (1 + floor(random() * 50)) || ' Lot ' || (1 + floor(random() * 30)) || 
                 ', ' || (ARRAY['Purok 1', 'Purok 2', 'Purok 3', 'Purok 4', 'Purok 5', 'Sitio San Jose', 'Sitio Riverside'])[1 + floor(random() * 7)]
-            ) RETURNING id INTO party_id;
+            );
         END LOOP;
 
         -- ==========================================
-        -- ADD 1-5 CASE NOTES
+        -- ADD 0-2 GUEST LINKS (25% chance)
         -- ==========================================
-        FOR j IN 1..(1 + floor(random() * 5)) LOOP
-            random_user := user_ids[1 + floor(random() * array_length(user_ids, 1))];
-            INSERT INTO case_notes (
-                case_id,
-                content,
-                created_by,
-                created_at
-            ) VALUES (
-                case_id,
-                (ARRAY[
-                    'Initial investigation conducted. All parties contacted.',
-                    'Follow-up interview scheduled for next week.',
-                    'Additional evidence submitted by complainant.',
-                    'Witness testimony recorded and filed.',
-                    'Mediation session completed. Progress made.',
-                    'Waiting for respondent response to summons.',
-                    'Case documents prepared for hearing.',
-                    'Settlement proposal drafted and sent to parties.',
-                    'Investigation findings documented.',
-                    'Status update: proceeding to next phase.'
-                ])[1 + floor(random() * 10)],
-                random_user,
-                random_date + (j * INTERVAL '3 days')
-            );
-        END LOOP;
+        guest_link_id := NULL; -- Reset for this case
+        
+        IF random() > 0.75 THEN
+            FOR j IN 1..1 LOOP -- Generate 1 link for simplicity usually
+                random_user := user_ids[1 + floor(random() * array_length(user_ids, 1))];
+                INSERT INTO guest_links (
+                    case_id,
+                    token,
+                    pin,
+                    created_by,
+                    expires_at,
+                    is_active,
+                    recipient_name,  -- NEW: Populate recipient fields
+                    recipient_email,
+                    recipient_phone,
+                    created_at
+                ) VALUES (
+                    case_id,
+                    substring(md5(random()::text || clock_timestamp()::text), 1, 32),
+                    LPAD(floor(random() * 10000)::TEXT, 4, '0'),
+                    random_user,
+                    random_date + INTERVAL '30 days',
+                    random() > 0.3, -- Active status
+                    (ARRAY['Juan Dela Cruz', 'Maria Santos', 'Jose Rizal'])[1 + floor(random() * 3)],
+                    'guest' || floor(random() * 100) || '@gmail.com',
+                    '09' || LPAD(floor(random() * 1000000000)::TEXT, 9, '0'),
+                    random_date + INTERVAL '1 day'
+                ) RETURNING id INTO guest_link_id; -- Capture ID for potential evidence linkage
+            END LOOP;
+        END IF;
 
         -- ==========================================
         -- ADD 0-3 EVIDENCE FILES
         -- ==========================================
         FOR j IN 1..floor(random() * 4) LOOP
             random_user := user_ids[1 + floor(random() * array_length(user_ids, 1))];
+            
+            -- Decide if this evidence is from a guest (if link exists, small chance)
+            -- If guest_link_id is set and random < 0.3, link it.
+            
             INSERT INTO evidence (
                 case_id,
                 file_path,
@@ -177,6 +240,8 @@ BEGIN
                 file_type,
                 description,
                 uploaded_by,
+                guest_link_id, -- NEW: Link to guest link if applicable
+                is_visible_to_others, -- NEW: Explicit visibility
                 created_at
             ) VALUES (
                 case_id,
@@ -196,17 +261,41 @@ BEGIN
                     'Visual proof of damages',
                     'Official statement from witness',
                     'Receipt for claimed expenses',
-                    'Supporting documentation',
-                    'Medical report from hospital',
-                    'Screenshot of online evidence'
-                ])[1 + floor(random() * 8)],
-                random_user,
+                    'Supporting documentation'
+                ])[1 + floor(random() * 6)],
+                CASE WHEN (guest_link_id IS NOT NULL AND random() < 0.3) THEN NULL ELSE random_user END, -- Guest uploads have null uploaded_by
+                CASE WHEN (guest_link_id IS NOT NULL AND random() < 0.3) THEN guest_link_id ELSE NULL END,
+                (random() > 0.1), -- 90% visible
                 random_date + (j * INTERVAL '2 days')
             );
         END LOOP;
 
         -- ==========================================
-        -- ADD 0-2 HEARINGS (for cases with Hearing Scheduled status)
+        -- ADD 1-5 CASE NOTES
+        -- ==========================================
+        FOR j IN 1..(1 + floor(random() * 5)) LOOP
+            random_user := user_ids[1 + floor(random() * array_length(user_ids, 1))];
+            INSERT INTO case_notes (
+                case_id,
+                content,
+                created_by,
+                created_at
+            ) VALUES (
+                case_id,
+                (ARRAY[
+                    'Initial investigation conducted. All parties contacted.',
+                    'Follow-up interview scheduled for next week.',
+                    'Additional evidence submitted by complainant.',
+                    'Witness testimony recorded and filed.',
+                    'Mediation session completed. Progress made.'
+                ])[1 + floor(random() * 5)],
+                random_user,
+                random_date + (j * INTERVAL '3 days')
+            );
+        END LOOP;
+
+        -- ==========================================
+        -- ADD 0-2 HEARINGS (for cases with Hearing Scheduled or resolved)
         -- ==========================================
         IF random_status IN ('Hearing Scheduled', 'Settled', 'Closed') THEN
             FOR j IN 1..(1 + floor(random() * 2)) LOOP
@@ -226,43 +315,8 @@ BEGIN
                         WHEN random_status = 'Settled' THEN (ARRAY['Completed', 'Settled'])[1 + floor(random() * 2)]
                         ELSE (ARRAY['Completed', 'Settled', 'No Show'])[1 + floor(random() * 3)]
                     END,
-                    (ARRAY[
-                        'Both parties attended. Productive discussion.',
-                        'Initial mediation session. Setting ground rules.',
-                        'Settlement terms being negotiated.',
-                        'Hearing postponed at parties request.',
-                        'Final hearing. Agreement reached.',
-                        'Respondent failed to appear. Rescheduled.',
-                        'Complainant presented additional evidence.',
-                        'Mediator facilitated compromise discussion.'
-                    ])[1 + floor(random() * 8)],
+                    'Routine hearing session.',
                     random_date + INTERVAL '5 days'
-                );
-            END LOOP;
-        END IF;
-
-        -- ==========================================
-        -- ADD 0-2 GUEST LINKS (25% chance)
-        -- ==========================================
-        IF random() > 0.75 THEN
-            FOR j IN 1..(1 + floor(random() * 2)) LOOP
-                random_user := user_ids[1 + floor(random() * array_length(user_ids, 1))];
-                INSERT INTO guest_links (
-                    case_id,
-                    token,
-                    pin,
-                    created_by,
-                    expires_at,
-                    is_active,
-                    created_at
-                ) VALUES (
-                    case_id,
-                    substring(md5(random()::text || clock_timestamp()::text), 1, 32),
-                    LPAD(floor(random() * 10000)::TEXT, 4, '0'),
-                    random_user,
-                    random_date + INTERVAL '30 days',
-                    random() > 0.3,
-                    random_date + INTERVAL '1 day'
                 );
             END LOOP;
         END IF;
@@ -289,29 +343,10 @@ BEGIN
             random_date
         );
 
-        -- Add status update audit logs
-        IF random_status != 'New' THEN
-            INSERT INTO audit_logs (
-                user_id,
-                case_id,
-                action,
-                details,
-                created_at
-            ) VALUES (
-                random_user,
-                case_id,
-                'Status Updated',
-                jsonb_build_object(
-                    'old_status', 'New',
-                    'new_status', random_status
-                ),
-                random_date + INTERVAL '1 day'
-            );
-        END IF;
     END LOOP;
 
     -- ==========================================
-    -- GENERATE NOTIFICATIONS FOR USERS
+    -- 2. GENERATE NOTIFICATIONS
     -- ==========================================
     FOR i IN 1..100 LOOP
         random_user := user_ids[1 + floor(random() * array_length(user_ids, 1))];
@@ -326,40 +361,19 @@ BEGIN
             created_at
         ) VALUES (
             random_user,
-            (ARRAY[
-                'New Case Assigned',
-                'Case Status Updated',
-                'Hearing Scheduled',
-                'Evidence Uploaded',
-                'New Note Added',
-                'Case Settled',
-                'Urgent: Case Requires Action',
-                'Reminder: Upcoming Hearing'
-            ])[1 + floor(random() * 8)],
-            (ARRAY[
-                'A new case has been assigned to you for review.',
-                'Case status has been updated. Please check for details.',
-                'A hearing has been scheduled. Review the date and time.',
-                'New evidence has been uploaded to one of your cases.',
-                'A new note has been added. Please review and respond.',
-                'A case under your supervision has been marked as settled.',
-                'This case requires immediate attention. Please review ASAP.',
-                'Reminder: You have an upcoming hearing tomorrow.'
-            ])[1 + floor(random() * 8)],
-            '/dashboard/cases/' || gen_random_uuid()::text,
+            'New Notification',
+            'You have a new update required on one of your cases.',
+            '/dashboard/cases',
             random() > 0.4,
             random_date
         );
     END LOOP;
 
+
     RAISE NOTICE 'Seed data generation complete!';
-    RAISE NOTICE '- 200 cases created';
-    RAISE NOTICE '- ~600 involved parties created';
-    RAISE NOTICE '- ~400 case notes created';
-    RAISE NOTICE '- ~200 evidence files created';
-    RAISE NOTICE '- ~100 hearings created';
-    RAISE NOTICE '- ~50 guest links created';
-    RAISE NOTICE '- ~300 audit logs created';
-    RAISE NOTICE '- 100 notifications created';
+    RAISE NOTICE '- Verified/Created Staff users';
+    RAISE NOTICE '- 200 cases created with resolution details';
+    RAISE NOTICE '- Included guest links with recipient info';
+    RAISE NOTICE '- Evidence linked to guest uploads';
 
 END $$;

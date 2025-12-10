@@ -8,7 +8,7 @@ import { mailersend } from '@/utils/mailersend'
 import { EmailParams, Sender, Recipient } from "mailersend";
 import { addInvolvedPartySchema, addCaseNoteSchema, updateCaseDetailsSchema, updateActionTakenSchema, guestLinkDurationSchema } from '@/utils/validation'
 import { generateSecurePIN, canModifyResource } from '@/utils/auth'
-import { CONFIG } from '@/constants/config'
+import { CONFIG, SIGNED_URL_EXPIRY } from '@/constants/config'
 import { createAdminClient } from '@/utils/supabase/admin'
 
 import { ResolutionDetails } from '@/types'
@@ -551,7 +551,16 @@ export async function generateCaseGuestLink(caseId: string, formData: FormData) 
         message += emailSent ? ` Email sent to ${recipientEmail}.` : ` (Email sending failed, please send manually.)`
     }
 
-    return { success: true, pin, token, message }
+    // Check if we're at limit after creating this link
+    const isAtLimit = (activeLinksCount || 0) + 1 >= CONFIG.GUEST_LINK.MAX_LINKS_PER_CASE
+
+    return { 
+        success: true, 
+        pin, 
+        token, 
+        message,
+        closeModal: isAtLimit // Auto-close modal if 5-link limit reached
+    }
 }
 
 export async function toggleGuestLinkStatus(linkId: string, currentStatus: boolean, caseId: string) {
@@ -755,18 +764,22 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
         return { error: `Storage upload failed: ${uploadError.message}` }
     }
 
-    // Get Public URL
-    const { data: { publicUrl } } = supabaseAdmin
+    // Get Signed URL (valid for 1 year)
+    const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin
         .storage
         .from('evidence')
-        .getPublicUrl(fileName)
+        .createSignedUrl(fileName, SIGNED_URL_EXPIRY.ONE_YEAR)
+
+    if (signedUrlError || !signedUrlData) {
+        return { error: `Failed to generate access URL: ${signedUrlError?.message}` }
+    }
 
     // Insert Record
     const { error: insertError } = await supabaseAdmin
         .from('evidence')
         .insert({
             case_id: caseId,
-            file_path: publicUrl,
+            file_path: signedUrlData.signedUrl,
             file_name: file.name,
             file_type: file.type,
             description: description,
@@ -783,7 +796,7 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
         action: 'Uploaded Evidence',
         details: {
             file_name: file.name,
-            file_path: publicUrl,
+            file_path: signedUrlData.signedUrl,
             description
         },
         case_id: caseId
@@ -792,6 +805,52 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
 
     revalidatePath(`/dashboard/cases/${caseId}`)
     return { success: true }
+}
+
+export async function getEvidenceSignedUrl(evidenceId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
+
+    const supabaseAdmin = createAdminClient()
+
+    // Fetch evidence record to get the file_path
+    const { data: evidence, error: fetchError } = await supabaseAdmin
+        .from('evidence')
+        .select('file_path')
+        .eq('id', evidenceId)
+        .single()
+
+    if (fetchError || !evidence) {
+        return { error: 'Evidence not found' }
+    }
+
+    // Extract storage path from the URL
+    // The file_path contains a signed URL, we need to extract the path part
+    try {
+        const url = new URL(evidence.file_path)
+        const pathParts = url.pathname.split('/evidence/')
+        if (pathParts.length <= 1) {
+            return { error: 'Invalid file path format' }
+        }
+        
+        const storagePath = pathParts[1].split('?')[0] // Remove any query params
+
+        // Generate new signed URL (valid for 1 hour)
+        const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin
+            .storage
+            .from('evidence')
+            .createSignedUrl(storagePath, SIGNED_URL_EXPIRY.ONE_HOUR)
+
+        if (signedUrlError || !signedUrlData) {
+            return { error: 'Failed to generate signed URL' }
+        }
+
+        return { url: signedUrlData.signedUrl }
+    } catch (e) {
+        console.error('Error parsing file path:', e)
+        return { error: 'Failed to parse file path' }
+    }
 }
 
 export async function deleteEvidence(caseId: string, evidenceId: string) {

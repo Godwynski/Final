@@ -2,6 +2,9 @@ import { createClient } from '@/utils/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import CaseDetailsClient from './CaseDetailsClient'
 
+// Cache case details for 30 seconds
+export const revalidate = 30;
+
 export default async function CaseDetailsPage(props: { params: Promise<{ id: string }>, searchParams: Promise<{ message?: string, error?: string }> }) {
     const params = await props.params
     const supabase = await createClient()

@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 import FlowbiteInit from "@/components/FlowbiteInit";
-import VisitTracker from "@/components/VisitTracker";
+
 
 export default function RootLayout({
   children,
@@ -37,7 +37,7 @@ export default function RootLayout({
         suppressHydrationWarning={true}
       >
         <FlowbiteInit />
-        <VisitTracker />
+
         {children}
         {/* Added Toaster component */}
         <Toaster

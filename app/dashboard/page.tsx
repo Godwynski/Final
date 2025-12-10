@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   description: "Overview of blotter cases, analytics, and action items",
 };
 
+// Cache page for 60 seconds, then revalidate
+export const revalidate = 60;
+
 const DashboardCharts = dynamic(
   () => import("@/components/dashboard/DashboardCharts"),
   {

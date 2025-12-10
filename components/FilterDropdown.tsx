@@ -1,7 +1,8 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useCallback, useMemo } from 'react'
+import { useClickOutside } from '@/hooks'
 
 type FilterProps = {
     label: string
@@ -9,13 +10,17 @@ type FilterProps = {
     options: string[]
 }
 
-export default function FilterDropdown({ label, paramName, options }: FilterProps) {
+function FilterDropdown({ label, paramName, options }: FilterProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
     const currentValue = searchParams.get(paramName) || ''
     const [isOpen, setIsOpen] = useState(false)
+    
+    // Use custom hook for click outside detection
+    const dropdownRef = useClickOutside<HTMLDivElement>(() => setIsOpen(false))
 
-    function handleSelect(value: string) {
+    // Memoize select handler
+    const handleSelect = useCallback((value: string) => {
         const params = new URLSearchParams(searchParams.toString())
         if (value) {
             params.set(paramName, value)
@@ -24,16 +29,22 @@ export default function FilterDropdown({ label, paramName, options }: FilterProp
         }
         router.push(`?${params.toString()}`)
         setIsOpen(false)
-    }
+    }, [paramName, searchParams, router])
+
+    // Memoize button classes
+    const buttonClasses = useMemo(() => 
+        `flex items-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${currentValue
+            ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+            : 'text-gray-700 bg-white border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700'
+        }`,
+        [currentValue]
+    )
 
     return (
-        <div className="relative">
+        <div className="relative" ref={dropdownRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${currentValue
-                    ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
-                    : 'text-gray-700 bg-white border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700'
-                    }`}
+                className={buttonClasses}
             >
                 {currentValue || label}
                 <svg className="w-4 h-4 ml-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -42,30 +53,30 @@ export default function FilterDropdown({ label, paramName, options }: FilterProp
             </button>
 
             {isOpen && (
-                <>
-                    <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-                    <div className="absolute right-0 z-20 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 max-h-60 overflow-y-auto">
+                <div className="absolute right-0 z-20 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 max-h-60 overflow-y-auto">
+                    <button
+                        onClick={() => handleSelect('')}
+                        className={`block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 ${!currentValue ? 'font-bold' : ''}`}
+                    >
+                        All
+                    </button>
+                    {options.map((option) => (
                         <button
-                            onClick={() => handleSelect('')}
-                            className={`block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 ${!currentValue ? 'font-bold' : ''}`}
+                            key={option}
+                            onClick={() => handleSelect(option)}
+                            className={`block w-full text-left px-4 py-2 text-sm ${currentValue === option
+                                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                }`}
                         >
-                            All
+                            {option}
                         </button>
-                        {options.map((option) => (
-                            <button
-                                key={option}
-                                onClick={() => handleSelect(option)}
-                                className={`block w-full text-left px-4 py-2 text-sm ${currentValue === option
-                                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                    }`}
-                            >
-                                {option}
-                            </button>
-                        ))}
-                    </div>
-                </>
+                    ))}
+                </div>
             )}
         </div>
     )
 }
+
+// Memoize component to prevent unnecessary re-renders
+export default FilterDropdown;

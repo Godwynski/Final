@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import { memo } from 'react'
 
 const StatusChart = dynamic(() => import('@/components/AnalyticsCharts').then(mod => mod.StatusChart), {
     loading: () => <div className="h-full w-full bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl" />,
@@ -21,7 +22,7 @@ interface DashboardChartsProps {
     trendData: any[]
 }
 
-export default function DashboardCharts({ statusData, typeData, trendData }: DashboardChartsProps) {
+function DashboardCharts({ statusData, typeData, trendData }: DashboardChartsProps) {
     return (
         <div className="space-y-6">
             {/* Charts Row */}
@@ -41,3 +42,13 @@ export default function DashboardCharts({ statusData, typeData, trendData }: Das
         </div>
     )
 }
+
+// Memoize component to prevent re-renders when props haven't changed
+export default memo(DashboardCharts, (prevProps, nextProps) => {
+    // Custom comparison: only re-render if data actually changed
+    return (
+        JSON.stringify(prevProps.statusData) === JSON.stringify(nextProps.statusData) &&
+        JSON.stringify(prevProps.typeData) === JSON.stringify(nextProps.typeData) &&
+        JSON.stringify(prevProps.trendData) === JSON.stringify(nextProps.trendData)
+    )
+})

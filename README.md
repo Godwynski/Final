@@ -30,10 +30,6 @@
 - **Guest Uploads**: Residents can upload photos/videos without creating an account.
 - **Bank-Grade Security**: All evidence is encrypted and stored securely via Supabase Storage.
 
-### 📊 Analytics Dashboard
-
-- **Insightful Metrics**: Track case volume, resolution rates, and common incident types.
-- **Visual Reports**: Interactive charts powered by Recharts.
 
 ## 🛠️ Technology Stack
 
@@ -226,13 +222,12 @@ An internal micro-service abstraction that launches a headless Chromium instance
 
 ## 🗄️ Database Schema
 
-BlotterSys uses a PostgreSQL database hosted on Supabase with 11 interconnected tables that handle case management, user authentication, evidence storage, and system configuration. The schema is designed with Row Level Security (RLS) policies to ensure data privacy and role-based access control.
+BlotterSys uses a PostgreSQL database hosted on Supabase with 10 interconnected tables that handle case management, user authentication, evidence storage, and system configuration. The schema is designed with Row Level Security (RLS) policies to ensure data privacy and role-based access control.
 
 <details>
 <summary><strong>🗄️ Database Schema & ERD (Click to Expand)</strong></summary>
 
 ### Entity Relationship Diagram
-
 ```mermaid
 erDiagram
     profiles {
@@ -349,41 +344,24 @@ erDiagram
         timestamp updated_at
     }
 
-    site_visits {
-        uuid id PK
-        text ip_address
-        text user_agent
-        text page_path
-        text referrer
-        text country
-        text city
-        text device_type
-        text browser
-        text os
-        text visit_type
-        text session_id
-        uuid user_id FK
-        text visitor_email
-        text visitor_name
-        text visitor_role
-        timestamp visited_at
-    }
+    %% Relationships from profiles
+    profiles ||--o{ cases : "reported_by"
+    profiles ||--o{ case_notes : "created_by"
+    profiles ||--o{ guest_links : "created_by"
+    profiles ||--o{ evidence : "uploaded_by"
+    profiles ||--o{ audit_logs : "user_id"
+    profiles ||--o{ notifications : "user_id"
 
-    profiles ||--o{ cases : reports
-    profiles ||--o{ case_notes : creates
-    profiles ||--o{ evidence : uploads
-    profiles ||--o{ guest_links : creates
-    profiles ||--o{ audit_logs : logs
-    profiles ||--o{ notifications : receives
+    %% Relationships from cases
+    cases ||--o{ involved_parties : "case_id"
+    cases ||--o{ case_notes : "case_id"
+    cases ||--o{ hearings : "case_id"
+    cases ||--o{ guest_links : "case_id"
+    cases ||--o{ evidence : "case_id"
+    cases ||--o{ audit_logs : "case_id"
 
-    cases ||--o{ involved_parties : has
-    cases ||--o{ case_notes : has
-    cases ||--o{ hearings : schedules
-    cases ||--o{ evidence : contains
-    cases ||--o{ guest_links : generates
-    cases ||--o{ audit_logs : tracked
-
-    guest_links ||--o{ evidence : enables
+    %% Relationship from guest_links
+    guest_links ||--o{ evidence : "guest_link_id"
 ```
 
 ### Key Enumerations
@@ -534,7 +512,6 @@ BlotterSys has three main types of users, each with specific roles and permissio
 - **Unique Capabilities**:
   - System settings configuration
   - Audit log access
-  - Site visit analytics
   - User role management
 
 #### 2. **Staff** (Desk Officer/Kagawad)
@@ -565,396 +542,28 @@ BlotterSys has three main types of users, each with specific roles and permissio
 
 ### 🎯 Use Case Diagram
 
-The following diagram shows all possible interactions between actors and the system, organized by access level:
+BlotterSys has **3 user roles** with different access levels:
 
-```mermaid
-graph TB
-    subgraph Actors["ACTORS"]
-        Admin["Admin<br/>(Barangay Captain/Secretary)"]
-        Staff["Staff<br/>(Desk Officer/Kagawad)"]
-        Guest["Guest<br/>(Complainant/Respondent)"]
-    end
+- **Admin** (Barangay Captain/Secretary) - Full system control
+- **Staff** (Desk Officer/Kagawad) - Operational access only
+- **Guest** (Resident) - Limited, link-based access
 
-    subgraph SharedFeatures["SHARED FEATURES (Admin + Staff)"]
-        Login[Login/Logout]
-        FileCase[File New Case]
-        ManageCase[View/Search Cases]
-        UpdateStatus[Update Case Status]
-        AddNotes[Add Case Notes]
-        ScheduleHearing[Schedule Hearing]
-        GenerateDocs[Generate Documents]
-        ManageEvidence[Manage Evidence]
-        CreateGuestLink[Create Guest Link]
-        ViewAnalytics[View Analytics]
-        PeopleDirectory[People Directory]
-    end
-
-    subgraph AdminFeatures["ADMIN-ONLY FEATURES"]
-        SystemSettings[System Settings]
-        UserManagement[User Management]
-        AuditLogs[Audit Logs]
-        SiteAnalytics[Site Analytics]
-    end
-
-    subgraph GuestFeatures["GUEST FEATURES (Magic Link)"]
-        ViewCaseInfo[View Case Narrative]
-        ViewHearings[View Hearing Schedule]
-        UploadEvidence[Upload Evidence]
-        AcceptTerms[Accept Terms]
-    end
-
-    %% Admin connections
-    Admin --> Login
-    Admin --> FileCase
-    Admin --> ManageCase
-    Admin --> UpdateStatus
-    Admin --> AddNotes
-    Admin --> ScheduleHearing
-    Admin --> GenerateDocs
-    Admin --> ManageEvidence
-    Admin --> CreateGuestLink
-    Admin --> ViewAnalytics
-    Admin --> PeopleDirectory
-    Admin --> SystemSettings
-    Admin --> UserManagement
-    Admin --> AuditLogs
-    Admin --> SiteAnalytics
-
-    %% Staff connections
-    Staff --> Login
-    Staff --> FileCase
-    Staff --> ManageCase
-    Staff --> UpdateStatus
-    Staff --> AddNotes
-    Staff --> ScheduleHearing
-    Staff --> GenerateDocs
-    Staff --> ManageEvidence
-    Staff --> CreateGuestLink
-    Staff --> ViewAnalytics
-    Staff --> PeopleDirectory
-
-    %% Guest connections
-    Guest --> ViewCaseInfo
-    Guest --> ViewHearings
-    Guest --> UploadEvidence
-    Guest --> AcceptTerms
-
-    %% Styling
-    style Admin fill:#e3f2fd,stroke:#1976d2
-    style Staff fill:#fff3e0,stroke:#f57c00
-    style Guest fill:#f3e5f5,stroke:#7b1fa2
-    style SystemSettings fill:#ffcdd2,stroke:#d32f2f
-    style UserManagement fill:#ffcdd2,stroke:#d32f2f
-    style AuditLogs fill:#ffcdd2,stroke:#d32f2f
-    style SiteAnalytics fill:#ffcdd2,stroke:#d32f2f
-```
-
-**Legend**:
-
-- **Blue (Admin)** = Full system access
-- **Orange (Staff)** = Operational access only
-- **Purple (Guest)** = Limited, link-based access
-- **Red boxes** = Admin-only features
+**📋 [View Complete Use Case Diagram & Feature Matrix →](./docs/06_USE_CASE.md)**
 
 ---
 
-### 🔄 System Flowcharts (Role-Based Subprocesses)
-
-BlotterSys workflows are organized into **4 role-based subprocess flowcharts**. Each subprocess represents a distinct user journey through the system.
-
-| Subprocess       | Actor(s)      | Description                   |
-| ---------------- | ------------- | ----------------------------- |
-| **Subprocess 1** | All Users     | System Entry & Authentication |
-| **Subprocess 2** | Admin Only    | Administrative Functions      |
-| **Subprocess 3** | Admin + Staff | Operational Case Management   |
-| **Subprocess 4** | Guest Only    | Evidence Upload Portal        |
-
 ---
 
-#### 🔐 Subprocess 1: System Entry & Authentication
+### 🔄 System Flowcharts
 
-**Actor:** All Users (Admin, Staff, Guest)  
-**Purpose:** Entry point for all users - authentication and role-based routing
+BlotterSys workflows are documented in **4 role-based subprocess flowcharts** covering:
 
-```mermaid
-flowchart TD
-    subgraph Entry["SUBPROCESS 1: ENTRY & AUTHENTICATION"]
-        Start([User Visits System]) --> Landing[Landing Page]
-        Landing --> UserType{User Type?}
+1. **Subprocess 1:** System Entry & Authentication (All Users)
+2. **Subprocess 2:** Admin-Only Functions  
+3. **Subprocess 3:** Operational Case Management (Admin + Staff)
+4. **Subprocess 4:** Guest Evidence Upload Portal
 
-        UserType -->|Admin/Staff| LoginPage[Login Page]
-        UserType -->|Guest with Link| GuestEntry[Go to Subprocess 4]
-
-        LoginPage --> EnterCreds[Enter Email & Password]
-        EnterCreds --> ValidateCreds{Valid Credentials?}
-
-        ValidateCreds -->|No| AttemptsCheck{Attempts >= 5?}
-        AttemptsCheck -->|Yes| AccountLocked[Locked 15 min]
-        AttemptsCheck -->|No| ShowError[Show Error] --> LoginPage
-        AccountLocked --> AccessDenied([Access Denied])
-
-        ValidateCreds -->|Yes| CheckFirstLogin{First Login?}
-        CheckFirstLogin -->|Yes| ForcePassword[Force Password Change]
-        ForcePassword --> LoadProfile
-        CheckFirstLogin -->|No| LoadProfile[Load User Profile]
-
-        LoadProfile --> CheckRole{User Role?}
-        CheckRole -->|Admin| AdminDash[Admin Dashboard]
-        CheckRole -->|Staff| StaffDash[Staff Dashboard]
-
-        AdminDash --> AdminChoice{Select Path}
-        AdminChoice -->|Admin Functions| AdminSub[Go to Subprocess 2]
-        AdminChoice -->|Operations| OpsSub[Go to Subprocess 3]
-
-        StaffDash --> StaffSub[Go to Subprocess 3]
-    end
-
-    style Start fill:#4CAF50,color:#fff
-    style AccessDenied fill:#f44336,color:#fff
-    style AdminDash fill:#e3f2fd
-    style StaffDash fill:#fff3e0
-    style ValidateCreds fill:#ffd93d
-    style CheckRole fill:#ffd93d
-```
-
----
-
-#### 👑 Subprocess 2: Admin-Only Functions
-
-**Actor:** Admin Only  
-**Purpose:** System configuration, user management, and audit functions
-
-```mermaid
-flowchart TD
-    subgraph Admin["SUBPROCESS 2: ADMIN FUNCTIONS"]
-        Start([Admin Dashboard]) --> Menu{Select Function}
-
-        Menu -->|System Settings| Settings[System Settings]
-        Menu -->|User Management| Users[User Management]
-        Menu -->|Audit Logs| Audit[Audit Logs]
-        Menu -->|Site Analytics| Analytics[Site Analytics]
-        Menu -->|Return| ReturnOps[Go to Subprocess 3]
-
-        %% System Settings
-        Settings --> SettingsAction{Action?}
-        SettingsAction -->|Edit Info| EditBarangay[Edit Barangay Info<br/>Province/City/Officials]
-        SettingsAction -->|Upload Logo| UploadLogo[Upload Logos<br/>Barangay/City]
-        EditBarangay --> SaveSettings[Save Settings]
-        UploadLogo --> SaveSettings
-        SaveSettings --> SettingsOK[Settings Updated]
-
-        %% User Management
-        Users --> UserAction{Action?}
-        UserAction -->|Create| CreateUser[Create User<br/>Email/Role/Name]
-        UserAction -->|Edit| EditUser[Edit User Details]
-        UserAction -->|Delete| DeleteUser[Delete User]
-        CreateUser --> UserOK[User Saved]
-        EditUser --> UserOK
-        DeleteUser --> UserOK
-
-        %% Audit Logs
-        Audit --> AuditFilters[Filter by:<br/>Date/User/Action]
-        AuditFilters --> ViewLogs[View Audit Trail<br/>Action/User/Timestamp]
-
-        %% Site Analytics
-        Analytics --> ViewAnalytics[View Metrics:<br/>Visits/Devices/Pages]
-
-        %% End States
-        SettingsOK --> End([Return to Dashboard])
-        UserOK --> End
-        ViewLogs --> End
-        ViewAnalytics --> End
-    end
-
-    style Start fill:#e3f2fd
-    style End fill:#2196F3,color:#fff
-    style SettingsAction fill:#ffd93d
-    style UserAction fill:#ffd93d
-```
-
----
-
-#### 📂 Subprocess 3: Operational Case Management
-
-**Actor:** Admin + Staff (Shared)  
-**Purpose:** Core case management, document generation, and evidence handling
-
-```mermaid
-flowchart TD
-    subgraph Operations["SUBPROCESS 3: CASE OPERATIONS"]
-        Start([Dashboard]) --> Menu{Select Operation}
-
-        Menu -->|New Case| NewCase[File New Case]
-        Menu -->|Manage Cases| ManageCases[Search Cases]
-        Menu -->|Documents| Documents[Generate Documents]
-        Menu -->|Guest Links| GuestLinks[Create Guest Link]
-        Menu -->|Analytics| CaseAnalytics[View Analytics]
-
-        %% NEW CASE FLOW
-        NewCase --> CaseForm[Enter Case Details]
-        CaseForm --> AddParties[Add Involved Parties<br/>Name Validation Applied]
-        AddParties --> ValidateForm{Form Valid?}
-        ValidateForm -->|No| ShowErrors[Show Errors] --> CaseForm
-        ValidateForm -->|Yes| SaveCase[Save Case<br/>Auto-Generate Case#]
-        SaveCase --> CheckPriority{High Priority?<br/>Theft/Injury}
-        CheckPriority -->|Yes| NotifyAdmin[Email Admins]
-        CheckPriority -->|No| CaseCreated
-        NotifyAdmin --> CaseCreated[Case Created]
-
-        %% MANAGE CASES FLOW
-        ManageCases --> SearchCase[Search: Case#/Name/Date]
-        SearchCase --> ViewCase[View Case Details]
-        ViewCase --> CaseAction{Action?}
-        CaseAction -->|Update Status| UpdateStatus[Change Status]
-        CaseAction -->|Add Note| AddNote[Add Note]
-        CaseAction -->|Schedule Hearing| AddHearing[Add Hearing]
-        CaseAction -->|View Evidence| ViewEvidence[View Files]
-
-        UpdateStatus --> IsTerminal{Terminal Status?<br/>Settled/Closed/<br/>Dismissed/Referred}
-        IsTerminal -->|Yes| LockCase[Lock Case<br/>Deactivate Links]
-        IsTerminal -->|No| StatusOK
-        LockCase --> LogAudit[Log Audit]
-        StatusOK[Updated] --> LogAudit
-
-        AddNote --> NoteOK[Note Saved]
-        AddHearing --> HearingOK[Hearing Scheduled]
-        ViewEvidence --> ShowFiles[Display Evidence]
-
-        %% DOCUMENT GENERATION
-        Documents --> SelectDoc{Document Type?}
-        SelectDoc -->|Summons| GenSummons[Generate Summons]
-        SelectDoc -->|Notice| GenNotice[Generate Notice]
-        SelectDoc -->|Settlement| GenSettlement[Generate Settlement]
-        SelectDoc -->|CFA| GenCFA[Generate CFA]
-        GenSummons --> RenderPDF[Render PDF]
-        GenNotice --> RenderPDF
-        GenSettlement --> RenderPDF
-        GenCFA --> RenderPDF
-        RenderPDF --> DownloadPDF[Download]
-
-        %% GUEST LINKS
-        GuestLinks --> EnterRecipient[Enter Recipient:<br/>Name/Email/Phone]
-        EnterRecipient --> SetExpiry[Set Expiration<br/>24-72 hours]
-        SetExpiry --> GenerateLink[Generate Token + PIN]
-        GenerateLink --> SendEmail{Send Email?}
-        SendEmail -->|Yes| EmailSent[Email Sent]
-        SendEmail -->|Failed| EmailFail[Email Failed]
-        EmailSent --> LinkOK[Link Created]
-
-        %% ANALYTICS
-        CaseAnalytics --> SetFilters[Set Filters:<br/>Date/Status/Type]
-        SetFilters --> FetchStats[Fetch Stats]
-        FetchStats --> ShowCharts[Display Charts]
-
-        %% END STATES
-        CaseCreated --> End([Return])
-        LogAudit --> End
-        NoteOK --> End
-        HearingOK --> End
-        ShowFiles --> End
-        DownloadPDF --> End
-        LinkOK --> End
-        EmailFail --> End
-        ShowCharts --> End
-    end
-
-    style Start fill:#fff3e0
-    style End fill:#2196F3,color:#fff
-    style LockCase fill:#ff6b6b,color:#fff
-    style ValidateForm fill:#ffd93d
-    style IsTerminal fill:#ffd93d
-    style SendEmail fill:#ffd93d
-```
-
----
-
-#### 👤 Subprocess 4: Guest Evidence Upload Portal
-
-**Actor:** Guest Only (via Magic Link)  
-**Purpose:** Secure evidence upload for case-related residents
-
-```mermaid
-flowchart TD
-    subgraph Guest["SUBPROCESS 4: GUEST PORTAL"]
-        Start([Receive Email]) --> ClickLink[Click Magic Link]
-        ClickLink --> LoadPortal[Load Guest Portal]
-
-        LoadPortal --> EnterPIN[Enter 6-Digit PIN]
-        EnterPIN --> ValidatePIN{PIN Correct?}
-
-        ValidatePIN -->|No| CheckAttempts{Attempts >= 3?}
-        CheckAttempts -->|Yes| PINLocked[Locked 10 min]
-        CheckAttempts -->|No| EnterPIN
-        PINLocked --> Denied([Access Denied])
-
-        ValidatePIN -->|Yes| CheckLink{Link Valid?<br/>Active & Not Expired}
-        CheckLink -->|No| LinkExpired[Link Expired]
-        LinkExpired --> Denied
-
-        CheckLink -->|Yes| CheckTerms{Terms Already<br/>Accepted?}
-        CheckTerms -->|No| ShowTerms[Show Terms & Conditions]
-        ShowTerms --> AcceptTerms{Accept?}
-        AcceptTerms -->|No| Denied
-        AcceptTerms -->|Yes| LogTerms[Log Acceptance<br/>Timestamp + IP]
-        LogTerms --> GrantAccess
-        CheckTerms -->|Yes| GrantAccess[Access Granted]
-
-        GrantAccess --> ShowCase[Display Case Info:<br/>Narrative<br/>Hearings<br/>Evidence]
-
-        ShowCase --> GuestAction{Action?}
-        GuestAction -->|Upload| SelectFile[Select File<br/>JPEG/PNG/WebP]
-        GuestAction -->|View| ShowCase
-        GuestAction -->|Exit| ExitPortal([Exit])
-
-        SelectFile --> ValidateFile{File Valid?<br/>Type: Image<br/>Size: ≤5MB<br/>Count: ≤5}
-        ValidateFile -->|No| FileError[Invalid File]
-        FileError --> ShowCase
-        ValidateFile -->|Yes| UploadFile[Upload to Storage]
-        UploadFile --> SaveRecord[Save Evidence Record]
-        SaveRecord --> UploadOK[Upload Success]
-        UploadOK --> ShowCase
-    end
-
-    style Start fill:#fff3e0
-    style Denied fill:#f44336,color:#fff
-    style ExitPortal fill:#2196F3,color:#fff
-    style ValidatePIN fill:#ffd93d
-    style CheckLink fill:#ffd93d
-    style AcceptTerms fill:#ffd93d
-    style ValidateFile fill:#ffd93d
-```
-
----
-
-### 🔗 Subprocess Connection Map
-
-```
-┌───────────────────────────────────────────────────────────────┐
-│           SUBPROCESS 1: ENTRY & AUTHENTICATION                │
-│                    (All Users Start Here)                     │
-└──────────┬────────────────────────────────────┬───────────────┘
-           │                                    │
-           ▼                                    ▼
-┌──────────────────────┐              ┌─────────────────────────┐
-│   Role: ADMIN        │              │   Role: GUEST           │
-│   ┌──────────────┐   │              │                         │
-│   │ SUBPROCESS 2 │   │              │   ┌─────────────────┐   │
-│   │ Admin-Only   │   │              │   │ SUBPROCESS 4    │   │
-│   │ Functions    │   │              │   │ Guest Portal    │   │
-│   └──────┬───────┘   │              │   │ (Evidence Upload)│   │
-│          │           │              │   └─────────────────┘   │
-│          ▼           │              └─────────────────────────┘
-│   ┌──────────────┐   │
-│   │ SUBPROCESS 3 │   │       ┌─────────────────────────┐
-│   │ Operations   │◄──┼───────│   Role: STAFF           │
-│   │ (Shared)     │   │       │                         │
-│   └──────────────┘   │       │   ┌─────────────────┐   │
-└──────────────────────┘       │   │ SUBPROCESS 3    │   │
-                               │   │ Operations      │   │
-                               │   │ (Case Mgmt)     │   │
-                               │   └─────────────────┘   │
-                               └─────────────────────────┘
-```
+**📋 [View Complete Flowcharts Documentation →](./docs/05_FLOWCHARTS.md)**
 
 ---
 
@@ -1305,7 +914,7 @@ sequenceDiagram
 | FR-6.3 | System shall display monthly case trends             | Medium   |
 | FR-6.4 | System shall allow filtering analytics by date range | Medium   |
 | FR-6.5 | System shall show comparison with previous period    | Low      |
-| FR-6.6 | System shall track site visit analytics              | Low      |
+
 
 ### FR-7: System Configuration
 

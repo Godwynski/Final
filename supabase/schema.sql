@@ -217,26 +217,7 @@ CREATE TABLE IF NOT EXISTS hearings (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Site Visits Table (with tracking extensions)
-CREATE TABLE IF NOT EXISTS site_visits (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  ip_address TEXT,
-  user_agent TEXT,
-  page_path TEXT NOT NULL,
-  referrer TEXT,
-  country TEXT,
-  city TEXT,
-  device_type TEXT,
-  browser TEXT,
-  os TEXT,
-  visit_type TEXT DEFAULT 'page_view' CHECK (visit_type IN ('page_view', 'session', 'unique_daily')),
-  session_id TEXT,
-  user_id UUID REFERENCES auth.users(id),
-  visitor_email TEXT,
-  visitor_name TEXT,
-  visitor_role TEXT DEFAULT 'anonymous',
-  visited_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+
 
 
 -- ==========================================
@@ -253,7 +234,7 @@ alter table guest_links enable row level security;
 alter table notifications enable row level security;
 alter table barangay_settings enable row level security;
 alter table hearings enable row level security;
-alter table site_visits enable row level security;
+
 
 -- Audit Logs Policies
 DROP POLICY IF EXISTS "Allow insert for authenticated users" ON audit_logs;
@@ -348,21 +329,7 @@ DROP POLICY IF EXISTS "Enable delete access for authenticated users" ON hearings
 CREATE POLICY "Enable delete access for authenticated users" ON hearings
     FOR DELETE TO authenticated USING (true);
 
--- Site Visits Policies
-DROP POLICY IF EXISTS "Admins can view site visits" ON site_visits;
-CREATE POLICY "Admins can view site visits" ON site_visits
-    FOR SELECT TO authenticated
-    USING (EXISTS (SELECT 1 FROM profiles WHERE id = (SELECT auth.uid()) AND role = 'admin'));
 
-DROP POLICY IF EXISTS "Anyone can insert site visits" ON site_visits;
-CREATE POLICY "Anyone can insert site visits" ON site_visits
-    FOR INSERT TO anon, authenticated
-    WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Admins can delete site visits" ON site_visits;
-CREATE POLICY "Admins can delete site visits" ON site_visits
-    FOR DELETE TO authenticated
-    USING (EXISTS (SELECT 1 FROM profiles WHERE id = (SELECT auth.uid()) AND role = 'admin'));
 
 
 -- ==========================================
@@ -422,11 +389,71 @@ CREATE INDEX IF NOT EXISTS idx_guest_links_case_id ON guest_links(case_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
 
--- Site Visits
-CREATE INDEX IF NOT EXISTS idx_site_visits_visited_at ON site_visits(visited_at DESC);
-CREATE INDEX IF NOT EXISTS idx_site_visits_page_path ON site_visits(page_path);
-CREATE INDEX IF NOT EXISTS idx_site_visits_ip_address ON site_visits(ip_address);
-CREATE INDEX IF NOT EXISTS idx_site_visits_user_id ON site_visits(user_id);
+
+
+-- Performance optimization indexes (added for query speed)
+-- Optimize hearing date range queries (used in calendar)
+CREATE INDEX IF NOT EXISTS idx_hearings_date_status ON hearings(hearing_date, status) 
+WHERE status IN ('Scheduled', 'Rescheduled');
+
+-- Optimize stale case queries (New/Under Investigation by updated_at)
+CREATE INDEX IF NOT EXISTS idx_cases_status_updated ON cases(status, updated_at DESC)
+WHERE status IN ('New', 'Under Investigation');
+
+-- NEW: Additional composite indexes for common query patterns
+-- Composite index for filtering by status and type together
+CREATE INDEX IF NOT EXISTS idx_cases_status_type ON cases(status, incident_type);
+
+-- Composite index for date range queries with type
+CREATE INDEX IF NOT EXISTS idx_cases_type_created ON cases(incident_type, created_at DESC);
+
+-- Composite index for evidence ordering by case
+CREATE INDEX IF NOT EXISTS idx_evidence_case_created ON evidence(case_id, created_at DESC);
+
+-- Composite index for notes ordering by case
+CREATE INDEX IF NOT EXISTS idx_case_notes_case_created ON case_notes(case_id, created_at DESC);
+
+-- Composite index for audit log queries by user and time
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_created ON audit_logs(user_id, created_at DESC);
+
+-- Composite index for guest links by case and active status
+CREATE INDEX IF NOT EXISTS idx_guest_links_case_active ON guest_links(case_id, is_active, expires_at);
+
+-- Composite index for unread notifications
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read, created_at DESC);
+
+-- NEW: Materialized View for Dashboard Statistics
+-- This pre-aggregates common dashboard queries for faster performance
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_dashboard_stats AS
+SELECT 
+  status,
+  incident_type,
+  DATE_TRUNC('day', created_at) as day,
+  DATE_TRUNC('month', created_at) as month,
+  COUNT(*) as case_count,
+  COUNT(CASE WHEN created_at >= NOW() - INTERVAL '7 days' THEN 1 END) as weekly_count,
+  COUNT(CASE WHEN created_at >= NOW() - INTERVAL '30 days' THEN 1 END) as monthly_count
+FROM cases
+GROUP BY status, incident_type, DATE_TRUNC('day', created_at), DATE_TRUNC('month', created_at);
+
+-- Create indexes on materialized view for fast lookups
+CREATE INDEX IF NOT EXISTS idx_mv_dashboard_stats_day ON mv_dashboard_stats(day DESC);
+CREATE INDEX IF NOT EXISTS idx_mv_dashboard_stats_month ON mv_dashboard_stats(month DESC);
+CREATE INDEX IF NOT EXISTS idx_mv_dashboard_stats_status ON mv_dashboard_stats(status);
+CREATE INDEX IF NOT EXISTS idx_mv_dashboard_stats_type ON mv_dashboard_stats(incident_type);
+
+-- Function to refresh materialized view (can be called manually or via cron)
+CREATE OR REPLACE FUNCTION refresh_dashboard_stats()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  REFRESH MATERIALIZED VIEW CONCURRENTLY mv_dashboard_stats;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION refresh_dashboard_stats TO authenticated;
 
 
 -- ==========================================
@@ -462,10 +489,11 @@ DECLARE
 BEGIN
   SELECT
     count(*),
-    -- Active: New, Under Investigation, plus Hearing Scheduled
-    count(*) FILTER (WHERE status IN ('New', 'Under Investigation', 'Hearing Scheduled')),
+    -- Active: Under Investigation, plus Hearing Scheduled (EXCLUDE 'New' to avoid double-counting with new_count)
+    count(*) FILTER (WHERE status IN ('Under Investigation', 'Hearing Scheduled')),
     -- Resolved: Settled, Closed, Dismissed, plus Referred
     count(*) FILTER (WHERE status IN ('Settled', 'Closed', 'Dismissed', 'Referred')),
+    -- New: Only New status
     count(*) FILTER (WHERE status = 'New')
   INTO
     total_count,
