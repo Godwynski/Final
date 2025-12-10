@@ -8,7 +8,7 @@ import { mailersend } from '@/utils/mailersend'
 import { EmailParams, Sender, Recipient } from "mailersend";
 import { addInvolvedPartySchema, addCaseNoteSchema, updateCaseDetailsSchema, updateActionTakenSchema, guestLinkDurationSchema } from '@/utils/validation'
 import { generateSecurePIN, canModifyResource } from '@/utils/auth'
-import { CONFIG } from '@/constants/config'
+import { CONFIG, SIGNED_URL_EXPIRY } from '@/constants/config'
 import { createAdminClient } from '@/utils/supabase/admin'
 
 import { ResolutionDetails } from '@/types'
