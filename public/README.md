@@ -222,13 +222,12 @@ An internal micro-service abstraction that launches a headless Chromium instance
 
 ## 🗄️ Database Schema
 
-BlotterSys uses a PostgreSQL database hosted on Supabase with 8 interconnected tables that handle case management, user authentication, evidence storage, and system configuration. The schema is designed with Row Level Security (RLS) policies to ensure data privacy and role-based access control.
+BlotterSys uses a PostgreSQL database hosted on Supabase with 10 interconnected tables that handle case management, user authentication, evidence storage, and system configuration. The schema is designed with Row Level Security (RLS) policies to ensure data privacy and role-based access control.
 
 <details>
 <summary><strong>🗄️ Database Schema & ERD (Click to Expand)</strong></summary>
 
 ### Entity Relationship Diagram
-
 ```mermaid
 erDiagram
     profiles {
@@ -323,6 +322,15 @@ erDiagram
         timestamp created_at
     }
 
+    notifications {
+        uuid id PK
+        uuid user_id FK
+        text title
+        text message
+        text link
+        boolean is_read
+        timestamp created_at
+    }
 
     barangay_settings {
         uuid id PK
@@ -336,7 +344,24 @@ erDiagram
         timestamp updated_at
     }
 
-    guest_links ||--o{ evidence : enables
+    %% Relationships from profiles
+    profiles ||--o{ cases : "reported_by"
+    profiles ||--o{ case_notes : "created_by"
+    profiles ||--o{ guest_links : "created_by"
+    profiles ||--o{ evidence : "uploaded_by"
+    profiles ||--o{ audit_logs : "user_id"
+    profiles ||--o{ notifications : "user_id"
+
+    %% Relationships from cases
+    cases ||--o{ involved_parties : "case_id"
+    cases ||--o{ case_notes : "case_id"
+    cases ||--o{ hearings : "case_id"
+    cases ||--o{ guest_links : "case_id"
+    cases ||--o{ evidence : "case_id"
+    cases ||--o{ audit_logs : "case_id"
+
+    %% Relationship from guest_links
+    guest_links ||--o{ evidence : "guest_link_id"
 ```
 
 ### Key Enumerations

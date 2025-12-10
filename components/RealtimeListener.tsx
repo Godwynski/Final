@@ -10,7 +10,7 @@ const supabase = createClient();
 
 export default function RealtimeListener() {
   const router = useRouter();
-  const refreshTimeoutRef = useRef<NodeJS.Timeout>();
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const channel = supabase
