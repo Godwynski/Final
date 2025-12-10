@@ -34,7 +34,6 @@ graph TB
         GenerateDocs[Generate Documents]
         ManageEvidence[Manage Evidence]
         CreateGuestLink[Create Guest Link]
-        ViewAnalytics[View Analytics]
         PeopleDirectory[People Directory]
     end
 
@@ -61,7 +60,7 @@ graph TB
     Admin --> GenerateDocs
     Admin --> ManageEvidence
     Admin --> CreateGuestLink
-    Admin --> ViewAnalytics
+
     Admin --> PeopleDirectory
     Admin --> SystemSettings
     Admin --> UserManagement
@@ -78,7 +77,7 @@ graph TB
     Staff --> GenerateDocs
     Staff --> ManageEvidence
     Staff --> CreateGuestLink
-    Staff --> ViewAnalytics
+
     Staff --> PeopleDirectory
 
     %% Guest connections
@@ -94,7 +93,6 @@ graph TB
     style SystemSettings fill:#ffcdd2,stroke:#d32f2f
     style UserManagement fill:#ffcdd2,stroke:#d32f2f
     style AuditLogs fill:#ffcdd2,stroke:#d32f2f
-    style SiteAnalytics fill:#ffcdd2,stroke:#d32f2f
 ```
 
 ---
@@ -133,8 +131,7 @@ graph TB
 | Create Guest Link | ✅ | ✅ | ❌ |
 | View Case Narrative | ✅ | ✅ | ✅ |
 | Accept Terms | ❌ | ❌ | ✅ |
-| **Analytics** |
-| View Analytics | ✅ | ✅ | ❌ |
+| **Directory** |
 | People Directory | ✅ | ✅ | ❌ |
 | **System Administration** |
 | System Settings | ✅ | ❌ | ❌ |
