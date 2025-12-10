@@ -34,6 +34,12 @@ Detailed role-based subprocess flowcharts showing user journeys.
 
 - **Go here for:** Authentication Flow, Admin Functions, Case Operations, and Guest Portal workflows.
 
+### [06. Use Case Diagram](./06_USE_CASE.md)
+
+Visual representation of user roles and their system interactions.
+
+- **Go here for:** Actor definitions, Feature access matrix, and User journey summaries.
+
 ---
 
 > 💡 **Tip:** Start with the **README** to get the app running, then consult **Scope and Limitations** for feature details, and **Technical Background** for architectural insights.

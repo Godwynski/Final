@@ -542,95 +542,13 @@ BlotterSys has three main types of users, each with specific roles and permissio
 
 ### 🎯 Use Case Diagram
 
-The following diagram shows all possible interactions between actors and the system, organized by access level:
+BlotterSys has **3 user roles** with different access levels:
 
-```mermaid
-graph TB
-    subgraph Actors["ACTORS"]
-        Admin["Admin<br/>(Barangay Captain/Secretary)"]
-        Staff["Staff<br/>(Desk Officer/Kagawad)"]
-        Guest["Guest<br/>(Complainant/Respondent)"]
-    end
+- **Admin** (Barangay Captain/Secretary) - Full system control
+- **Staff** (Desk Officer/Kagawad) - Operational access only
+- **Guest** (Resident) - Limited, link-based access
 
-    subgraph SharedFeatures["SHARED FEATURES (Admin + Staff)"]
-        Login[Login/Logout]
-        FileCase[File New Case]
-        ManageCase[View/Search Cases]
-        UpdateStatus[Update Case Status]
-        AddNotes[Add Case Notes]
-        ScheduleHearing[Schedule Hearing]
-        GenerateDocs[Generate Documents]
-        ManageEvidence[Manage Evidence]
-        CreateGuestLink[Create Guest Link]
-        ViewAnalytics[View Analytics]
-        PeopleDirectory[People Directory]
-    end
-
-    subgraph AdminFeatures["ADMIN-ONLY FEATURES"]
-        SystemSettings[System Settings]
-        UserManagement[User Management]
-        AuditLogs[Audit Logs]
-    end
-
-    subgraph GuestFeatures["GUEST FEATURES (Magic Link)"]
-        ViewCaseInfo[View Case Narrative]
-        ViewHearings[View Hearing Schedule]
-        UploadEvidence[Upload Evidence]
-        AcceptTerms[Accept Terms]
-    end
-
-    %% Admin connections
-    Admin --> Login
-    Admin --> FileCase
-    Admin --> ManageCase
-    Admin --> UpdateStatus
-    Admin --> AddNotes
-    Admin --> ScheduleHearing
-    Admin --> GenerateDocs
-    Admin --> ManageEvidence
-    Admin --> CreateGuestLink
-    Admin --> ViewAnalytics
-    Admin --> PeopleDirectory
-    Admin --> SystemSettings
-    Admin --> UserManagement
-    Admin --> AuditLogs
-
-
-    %% Staff connections
-    Staff --> Login
-    Staff --> FileCase
-    Staff --> ManageCase
-    Staff --> UpdateStatus
-    Staff --> AddNotes
-    Staff --> ScheduleHearing
-    Staff --> GenerateDocs
-    Staff --> ManageEvidence
-    Staff --> CreateGuestLink
-    Staff --> ViewAnalytics
-    Staff --> PeopleDirectory
-
-    %% Guest connections
-    Guest --> ViewCaseInfo
-    Guest --> ViewHearings
-    Guest --> UploadEvidence
-    Guest --> AcceptTerms
-
-    %% Styling
-    style Admin fill:#e3f2fd,stroke:#1976d2
-    style Staff fill:#fff3e0,stroke:#f57c00
-    style Guest fill:#f3e5f5,stroke:#7b1fa2
-    style SystemSettings fill:#ffcdd2,stroke:#d32f2f
-    style UserManagement fill:#ffcdd2,stroke:#d32f2f
-    style AuditLogs fill:#ffcdd2,stroke:#d32f2f
-    style SiteAnalytics fill:#ffcdd2,stroke:#d32f2f
-```
-
-**Legend**:
-
-- **Blue (Admin)** = Full system access
-- **Orange (Staff)** = Operational access only
-- **Purple (Guest)** = Limited, link-based access
-- **Red boxes** = Admin-only features
+**📋 [View Complete Use Case Diagram & Feature Matrix →](./docs/06_USE_CASE.md)**
 
 ---
 

@@ -263,33 +263,65 @@ flowchart TD
 
 ## 🔗 Subprocess Connection Map
 
+```mermaid
+flowchart TB
+    %% Entry point
+    Start([All Users Start Here])
+    
+    %% Subprocess 1
+    SP1["🔐 SUBPROCESS 1<br/>Entry & Authentication<br/>(All Users)"]
+    
+    %% Role decision
+    RoleDecision{User Role?}
+    
+    %% Admin path
+    AdminRole["👑 Admin Role"]
+    SP2["⚙️ SUBPROCESS 2<br/>Admin Functions<br/>(System Config, Users, Audit)"]
+    
+    %% Staff path
+    StaffRole["👤 Staff Role"]
+    
+    %% Shared operations
+    SP3["📂 SUBPROCESS 3<br/>Case Operations<br/>(Admin + Staff Shared)"]
+    
+    %% Guest path
+    GuestRole["👥 Guest Role"]
+    SP4["🔗 SUBPROCESS 4<br/>Guest Portal<br/>(Evidence Upload)"]
+    
+    %% Connections
+    Start --> SP1
+    SP1 --> RoleDecision
+    
+    RoleDecision -->|Admin| AdminRole
+    RoleDecision -->|Staff| StaffRole
+    RoleDecision -->|Guest| GuestRole
+    
+    AdminRole --> SP2
+    SP2 -->|Access Operations| SP3
+    
+    StaffRole --> SP3
+    
+    GuestRole --> SP4
+    
+    %% Styling
+    style Start fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style SP1 fill:#2196F3,stroke:#1565C0,color:#fff
+    style SP2 fill:#f44336,stroke:#c62828,color:#fff
+    style SP3 fill:#FF9800,stroke:#E65100,color:#fff
+    style SP4 fill:#9C27B0,stroke:#6A1B9A,color:#fff
+    style RoleDecision fill:#FDD835,stroke:#F9A825
+    style AdminRole fill:#ffcdd2,stroke:#d32f2f
+    style StaffRole fill:#fff3e0,stroke:#f57c00
+    style GuestRole fill:#f3e5f5,stroke:#7b1fa2
 ```
-┌───────────────────────────────────────────────────────────────┐
-│           SUBPROCESS 1: ENTRY & AUTHENTICATION                │
-│                    (All Users Start Here)                     │
-└──────────┬────────────────────────────────────┬───────────────┘
-           │                                    │
-           ▼                                    ▼
-┌──────────────────────┐              ┌─────────────────────────┐
-│   Role: ADMIN        │              │   Role: GUEST           │
-│   ┌──────────────┐   │              │                         │
-│   │ SUBPROCESS 2 │   │              │   ┌─────────────────┐   │
-│   │ Admin-Only   │   │              │   │ SUBPROCESS 4    │   │
-│   │ Functions    │   │              │   │ Guest Portal    │   │
-│   └──────┬───────┘   │              │   │ (Evidence Upload)│   │
-│          │           │              │   └─────────────────┘   │
-│          ▼           │              └─────────────────────────┘
-│   ┌──────────────┐   │
-│   │ SUBPROCESS 3 │   │       ┌─────────────────────────┐
-│   │ Operations   │◄──┼───────│   Role: STAFF           │
-│   │ (Shared)     │   │       │                         │
-│   └──────────────┘   │       │   ┌─────────────────┐   │
-└──────────────────────┘       │   │ SUBPROCESS 3    │   │
-                               │   │ Operations      │   │
-                               │   │ (Case Mgmt)     │   │
-                               │   └─────────────────┘   │
-                               └─────────────────────────┘
-```
+
+**Flow Description:**
+
+1. **All users** start at **Subprocess 1** (Entry & Authentication)
+2. After authentication, users route based on role:
+   - **Admin** → Can access **Subprocess 2** (admin functions) AND **Subprocess 3** (operations)
+   - **Staff** → Direct to **Subprocess 3** (operations only)
+   - **Guest** → Direct to **Subprocess 4** (evidence upload portal)
 
 ---
 
