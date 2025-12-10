@@ -726,15 +726,14 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
 
     if (!file) return { error: 'No file uploaded' }
 
-    // Check photo count limit for staff/admin
-    const { count: photoCount } = await supabaseAdmin
+    // Check file count limit for staff/admin
+    const { count: fileCount } = await supabaseAdmin
         .from('evidence')
         .select('id', { count: 'exact', head: true })
         .eq('case_id', caseId)
-        .in('file_type', CONFIG.FILE_UPLOAD.ALLOWED_IMAGE_TYPES)
 
-    if (photoCount && photoCount >= CONFIG.FILE_UPLOAD.STAFF_MAX_PHOTOS_PER_CASE) {
-        return { error: `Upload limit reached. Maximum ${CONFIG.FILE_UPLOAD.STAFF_MAX_PHOTOS_PER_CASE} photos allowed per case.` }
+    if (fileCount && fileCount >= CONFIG.FILE_UPLOAD.STAFF_MAX_FILES_PER_CASE) {
+        return { error: `Upload limit reached. Maximum ${CONFIG.FILE_UPLOAD.STAFF_MAX_FILES_PER_CASE} files allowed per case.` }
     }
 
     // Validate file size

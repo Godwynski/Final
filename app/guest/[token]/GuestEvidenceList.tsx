@@ -51,9 +51,20 @@ export default function GuestEvidenceList({ evidence, token }: { evidence: any[]
                                     </div>
                                 </div>
                             ) : (
-                                <div className="flex items-center justify-center h-full">
-                                    <span className="text-gray-500 dark:text-gray-400">{item.file_name}</span>
-                                </div>
+                                <a
+                                    href={item.file_path}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex flex-col items-center justify-center h-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                >
+                                    <svg className="w-12 h-12 text-red-500 mb-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300 uppercase">
+                                        {item.file_type.split('/')[1]?.replace('vnd.openxmlformats-officedocument.wordprocessingml.document', 'docx') || 'Document'}
+                                    </span>
+                                    <span className="text-xs text-blue-600 dark:text-blue-400 mt-1">Click to open</span>
+                                </a>
                             )}
                         </div>
                         <div className="p-5 flex-1 flex flex-col">

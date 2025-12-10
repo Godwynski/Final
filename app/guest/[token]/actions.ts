@@ -52,15 +52,14 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
         return { error: 'No file uploaded.' }
     }
 
-    // Check photo count limit for THIS LINK (per-link limit)
-    const { count: linkPhotoCount } = await supabaseAdmin
+    // Check file count limit for THIS LINK (per-link limit)
+    const { count: linkFileCount } = await supabaseAdmin
         .from('evidence')
         .select('id', { count: 'exact', head: true })
         .eq('guest_link_id', links.id)
-        .in('file_type', CONFIG.FILE_UPLOAD.ALLOWED_IMAGE_TYPES)
 
-    if (linkPhotoCount !== null && linkPhotoCount >= CONFIG.GUEST_LINK.MAX_UPLOADS_PER_LINK) {
-        return { error: `Upload limit reached for this link. Maximum ${CONFIG.GUEST_LINK.MAX_UPLOADS_PER_LINK} photos per link.` }
+    if (linkFileCount !== null && linkFileCount >= CONFIG.GUEST_LINK.MAX_UPLOADS_PER_LINK) {
+        return { error: `Upload limit reached for this link. Maximum ${CONFIG.GUEST_LINK.MAX_UPLOADS_PER_LINK} files per link.` }
     }
 
     // Validate file size (Guest limit: 5MB)
