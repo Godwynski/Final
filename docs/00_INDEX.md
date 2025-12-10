@@ -22,6 +22,12 @@ A detailed breakdown of the technology stack and architecture.
 
 - **Go here for:** Frontend/Backend Tech, Database Schema, Security Measures, and Deployment info.
 
+### [04. Data Flow](./04_DATA_FLOW.md)
+
+A visual representation of how data moves through the system.
+
+- **Go here for:** System Data Flow, Entity Interactions, and Process Descriptions.
+
 ---
 
 > 💡 **Tip:** Start with the **README** to get the app running, then consult **Scope and Limitations** for feature details, and **Technical Background** for architectural insights.
