@@ -41,6 +41,64 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
         }
     }
 
+    // Compress image before upload
+    const compressImage = async (file: File): Promise<File> => {
+        return new Promise((resolve) => {
+            const reader = new FileReader()
+            reader.onload = (e) => {
+                const img = new Image()
+                img.onload = () => {
+                    const canvas = document.createElement('canvas')
+                    const ctx = canvas.getContext('2d')!
+                    
+                    // Max dimensions
+                    const MAX_WIDTH = 1920
+                    const MAX_HEIGHT = 1920
+                    
+                    let width = img.width
+                    let height = img.height
+                    
+                    // Calculate new dimensions
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height = (height * MAX_WIDTH) / width
+                            width = MAX_WIDTH
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width = (width * MAX_HEIGHT) / height
+                            height = MAX_HEIGHT
+                        }
+                    }
+                    
+                    canvas.width = width
+                    canvas.height = height
+                    
+                    // Draw and compress
+                    ctx.drawImage(img, 0, 0, width, height)
+                    
+                    canvas.toBlob(
+                        (blob) => {
+                            if (blob) {
+                                const compressedFile = new File([blob], file.name, {
+                                    type: 'image/jpeg',
+                                    lastModified: Date.now(),
+                                })
+                                resolve(compressedFile)
+                            } else {
+                                resolve(file) // Fallback to original
+                            }
+                        },
+                        'image/jpeg',
+                        0.8 // 80% quality
+                    )
+                }
+                img.src = e.target?.result as string
+            }
+            reader.readAsDataURL(file)
+        })
+    }
+
     async function handleSubmit(formData: FormData) {
         if (!previewUrl && !formData.get('file')) {
             setError('Please select a file first.')
@@ -48,17 +106,26 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
         }
 
         setIsLoading(true)
-        setMessage('')
+        setMessage('Compressing and uploading...')
         setError('')
 
-        // Add visibility flag to form data
-        formData.set('is_visible', isVisible.toString())
-
         try {
+            // Compress the image before upload
+            const file = formData.get('file') as File
+            if (file && file.type.startsWith('image/')) {
+                const compressedFile = await compressImage(file)
+                formData.set('file', compressedFile)
+                setMessage(`Uploading (${(compressedFile.size / 1024 / 1024).toFixed(1)}MB)...`)
+            }
+
+            // Add visibility flag to form data
+            formData.set('is_visible', isVisible.toString())
+
             const res = await uploadGuestEvidence(token, formData)
 
             if (res?.error) {
                 setError(res.error)
+                setMessage('')
             } else if (res?.success) {
                 setMessage('Evidence uploaded successfully!')
                 // Reset form
@@ -69,6 +136,7 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
             }
         } catch {
             setError('An unexpected error occurred.')
+            setMessage('')
         } finally {
             setIsLoading(false)
         }

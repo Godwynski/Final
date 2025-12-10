@@ -428,6 +428,15 @@ CREATE INDEX IF NOT EXISTS idx_site_visits_page_path ON site_visits(page_path);
 CREATE INDEX IF NOT EXISTS idx_site_visits_ip_address ON site_visits(ip_address);
 CREATE INDEX IF NOT EXISTS idx_site_visits_user_id ON site_visits(user_id);
 
+-- Performance optimization indexes (added for query speed)
+-- Optimize hearing date range queries (used in calendar)
+CREATE INDEX IF NOT EXISTS idx_hearings_date_status ON hearings(hearing_date, status) 
+WHERE status IN ('Scheduled', 'Rescheduled');
+
+-- Optimize stale case queries (New/Under Investigation by updated_at)
+CREATE INDEX IF NOT EXISTS idx_cases_status_updated ON cases(status, updated_at DESC)
+WHERE status IN ('New', 'Under Investigation');
+
 
 -- ==========================================
 -- 7. FUNCTIONS & RPCs
@@ -462,10 +471,11 @@ DECLARE
 BEGIN
   SELECT
     count(*),
-    -- Active: New, Under Investigation, plus Hearing Scheduled
-    count(*) FILTER (WHERE status IN ('New', 'Under Investigation', 'Hearing Scheduled')),
+    -- Active: Under Investigation, plus Hearing Scheduled (EXCLUDE 'New' to avoid double-counting with new_count)
+    count(*) FILTER (WHERE status IN ('Under Investigation', 'Hearing Scheduled')),
     -- Resolved: Settled, Closed, Dismissed, plus Referred
     count(*) FILTER (WHERE status IN ('Settled', 'Closed', 'Dismissed', 'Referred')),
+    -- New: Only New status
     count(*) FILTER (WHERE status = 'New')
   INTO
     total_count,

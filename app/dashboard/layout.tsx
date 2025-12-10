@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import DashboardShell from '@/components/DashboardShell'
 import { getCachedProfile, getCachedNewCasesCount } from './actions'
+import RealtimeNotifications from '@/components/RealtimeNotifications'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient()
@@ -23,6 +24,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
     return (
         <DashboardShell userProfile={userProfile}>
+            <RealtimeNotifications />
             {children}
         </DashboardShell>
     )

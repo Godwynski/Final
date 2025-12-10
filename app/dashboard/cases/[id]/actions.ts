@@ -551,7 +551,16 @@ export async function generateCaseGuestLink(caseId: string, formData: FormData) 
         message += emailSent ? ` Email sent to ${recipientEmail}.` : ` (Email sending failed, please send manually.)`
     }
 
-    return { success: true, pin, token, message }
+    // Check if we're at limit after creating this link
+    const isAtLimit = (activeLinksCount || 0) + 1 >= CONFIG.GUEST_LINK.MAX_LINKS_PER_CASE
+
+    return { 
+        success: true, 
+        pin, 
+        token, 
+        message,
+        closeModal: isAtLimit // Auto-close modal if 5-link limit reached
+    }
 }
 
 export async function toggleGuestLinkStatus(linkId: string, currentStatus: boolean, caseId: string) {
@@ -759,7 +768,7 @@ export async function uploadEvidence(caseId: string, formData: FormData) {
     const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin
         .storage
         .from('evidence')
-        .createSignedUrl(fileName, 31536000) // 1 year = 31536000 seconds
+        .createSignedUrl(fileName, SIGNED_URL_EXPIRY.ONE_YEAR)
 
     if (signedUrlError || !signedUrlData) {
         return { error: `Failed to generate access URL: ${signedUrlError?.message}` }
@@ -831,7 +840,7 @@ export async function getEvidenceSignedUrl(evidenceId: string) {
         const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin
             .storage
             .from('evidence')
-            .createSignedUrl(storagePath, 3600) // 1 hour = 3600 seconds
+            .createSignedUrl(storagePath, SIGNED_URL_EXPIRY.ONE_HOUR)
 
         if (signedUrlError || !signedUrlData) {
             return { error: 'Failed to generate signed URL' }

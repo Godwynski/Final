@@ -28,6 +28,9 @@ export const metadata: Metadata = {
   description: "Manage and track all reported blotter cases",
 };
 
+// Cache page for 30 seconds for faster navigation
+export const revalidate = 30;
+
 export default async function CasesPage(props: {
   searchParams: Promise<{
     query?: string;

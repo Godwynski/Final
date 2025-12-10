@@ -526,7 +526,7 @@ export default function CaseDetailsClient({
 
                                 {/* Generate Link Modal */}
                                 {showLinkModal && (
-                                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowLinkModal(false)}>
+                                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                                         <div
                                             className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
                                             onClick={(e) => e.stopPropagation()}
@@ -559,8 +559,13 @@ export default function CaseDetailsClient({
                                                     if (result?.error) {
                                                         showAlert('Error', result.error, 'error')
                                                     } else if (result?.success) {
+                                                        // Always close modal after successful generation
                                                         setShowLinkModal(false)
-                                                        showAlert('Link Generated', result.message, 'success')
+                                                        // Add limit warning if applicable
+                                                        const message = result.closeModal 
+                                                            ? result.message + ' (Maximum limit of 5 links reached)'
+                                                            : result.message
+                                                        showAlert('Link Generated', message, 'success')
                                                     }
                                                 }}
                                                 className="p-6 space-y-4"

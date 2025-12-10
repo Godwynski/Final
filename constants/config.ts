@@ -3,6 +3,18 @@
  * Centralizes all magic numbers and configuration values
  */
 
+// Signed URL Expiry Presets (in seconds)
+export const SIGNED_URL_EXPIRY = {
+    ONE_HOUR: 3600,
+    ONE_DAY: 86400,
+    ONE_WEEK: 604800,
+    ONE_MONTH: 2592000,
+    THREE_MONTHS: 7776000,
+    SIX_MONTHS: 15552000,
+    ONE_YEAR: 31536000,
+    FIVE_YEARS: 157680000,
+} as const
+
 export const CONFIG = {
     FILE_UPLOAD: {
         MAX_SIZE: 10 * 1024 * 1024, // 10MB in bytes

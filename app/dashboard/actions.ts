@@ -304,58 +304,66 @@ export async function getPersonHistory(name: string) {
     }))
 }
 
-export async function getActionItems() {
-    const supabase = await createClient()
-    const now = new Date()
-    const staleDate = new Date()
-    staleDate.setDate(now.getDate() - 15)
+export const getActionItems = unstable_cache(
+    async () => {
+        const supabase = createAdminClient() // Use admin client to avoid cookies() in cache
+        const now = new Date()
+        const staleDate = new Date()
+        staleDate.setDate(now.getDate() - 15)
 
-    const next7Days = new Date()
-    next7Days.setDate(now.getDate() + 7)
+        const next7Days = new Date()
+        next7Days.setDate(now.getDate() + 7)
 
-    const [staleCasesResult, hearingsResult] = await Promise.all([
-        // 1. Stale Cases (New/Under Investigation > 15 days)
-        supabase
-            .from('cases')
-            .select('id, case_number, title, status, updated_at')
-            .in('status', ['New', 'Under Investigation'])
-            .lt('updated_at', staleDate.toISOString())
-            .limit(5),
+        const [staleCasesResult, hearingsResult] = await Promise.all([
+            // 1. Stale Cases (New/Under Investigation > 15 days)
+            supabase
+                .from('cases')
+                .select('id, case_number, title, status, updated_at')
+                .in('status', ['New', 'Under Investigation'])
+                .lt('updated_at', staleDate.toISOString())
+                .limit(5),
 
-        // 2. Upcoming Hearings (Next 7 days)
-        supabase
+            // 2. Upcoming Hearings (Next 7 days)
+            supabase
+                .from('hearings')
+                .select('*, cases(id, case_number, title)')
+                .gte('hearing_date', now.toISOString())
+                .lte('hearing_date', next7Days.toISOString())
+                .order('hearing_date', { ascending: true })
+                .limit(5)
+        ])
+
+        return {
+            staleCases: staleCasesResult.data || [],
+            upcomingHearings: hearingsResult.data || []
+        }
+    },
+    ['action-items'],
+    { revalidate: 120, tags: ['dashboard', 'cases', 'hearings'] }
+)
+
+export const getMonthlyHearings = unstable_cache(
+    async (year: number, month: number) => {
+        const supabase = createAdminClient() // Use admin client to avoid cookies() in cache
+
+        // Start of month
+        const startDate = new Date(year, month, 1)
+        // End of month
+        const endDate = new Date(year, month + 1, 0)
+        endDate.setHours(23, 59, 59, 999)
+
+        const { data: hearings } = await supabase
             .from('hearings')
-            .select('*, cases(id, case_number, title)')
-            .gte('hearing_date', now.toISOString())
-            .lte('hearing_date', next7Days.toISOString())
+            .select('*, cases(id, case_number, title, status, incident_date)')
+            .gte('hearing_date', startDate.toISOString())
+            .lte('hearing_date', endDate.toISOString())
             .order('hearing_date', { ascending: true })
-            .limit(5)
-    ])
 
-    return {
-        staleCases: staleCasesResult.data || [],
-        upcomingHearings: hearingsResult.data || []
-    }
-}
-
-export async function getMonthlyHearings(year: number, month: number) {
-    const supabase = await createClient()
-
-    // Start of month
-    const startDate = new Date(year, month, 1)
-    // End of month
-    const endDate = new Date(year, month + 1, 0)
-    endDate.setHours(23, 59, 59, 999)
-
-    const { data: hearings } = await supabase
-        .from('hearings')
-        .select('*, cases(id, case_number, title, status, incident_date)')
-        .gte('hearing_date', startDate.toISOString())
-        .lte('hearing_date', endDate.toISOString())
-        .order('hearing_date', { ascending: true })
-
-    return hearings || []
-}
+        return hearings || []
+    },
+    ['monthly-hearings'],
+    { revalidate: 300, tags: ['hearings'] }
+)
 
 export const getCachedProfile = unstable_cache(
     async (userId: string) => {

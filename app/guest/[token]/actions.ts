@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { RateLimiterMemory } from 'rate-limiter-flexible'
-import { CONFIG } from '@/constants/config'
+import { CONFIG, SIGNED_URL_EXPIRY } from '@/constants/config'
 
 // Rate limiter for PIN verification
 const pinLimiter = new RateLimiterMemory({
@@ -89,11 +89,11 @@ export async function uploadGuestEvidence(token: string, formData: FormData) {
         return { error: 'Failed to upload file to storage.' }
     }
 
-    // Get Signed URL (valid for 1 year)
+    // Get Signed URL (configurable expiry - default 1 year)
     const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin
         .storage
         .from('evidence')
-        .createSignedUrl(fileName, 31536000) // 1 year = 31536000 seconds
+        .createSignedUrl(fileName, SIGNED_URL_EXPIRY.ONE_YEAR)
 
     if (signedUrlError || !signedUrlData) {
         return { error: 'Failed to generate access URL for file.' }
@@ -198,7 +198,7 @@ export async function getGuestEvidenceSignedUrl(token: string, evidenceId: strin
         const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin
             .storage
             .from('evidence')
-            .createSignedUrl(storagePath, 3600) // 1 hour
+            .createSignedUrl(storagePath, SIGNED_URL_EXPIRY.ONE_HOUR)
 
         if (signedUrlError || !signedUrlData) {
             return { error: 'Failed to generate signed URL' }
