@@ -2,12 +2,15 @@
 
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
+
+// Create client once outside component to avoid recreation on every render
+const supabase = createClient();
 
 export default function RealtimeListener() {
   const router = useRouter();
-  const supabase = createClient();
+  const refreshTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     const channel = supabase
@@ -20,18 +23,28 @@ export default function RealtimeListener() {
           table: "cases",
         },
         (payload) => {
-          router.refresh();
-          if (payload.eventType === "INSERT") {
-            toast.info("New case added! Dashboard updated.");
+          // Debounce router.refresh to avoid excessive refreshes
+          if (refreshTimeoutRef.current) {
+            clearTimeout(refreshTimeoutRef.current);
           }
+          
+          refreshTimeoutRef.current = setTimeout(() => {
+            router.refresh();
+            if (payload.eventType === "INSERT") {
+              toast.info("New case added! Dashboard updated.");
+            }
+          }, 500); // Wait 500ms before refreshing
         },
       )
       .subscribe();
 
     return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
       supabase.removeChannel(channel);
     };
-  }, [router, supabase]);
+  }, [router]); // Removed supabase from deps since it's now constant
 
   return null;
 }

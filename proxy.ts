@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "./utils/supabase/middleware";
 import { RateLimiterMemory } from "rate-limiter-flexible";
+import { requiresSessionValidation } from "./utils/route-helpers";
 
 const rateLimiter = new RateLimiterMemory({
   points: 20, // 20 requests
@@ -10,8 +11,6 @@ const rateLimiter = new RateLimiterMemory({
 export async function proxy(request: NextRequest) {
   try {
     // Simple IP-based rate limiting
-    // Note: In a real edge environment, this memory cache is per-isolate.
-    // For distributed rate limiting, use Redis or similar.
     const ip =
       request.headers.get("x-forwarded-for") ||
       request.headers.get("x-real-ip") ||
@@ -21,6 +20,21 @@ export async function proxy(request: NextRequest) {
     return new NextResponse("Too Many Requests", { status: 429 });
   }
 
+  // OPTIMIZATION: Non-blocking session update for public/guest routes
+  const pathname = request.nextUrl.pathname;
+  
+  if (!requiresSessionValidation(pathname)) {
+    // For public routes, update session async (fire-and-forget)
+    // This prevents blocking the request while session is validated
+    updateSession(request).catch((error) => {
+      // Silent fail - session update is not critical for public routes
+      console.error('Background session update failed:', error);
+    });
+    
+    return NextResponse.next();
+  }
+
+  // For protected routes (dashboard, etc.), still wait for session validation
   return await updateSession(request);
 }
 

@@ -24,7 +24,7 @@ function isNewSession(): boolean {
     return true
 }
 
-// Check if this is a unique daily visit (per IP - handled server-side)
+// Check if this is a unique daily visit
 function getDailyVisitKey(): string {
     const today = new Date().toISOString().split('T')[0]
     return `daily_visit_${today}`
@@ -51,36 +51,36 @@ export default function VisitTracker() {
     const lastTrackedPath = useRef<string | null>(null)
 
     useEffect(() => {
-        // Prevent duplicate tracking for the same path in quick succession
+        // OPTIMIZATION: Prevent duplicate tracking for the same path
         if (lastTrackedPath.current === pathname) return
         lastTrackedPath.current = pathname
 
-        const trackVisit = async () => {
-            try {
-                const sessionId = getOrCreateSessionId()
-                const isSession = isNewSession()
-                const isUniqueDaily = isNewDailyVisit()
+        // Get tracking data
+        const sessionId = getOrCreateSessionId()
+        const isSession = isNewSession()
+        const isUniqueDaily = isNewDailyVisit()
 
-                await fetch('/api/track-visit', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        page: pathname,
-                        referrer: document.referrer || null,
-                        sessionId,
-                        isNewSession: isSession,
-                        isNewDailyVisit: isUniqueDaily,
-                    }),
-                })
-            } catch (error) {
-                // Silently fail - don't disrupt user experience
-                console.debug('Visit tracking failed:', error)
-            }
-        }
+        const trackingData = JSON.stringify({
+            page: pathname,
+            referrer: document.referrer || null,
+            sessionId,
+            isNewSession: isSession,
+            isNewDailyVisit: isUniqueDaily,
+        })
 
-        trackVisit()
+        // OPTIMIZATION: Fire-and-forget using keepalive
+        // This doesn't block the UI and works even if user navigates away
+        fetch('/api/track-visit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: trackingData,
+            keepalive: true, // Ensure request completes even if page unloads
+        }).catch(() => {
+            // Silent fail - analytics shouldn't disrupt UX
+            // Error is already logged server-side if needed
+        })
     }, [pathname])
 
     // This component doesn't render anything

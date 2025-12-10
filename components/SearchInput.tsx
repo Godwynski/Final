@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useDebouncedCallback } from "use-debounce";
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useDebounce } from "@/hooks";
 
 export default function SearchInput() {
   const searchParams = useSearchParams();
@@ -10,30 +10,34 @@ export default function SearchInput() {
 
   const query = searchParams.get("query")?.toString() || "";
   const [searchTerm, setSearchTerm] = useState(query);
-  const [prevQuery, setPrevQuery] = useState(query);
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  if (query !== prevQuery) {
-    setPrevQuery(query);
+  // Sync with URL when query changes externally (e.g., browser back/forward)
+  useEffect(() => {
     if (query !== searchTerm) {
       setSearchTerm(query);
     }
-  }
+  }, [query]); // Only depend on query
 
-  const handleSearch = useDebouncedCallback((term: string) => {
+  // Memoized search handler
+  const handleSearch = useCallback(() => {
     const params = new URLSearchParams(searchParams);
-    if (term) {
-      params.set("query", term);
+    if (debouncedSearchTerm) {
+      params.set("query", debouncedSearchTerm);
     } else {
       params.delete("query");
     }
     router.replace(`?${params.toString()}`);
-  }, 300);
+  }, [debouncedSearchTerm, router, searchParams]);
 
-  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    handleSearch(value);
-  };
+  // Trigger search when debounced value changes
+  useEffect(() => {
+    handleSearch();
+  }, [handleSearch]);
+
+  const onInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  }, []);
 
   return (
     <div className="relative flex-1">
