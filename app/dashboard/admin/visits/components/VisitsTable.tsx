@@ -39,14 +39,7 @@ const formatDate = (dateStr: string) => {
     })
 }
 
-export default function VisitsTable({
-    visits,
-    onSort,
-    sortBy,
-    sortOrder,
-    onDelete,
-    deletingId
-}: VisitsTableProps) {
+const TableHead = ({ id, label, sortBy, sortOrder, onSort }: { id: string, label: string, sortBy: string, sortOrder: string, onSort: (col: string) => void }) => {
     const getSortIcon = (column: string) => {
         if (sortBy !== column) return <ArrowUpDown className="w-3 h-3 opacity-30 group-hover:opacity-100" />
         return sortOrder === 'asc'
@@ -54,7 +47,7 @@ export default function VisitsTable({
             : <ArrowDown className="w-3 h-3" />
     }
 
-    const TableHead = ({ id, label }: { id: string, label: string }) => (
+    return (
         <th
             className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group select-none"
             onClick={() => onSort(id)}
@@ -64,6 +57,17 @@ export default function VisitsTable({
             </div>
         </th>
     )
+}
+
+export default function VisitsTable({
+    visits,
+    onSort,
+    sortBy,
+    sortOrder,
+    onDelete,
+    deletingId
+}: VisitsTableProps) {
+
 
     return (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -71,10 +75,10 @@ export default function VisitsTable({
                 <table className="w-full text-sm text-left">
                     <thead className="bg-gray-50/50 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700">
                         <tr>
-                            <TableHead id="visited_at" label="Time" />
+                            <TableHead id="visited_at" label="Time" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
                             <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Visitor</th>
-                            <TableHead id="ip_address" label="IP Address" />
-                            <TableHead id="page_path" label="Page" />
+                            <TableHead id="ip_address" label="IP Address" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
+                            <TableHead id="page_path" label="Page" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
                             <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tech</th>
                             <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
                         </tr>

@@ -8,6 +8,7 @@ import CertificateToFileActionForm from '@/components/documents/forms/Certificat
 import AmicableSettlementForm from '@/components/documents/forms/AmicableSettlementForm'
 import ReferralForm from '@/components/documents/forms/ReferralForm'
 import AbstractForm from '@/components/documents/forms/AbstractForm'
+import { getSettings } from '@/app/dashboard/settings/actions'
 
 export default async function PrintDocumentPage(props: { params: Promise<{ id: string }>, searchParams: Promise<{ form?: string }> }) {
     const params = await props.params
@@ -19,7 +20,7 @@ export default async function PrintDocumentPage(props: { params: Promise<{ id: s
     // Fetch Case Data
     const { data: caseData } = await supabase.from('cases').select('*').eq('id', id).single()
     const { data: parties } = await supabase.from('involved_parties').select('*').eq('case_id', id)
-    const { data: settings } = await supabase.from('barangay_settings').select('*').single()
+    const settings = await getSettings()
 
     if (!caseData) return notFound()
 

@@ -154,7 +154,7 @@ export async function verifyGuestPin(token: string, pin: string) {
 
     const { data: link, error } = await supabaseAdmin
         .from('guest_links')
-        .select('pin')
+        .select('pin, id, terms_accepted_at')
         .eq('token', token)
         .single()
 
@@ -164,6 +164,14 @@ export async function verifyGuestPin(token: string, pin: string) {
 
     if (link.pin !== pin) {
         return { error: 'Invalid PIN' }
+    }
+
+    // Record terms acceptance timestamp (only once, first time they verify)
+    if (!link.terms_accepted_at) {
+        await supabaseAdmin
+            .from('guest_links')
+            .update({ terms_accepted_at: new Date().toISOString() })
+            .eq('id', link.id)
     }
 
     // Set cookie

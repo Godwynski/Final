@@ -3,12 +3,14 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { verifyGuestPin } from './actions'
+import TermsModal from '@/components/TermsModal'
 
 export default function PinEntryForm({ token }: { token: string }) {
     const [pin, setPin] = useState('')
     const [agreed, setAgreed] = useState(false)
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const [showTerms, setShowTerms] = useState(false)
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -74,7 +76,15 @@ export default function PinEntryForm({ token }: { token: string }) {
                             />
                         </div>
                         <label htmlFor="terms" className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-                            I agree to the <a href="#" className="text-blue-600 hover:underline dark:text-blue-500">Terms and Conditions</a> regarding the handling of sensitive case evidence.
+                            I agree to the{' '}
+                            <button
+                                type="button"
+                                onClick={() => setShowTerms(true)}
+                                className="text-blue-600 hover:underline dark:text-blue-500 font-medium"
+                            >
+                                Terms and Conditions
+                            </button>
+                            {' '}regarding the handling of sensitive case evidence.
                         </label>
                     </div>
 
@@ -93,6 +103,8 @@ export default function PinEntryForm({ token }: { token: string }) {
                     </button>
                 </form>
             </div>
+
+            <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
         </div>
     )
 }
