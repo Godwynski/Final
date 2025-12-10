@@ -30,10 +30,6 @@
 - **Guest Uploads**: Residents can upload photos/videos without creating an account.
 - **Bank-Grade Security**: All evidence is encrypted and stored securely via Supabase Storage.
 
-### 📊 Analytics Dashboard
-
-- **Insightful Metrics**: Track case volume, resolution rates, and common incident types.
-- **Visual Reports**: Interactive charts powered by Recharts.
 
 ## 🛠️ Technology Stack
 
@@ -226,7 +222,7 @@ An internal micro-service abstraction that launches a headless Chromium instance
 
 ## 🗄️ Database Schema
 
-BlotterSys uses a PostgreSQL database hosted on Supabase with 11 interconnected tables that handle case management, user authentication, evidence storage, and system configuration. The schema is designed with Row Level Security (RLS) policies to ensure data privacy and role-based access control.
+BlotterSys uses a PostgreSQL database hosted on Supabase with 8 interconnected tables that handle case management, user authentication, evidence storage, and system configuration. The schema is designed with Row Level Security (RLS) policies to ensure data privacy and role-based access control.
 
 <details>
 <summary><strong>🗄️ Database Schema & ERD (Click to Expand)</strong></summary>
@@ -327,15 +323,6 @@ erDiagram
         timestamp created_at
     }
 
-    notifications {
-        uuid id PK
-        uuid user_id FK
-        text title
-        text message
-        text link
-        boolean is_read
-        timestamp created_at
-    }
 
     barangay_settings {
         uuid id PK
@@ -348,40 +335,6 @@ erDiagram
         text logo_city_url
         timestamp updated_at
     }
-
-    site_visits {
-        uuid id PK
-        text ip_address
-        text user_agent
-        text page_path
-        text referrer
-        text country
-        text city
-        text device_type
-        text browser
-        text os
-        text visit_type
-        text session_id
-        uuid user_id FK
-        text visitor_email
-        text visitor_name
-        text visitor_role
-        timestamp visited_at
-    }
-
-    profiles ||--o{ cases : reports
-    profiles ||--o{ case_notes : creates
-    profiles ||--o{ evidence : uploads
-    profiles ||--o{ guest_links : creates
-    profiles ||--o{ audit_logs : logs
-    profiles ||--o{ notifications : receives
-
-    cases ||--o{ involved_parties : has
-    cases ||--o{ case_notes : has
-    cases ||--o{ hearings : schedules
-    cases ||--o{ evidence : contains
-    cases ||--o{ guest_links : generates
-    cases ||--o{ audit_logs : tracked
 
     guest_links ||--o{ evidence : enables
 ```
@@ -534,7 +487,6 @@ BlotterSys has three main types of users, each with specific roles and permissio
 - **Unique Capabilities**:
   - System settings configuration
   - Audit log access
-  - Site visit analytics
   - User role management
 
 #### 2. **Staff** (Desk Officer/Kagawad)
@@ -593,7 +545,6 @@ graph TB
         SystemSettings[System Settings]
         UserManagement[User Management]
         AuditLogs[Audit Logs]
-        SiteAnalytics[Site Analytics]
     end
 
     subgraph GuestFeatures["GUEST FEATURES (Magic Link)"]
@@ -618,7 +569,7 @@ graph TB
     Admin --> SystemSettings
     Admin --> UserManagement
     Admin --> AuditLogs
-    Admin --> SiteAnalytics
+
 
     %% Staff connections
     Staff --> Login
@@ -732,7 +683,6 @@ flowchart TD
         Menu -->|System Settings| Settings[System Settings]
         Menu -->|User Management| Users[User Management]
         Menu -->|Audit Logs| Audit[Audit Logs]
-        Menu -->|Site Analytics| Analytics[Site Analytics]
         Menu -->|Return| ReturnOps[Go to Subprocess 3]
 
         %% System Settings
@@ -756,14 +706,10 @@ flowchart TD
         Audit --> AuditFilters[Filter by:<br/>Date/User/Action]
         AuditFilters --> ViewLogs[View Audit Trail<br/>Action/User/Timestamp]
 
-        %% Site Analytics
-        Analytics --> ViewAnalytics[View Metrics:<br/>Visits/Devices/Pages]
-
         %% End States
         SettingsOK --> End([Return to Dashboard])
         UserOK --> End
         ViewLogs --> End
-        ViewAnalytics --> End
     end
 
     style Start fill:#e3f2fd
@@ -1305,7 +1251,7 @@ sequenceDiagram
 | FR-6.3 | System shall display monthly case trends             | Medium   |
 | FR-6.4 | System shall allow filtering analytics by date range | Medium   |
 | FR-6.5 | System shall show comparison with previous period    | Low      |
-| FR-6.6 | System shall track site visit analytics              | Low      |
+
 
 ### FR-7: System Configuration
 

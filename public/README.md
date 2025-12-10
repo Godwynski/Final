@@ -12,7 +12,7 @@
 ### 📂 Smart Case Management
 
 - **Digital Blotter**: Record and track incidents with a structured workflow (Filed -> Hearing -> Amicable Settlement -> Certificate to File Action).
-- **Real-time Updates**: Live status tracking for complainants and respondents.
+- **Status Tracking**: Track case progress from filing to resolution.
 - **Search & Filter**: Instantly retrieve cases by case number, name, or date.
 
 ### 🖨️ Automated Document Generation
@@ -30,10 +30,6 @@
 - **Guest Uploads**: Residents can upload photos/videos without creating an account.
 - **Bank-Grade Security**: All evidence is encrypted and stored securely via Supabase Storage.
 
-### 📊 Analytics Dashboard
-
-- **Insightful Metrics**: Track case volume, resolution rates, and common incident types.
-- **Visual Reports**: Interactive charts powered by Recharts.
 
 ## 🛠️ Technology Stack
 
@@ -45,11 +41,191 @@
 - **UI Components**: [Flowbite](https://flowbite.com/) & [Lucide React](https://lucide.dev/)
 - **Validation**: [Zod](https://zod.dev/)
 
-💡 **For detailed technical information, architecture patterns, security measures, and deployment guides, see [Technical Background Documentation](./docs/TECHNICAL_BACKGROUND.md)**
+<details>
+<summary><strong>📋 Scope and Limitations (Click to Expand)</strong></summary>
+
+### 1. System Scope
+
+The system handles the digital management of barangay blotter cases, specifically focusing on the _Katarungang Pambarangay_ process.
+
+#### 1.1 Core Functionalities
+
+- **Digital Blotter**: Full lifecycle management of cases from filing to resolution (Filed → Hearing → Amicable Settlement/CFA → Closed).
+- **Search & Retrieval**: Advanced filtering of cases by Case Number, Title, Date, Status, or Involved Parties.
+- **Dashboard & Analytics**: Real-time visualization of case statistics, status distribution, and incident trends.
+- **Audit Trails**: automatic logging of critical system actions (login, status changes, document generation) for accountability.
+
+#### 1.2 User Roles & Access Control
+
+- **Admin (Barangay Captain/Secretary)**: Full access to system settings, user management, audit logs, and all operational features.
+- **Staff (Desk Officer/Kagawad)**: Operational access to file cases, schedule hearings, managing evidence, and generating documents.
+- **Guest (Residents)**: Temporary, secure access to specific case details updates and an evidence upload portal via Magic Links.
+
+#### 1.3 Document Handling
+
+- **Automated Generation**: Instant creation of DILG-compliant PDF documents:
+  - Summons
+  - Notice of Hearing
+  - Amicable Settlement
+  - Certificate to File Action (CFA)
+- **PDF Export**: Documents are rendered server-side and available for download/printing.
+
+#### 1.4 Evidence Management
+
+- **Secure Vault**: Encrypted cloud storage for case-related files.
+- **Guest Portal**: A specialized, PIN-protected interface allowing non-users (residents) to upload evidence without creating an account.
+- **Visibility Control**: Granular control over which evidence files are visible to other parties.
+
+### 2. System Limitations
+
+The following constraints define the boundaries of the system's capabilities, determined by technical architecture and configuration.
+
+#### 2.1 Technical Constraints
+
+- **Connectivity**: The system is cloud-native and requires an active internet connection to function; there is no offline mode.
+- **Platform**: The system is a web application accessible via modern browsers (Chrome, Edge, Firefox, Safari). There is no native mobile application (iOS/Android), though the interface is responsive.
+- **Dependencies**: The system relies on third-party services:
+  - **Supabase**: For database, authentication, and file storage.
+  - **MailerSend**: For sending transactional emails (magic links, notifications).
+
+#### 2.2 Storage & Upload Limits
+
+Strict limits are enforced to maintain system performance and storage quotas:
+
+| Feature               | Limit Description                         | Value                                        |
+| :-------------------- | :---------------------------------------- | :------------------------------------------- |
+| **Guest Upload Size** | Maximum file size for guest uploads       | **5 MB** per file                            |
+| **Guest file Count**  | Maximum files a guest can upload per link | **3 files**                                  |
+| **Staff Upload Size** | Maximum file size for staff/admin uploads | **10 MB** per file                           |
+| **Staff File Count**  | Maximum files staff can attach to a case  | **20 files**                                 |
+| **File Types**        | Allowed formats for Evidence              | **JPEG, PNG, WebP** (Images), **PDF** (Docs) |
+
+#### 2.3 Operational Constraints
+
+- **Guest Access Duration**: Guest links are temporary. They default to **24 hours** and cannot exceed **7 days**.
+- **Guest Link Limit**: A maximum of **5 active guest links** can be generated per case at any one time.
+- **Terminal States**: Once a case is marked as _Settled_, _Closed_, _Dismissed_, or _Referred_, it becomes **read-only**. No further edits or uploads are permitted unless reopened.
+- **Rate Limiting**:
+  - **Login**: Max **5 failed attempts** per 15 minutes.
+  - **Guest PIN**: Max **3 failed attempts** per 10 minutes.
+
+#### 2.4 Jurisdiction
+
+- **Legal Scope**: The system is designed specifically for the _Katarungang Pambarangay_ law (RA 7160) and is not intended for police blotters or court-level case management.
+
+</details>
+
+<details>
+<summary><strong>🔧 Technical Background (Click to Expand)</strong></summary>
+
+### 1. Technology Stack
+
+This section outlines the software development tools, frameworks, and libraries utilized in the development of _BlotterSys_. The selection of these technologies was driven by the requirements for performance, scalability, type safety, and rapid development.
+
+#### 1.1 Frontend Technologies
+
+The client-side architecture is built upon a modern React ecosystem, leveraging server-side rendering for optimal performance and SEO.
+
+| Technology       | Version | Role / Justification                                                                                                                                            |
+| :--------------- | :------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Next.js**      | 16.0.7  | **Core Framework.** Selected for its App Router architecture, server-side rendering (SSR), and built-in API routes, which unify the frontend and backend logic. |
+| **React**        | 19.2.1  | **UI Library.** Provides the component-based architecture. Version 19 introduces improved concurrency and server action support.                                |
+| **TypeScript**   | 5.x     | **Language.** Enforces static typing to reduce runtime errors and improve code maintainability for complex logic like case management.                          |
+| **Tailwind CSS** | 4.0     | **Styling Engine.** A utility-first CSS framework used for rapid UI development and ensuring consistent design tokens.                                          |
+| **Flowbite**     | 4.0.1   | **Component Library.** Provides pre-built, accessible UI components (modals, tables) compatible with Tailwind CSS.                                              |
+| **Recharts**     | 3.5.1   | **Data Visualization.** Used for rendering responsive charts in the analytics dashboard.                                                                        |
+| **Zod**          | 4.1.13  | **Schema Validation.** Ensures runtime data integrity for form inputs and API request payloads.                                                                 |
+| **Lucide React** | 0.555.0 | **Iconography.** A lightweight, consistent icon set used throughout the interface.                                                                              |
+
+#### 1.2 Backend Services & Infrastructure
+
+The system employs a serverless and cloud-native approach to minimize infrastructure maintenance while ensuring high availability.
+
+| Technology           | Version | Role / Justification                                                                                                  |
+| :------------------- | :------ | :-------------------------------------------------------------------------------------------------------------------- |
+| **Node.js**          | 20+     | **Runtime Environment.** Executes JavaScript code on the server side.                                                 |
+| **Supabase**         | Cloud   | **Backend-as-a-Service (BaaS).** Provides the PostgreSQL database, authentication system, and object storage.         |
+| **PostgreSQL**       | 15+     | **Database.** An advanced, open-source relational database used for structured data storage (cases, users, evidence). |
+| **Supabase Auth**    | v2      | **Identity Management.** Handles secure user authentication, session management, and JWT issuance.                    |
+| **Supabase Storage** | v2      | **Object Storage.** Securely stores binary large objects (BLOBs) such as evidence photos and PDF documents.           |
+| **MailerSend**       | 2.6.0   | **Email Service.** A transactional email API used for sending secure guest links and system notifications.            |
+| **Puppeteer**        | 24.32.0 | **PDF Engine.** A headless Chrome Node.js API used to generate high-fidelity PDF legal documents from HTML templates. |
+
+#### 1.3 Development & Quality Assurance Tools
+
+| Tool                      | Role                                                                                    |
+| :------------------------ | :-------------------------------------------------------------------------------------- |
+| **ESLint**                | Static code analysis tool for identifying patterns found in ECMAScript/JavaScript code. |
+| **Git**                   | Distributed version control system for tracking changes in source code.                 |
+| **Rate-Limiter-Flexible** | Library used to implement DDoS protection and bruteforce prevention on login endpoints. |
+
+### 2. Software Architecture
+
+The system follows a **Monolithic implementation within a Serverless environment**, utilizing the **Next.js App Router** pattern. This architecture blends frontend UI and backend logic into a single cohesive codebase while leveraging cloud services for persistence and state.
+
+#### 2.1 Architectural Patterns
+
+1.  **Server Components (RSC):**
+    - _Description:_ Components that render exclusively on the server.
+    - _Usage:_ Used for data fetching (e.g., retrieving case lists) to reduce client-side JavaScript bundles and improve initial page load (FCP).
+
+2.  **Server Actions:**
+    - _Description:_ Asynchronous functions executed on the server, callable directly from client components.
+    - _Usage:_ Replaces traditional REST API endpoints for form submissions (e.g., `createCase`, `updateStatus`), ensuring type safety and reducing boilerplate.
+
+3.  **Row-Level Security (RLS):**
+    - _Description:_ A security pattern where access policies are defined directly on the database tables.
+    - _Usage:_ Ensures that users can strictly access only the data permitted by their role (Admin vs. Staff) and tenant (Barangay), regardless of the access vector (API or Dashboard).
+
+### 3. Database Schema Design
+
+The persistence layer is built on a **Relational Database Management System (RDBMS)** schema.
+
+#### 3.1 Core Entities
+
+- **Profiles**: Extends the auth system with application-specific user data (Roles: Admin/Staff).
+- **Blotter_Cases**: The central entity storing incident details, status, and metadata.
+- **Involved_Parties**: Stores normalized data about complainants, respondents, and witnesses, linked to cases via Foreign Key.
+- **Evidence**: Metadata for files stored in the object storage, linked to specific cases.
+- **Guest_Links**: Validates and tracks the temporary access tokens issued to non-system users.
+
+#### 3.2 Security Implementation
+
+- **Encryption at Rest**: Data is stored on encrypted volumes.
+- **Encryption in Transit**: All connections are enforced via TLS 1.2+.
+- **Audit Logging**: Database triggers automatically record `INSERT`, `UPDATE`, and `DELETE` operations into an immutable `audit_logs` table for forensic capability.
+
+### 4. External Interfaces
+
+#### 4.1 MailerSend API
+
+Restful API integration for delivering transactional emails. It is used primarily for the **Guest Evidence Upload** workflow, delivering time-sensitive "Magic Links" to residents.
+
+#### 4.2 Puppeteer Renderer
+
+An internal micro-service abstraction that launches a headless Chromium instance to render HTML/CSS templates into PDF buffers. This ensures that legal documents (Summons, CFA) match exact formatting requirements regardless of the client device.
+
+### 5. System Requirements
+
+#### 5.1 Deployment Environment
+
+- **Runtime**: Node.js 18.x or higher.
+- **Memory**: Minimum 1GB RAM (for Puppeteer PDF generation).
+- **Storage**: Ephemeral filesystem support (for temporary file processing).
+
+#### 5.2 Client Requirements
+
+- **Browser**: Modern evergreen browser (Chrome 90+, Firefox 90+, Safari 14+, Edge).
+- **Network**: Broadband internet connection (required for real-time database connectivity).
+
+</details>
 
 ## 🗄️ Database Schema
 
-BlotterSys uses a PostgreSQL database hosted on Supabase with 11 interconnected tables that handle case management, user authentication, evidence storage, and system configuration. The schema is designed with Row Level Security (RLS) policies to ensure data privacy and role-based access control.
+BlotterSys uses a PostgreSQL database hosted on Supabase with 8 interconnected tables that handle case management, user authentication, evidence storage, and system configuration. The schema is designed with Row Level Security (RLS) policies to ensure data privacy and role-based access control.
+
+<details>
+<summary><strong>🗄️ Database Schema & ERD (Click to Expand)</strong></summary>
 
 ### Entity Relationship Diagram
 
@@ -147,15 +323,6 @@ erDiagram
         timestamp created_at
     }
 
-    notifications {
-        uuid id PK
-        uuid user_id FK
-        text title
-        text message
-        text link
-        boolean is_read
-        timestamp created_at
-    }
 
     barangay_settings {
         uuid id PK
@@ -168,40 +335,6 @@ erDiagram
         text logo_city_url
         timestamp updated_at
     }
-
-    site_visits {
-        uuid id PK
-        text ip_address
-        text user_agent
-        text page_path
-        text referrer
-        text country
-        text city
-        text device_type
-        text browser
-        text os
-        text visit_type
-        text session_id
-        uuid user_id FK
-        text visitor_email
-        text visitor_name
-        text visitor_role
-        timestamp visited_at
-    }
-
-    profiles ||--o{ cases : reports
-    profiles ||--o{ case_notes : creates
-    profiles ||--o{ evidence : uploads
-    profiles ||--o{ guest_links : creates
-    profiles ||--o{ audit_logs : logs
-    profiles ||--o{ notifications : receives
-
-    cases ||--o{ involved_parties : has
-    cases ||--o{ case_notes : has
-    cases ||--o{ hearings : schedules
-    cases ||--o{ evidence : contains
-    cases ||--o{ guest_links : generates
-    cases ||--o{ audit_logs : tracked
 
     guest_links ||--o{ evidence : enables
 ```
@@ -229,6 +362,37 @@ erDiagram
 - **Cascade Deletion**: Deleting a case automatically removes related parties, notes, evidence, and hearings
 - **Audit Triggers**: Case status changes auto-log to `audit_logs`
 - **Guest Link Auto-Expiry**: Links automatically deactivate when case status becomes terminal (`Settled`, `Closed`, `Dismissed`, `Referred`)
+
+</details>
+
+### Input Validation & UX Enhancements
+
+The system implements comprehensive input validation and user experience improvements:
+
+#### Name Input Validation (Involved Parties)
+
+| Rule               | Implementation                                                                    |
+| ------------------ | --------------------------------------------------------------------------------- |
+| **Required**       | Field cannot be empty                                                             |
+| **Min Length**     | Minimum 2 characters                                                              |
+| **Max Length**     | Maximum 100 characters                                                            |
+| **Letters Only**   | Only alphabetic characters (A-Z, a-z) allowed                                     |
+| **Spaces Allowed** | Spaces permitted for first, middle, last names                                    |
+| **Special Chars**  | Hyphens (`-`) and apostrophes (`'`) allowed for names like "O'Brien", "Mary-Jane" |
+| **No Numbers**     | Numeric characters are rejected                                                   |
+| **Auto-Trim**      | Leading/trailing whitespace automatically removed                                 |
+| **Title Case**     | Names auto-formatted to Title Case (e.g., "JOHN DOE" → "John Doe")                |
+| **Inline Errors**  | Real-time validation feedback with red border and error message                   |
+
+#### Confirmation Dialogs
+
+Critical user actions require confirmation to prevent accidental operations:
+
+| Action              | Modal Type    | Description                                              |
+| ------------------- | ------------- | -------------------------------------------------------- |
+| **Sign Out**        | Warning Modal | "Are you sure you want to sign out?" with Cancel/Confirm |
+| **Delete Case**     | Danger Modal  | Requires explicit confirmation before deletion           |
+| **Terminal Status** | Warning Modal | Confirms locking case when marking as Settled/Closed     |
 
 > 💡 **For Developers**: Full schema with indexes, functions, and triggers available in [`supabase/schema.sql`](file:///c:/Users/kuyag/OneDrive/Desktop/Final/Final/supabase/schema.sql)
 
@@ -301,6 +465,9 @@ erDiagram
 
 ## 📊 Use Case Diagram & System Flowchart
 
+<details>
+<summary><strong>📊 Use Case Diagram & System Flowchart (Click to Expand)</strong></summary>
+
 This section provides a visual overview of how different users interact with BlotterSys and how the system processes cases from start to finish.
 
 ---
@@ -320,7 +487,6 @@ BlotterSys has three main types of users, each with specific roles and permissio
 - **Unique Capabilities**:
   - System settings configuration
   - Audit log access
-  - Site visit analytics
   - User role management
 
 #### 2. **Staff** (Desk Officer/Kagawad)
@@ -351,164 +517,202 @@ BlotterSys has three main types of users, each with specific roles and permissio
 
 ### 🎯 Use Case Diagram
 
-The following diagram shows all possible interactions between actors and the system:
+The following diagram shows all possible interactions between actors and the system, organized by access level:
 
 ```mermaid
 graph TB
-    subgraph Actors
-        Admin[👤 Admin<br/>Barangay Captain]
-        Staff[👤 Staff<br/>Desk Officer]
-        Guest[👤 Guest<br/>Resident]
+    subgraph Actors["ACTORS"]
+        Admin["Admin<br/>(Barangay Captain/Secretary)"]
+        Staff["Staff<br/>(Desk Officer/Kagawad)"]
+        Guest["Guest<br/>(Complainant/Respondent)"]
     end
 
-    subgraph "Core Features"
-        Login[🔐 Login to Dashboard]
-        CreateCase[📝 File New Case]
-        UpdateCase[🔄 Update Case Status]
-        GenerateDocs[📄 Generate Documents]
-        ViewAnalytics[📊 View Analytics]
-        ManageEvidence[📎 Manage Evidence]
-        CreateGuestLink[🔗 Create Guest Link]
-        UploadEvidence[📤 Upload Evidence]
-        SystemSettings[⚙️ System Settings]
-        AuditLogs[📋 View Audit Logs]
-        UserManagement[👥 Manage Users]
+    subgraph SharedFeatures["SHARED FEATURES (Admin + Staff)"]
+        Login[Login/Logout]
+        FileCase[File New Case]
+        ManageCase[View/Search Cases]
+        UpdateStatus[Update Case Status]
+        AddNotes[Add Case Notes]
+        ScheduleHearing[Schedule Hearing]
+        GenerateDocs[Generate Documents]
+        ManageEvidence[Manage Evidence]
+        CreateGuestLink[Create Guest Link]
+        ViewAnalytics[View Analytics]
+        PeopleDirectory[People Directory]
     end
 
+    subgraph AdminFeatures["ADMIN-ONLY FEATURES"]
+        SystemSettings[System Settings]
+        UserManagement[User Management]
+        AuditLogs[Audit Logs]
+    end
+
+    subgraph GuestFeatures["GUEST FEATURES (Magic Link)"]
+        ViewCaseInfo[View Case Narrative]
+        ViewHearings[View Hearing Schedule]
+        UploadEvidence[Upload Evidence]
+        AcceptTerms[Accept Terms]
+    end
+
+    %% Admin connections
     Admin --> Login
-    Admin --> CreateCase
-    Admin --> UpdateCase
+    Admin --> FileCase
+    Admin --> ManageCase
+    Admin --> UpdateStatus
+    Admin --> AddNotes
+    Admin --> ScheduleHearing
     Admin --> GenerateDocs
-    Admin --> ViewAnalytics
     Admin --> ManageEvidence
     Admin --> CreateGuestLink
+    Admin --> ViewAnalytics
+    Admin --> PeopleDirectory
     Admin --> SystemSettings
-    Admin --> AuditLogs
     Admin --> UserManagement
+    Admin --> AuditLogs
 
+
+    %% Staff connections
     Staff --> Login
-    Staff --> CreateCase
-    Staff --> UpdateCase
+    Staff --> FileCase
+    Staff --> ManageCase
+    Staff --> UpdateStatus
+    Staff --> AddNotes
+    Staff --> ScheduleHearing
     Staff --> GenerateDocs
-    Staff --> ViewAnalytics
     Staff --> ManageEvidence
     Staff --> CreateGuestLink
+    Staff --> ViewAnalytics
+    Staff --> PeopleDirectory
 
+    %% Guest connections
+    Guest --> ViewCaseInfo
+    Guest --> ViewHearings
     Guest --> UploadEvidence
-    Guest -.->|Views| CreateCase
+    Guest --> AcceptTerms
 
-    style Admin fill:#e1f5ff
-    style Staff fill:#fff4e1
-    style Guest fill:#f0f0f0
-    style SystemSettings fill:#ffcccc
-    style AuditLogs fill:#ffcccc
-    style UserManagement fill:#ffcccc
+    %% Styling
+    style Admin fill:#e3f2fd,stroke:#1976d2
+    style Staff fill:#fff3e0,stroke:#f57c00
+    style Guest fill:#f3e5f5,stroke:#7b1fa2
+    style SystemSettings fill:#ffcdd2,stroke:#d32f2f
+    style UserManagement fill:#ffcdd2,stroke:#d32f2f
+    style AuditLogs fill:#ffcdd2,stroke:#d32f2f
+    style SiteAnalytics fill:#ffcdd2,stroke:#d32f2f
 ```
 
 **Legend**:
 
-- **Solid lines** = User can perform action
-- **Dashed lines** = User can view only (read-only)
+- **Blue (Admin)** = Full system access
+- **Orange (Staff)** = Operational access only
+- **Purple (Guest)** = Limited, link-based access
 - **Red boxes** = Admin-only features
 
 ---
 
-### 🔄 System Flowcharts
+### 🔄 System Flowcharts (Role-Based Subprocesses)
 
-BlotterSys workflows are organized into **4 connected flowcharts** based on user roles and system entry points. Each flowchart represents a distinct path through the system.
+BlotterSys workflows are organized into **4 role-based subprocess flowcharts**. Each subprocess represents a distinct user journey through the system.
+
+| Subprocess       | Actor(s)      | Description                   |
+| ---------------- | ------------- | ----------------------------- |
+| **Subprocess 1** | All Users     | System Entry & Authentication |
+| **Subprocess 2** | Admin Only    | Administrative Functions      |
+| **Subprocess 3** | Admin + Staff | Operational Case Management   |
+| **Subprocess 4** | Guest Only    | Evidence Upload Portal        |
 
 ---
 
-#### 🌐 Flowchart 1: System Entry & Authentication
+#### 🔐 Subprocess 1: System Entry & Authentication
 
-**Purpose:** How all users enter the system and get authenticated/routed
+**Actor:** All Users (Admin, Staff, Guest)  
+**Purpose:** Entry point for all users - authentication and role-based routing
 
 ```mermaid
 flowchart TD
-    Start([🚀 User Visits System]) --> Landing[🏠 Landing Page]
-    Landing --> UserType{User Type?}
+    subgraph Entry["SUBPROCESS 1: ENTRY & AUTHENTICATION"]
+        Start([User Visits System]) --> Landing[Landing Page]
+        Landing --> UserType{User Type?}
 
-    UserType -->|Admin/Staff| LoginPage[🔐 Login Page]
-    UserType -->|Guest| HasLink{Has Magic Link?}
+        UserType -->|Admin/Staff| LoginPage[Login Page]
+        UserType -->|Guest with Link| GuestEntry[Go to Subprocess 4]
 
-    HasLink -->|Yes| GuestFlow[Go to Flowchart 4:<br/>Guest Portal]
-    HasLink -->|No| Landing
+        LoginPage --> EnterCreds[Enter Email & Password]
+        EnterCreds --> ValidateCreds{Valid Credentials?}
 
-    LoginPage --> EnterCreds[Enter Email & Password]
-    EnterCreds --> ValidateCreds{Valid<br/>Credentials?}
+        ValidateCreds -->|No| AttemptsCheck{Attempts >= 5?}
+        AttemptsCheck -->|Yes| AccountLocked[Locked 15 min]
+        AttemptsCheck -->|No| ShowError[Show Error] --> LoginPage
+        AccountLocked --> AccessDenied([Access Denied])
 
-    ValidateCreds -->|No| AttemptsCheck{Login Attempts<br/>≥ 5?}
-    AttemptsCheck -->|Yes| AccountLocked[🔒 Account Locked<br/>15 minutes]
-    AttemptsCheck -->|No| LoginPage
-    AccountLocked --> End1([❌ Access Denied])
+        ValidateCreds -->|Yes| CheckFirstLogin{First Login?}
+        CheckFirstLogin -->|Yes| ForcePassword[Force Password Change]
+        ForcePassword --> LoadProfile
+        CheckFirstLogin -->|No| LoadProfile[Load User Profile]
 
-    ValidateCreds -->|Yes| LoadProfile[Load User Profile]
-    LoadProfile --> CheckRole{User Role?}
+        LoadProfile --> CheckRole{User Role?}
+        CheckRole -->|Admin| AdminDash[Admin Dashboard]
+        CheckRole -->|Staff| StaffDash[Staff Dashboard]
 
-    CheckRole -->|Admin| AdminDash[📊 Admin Dashboard<br/>All Features Unlocked]
-    CheckRole -->|Staff| StaffDash[📊 Staff Dashboard<br/>Operational Features]
+        AdminDash --> AdminChoice{Select Path}
+        AdminChoice -->|Admin Functions| AdminSub[Go to Subprocess 2]
+        AdminChoice -->|Operations| OpsSub[Go to Subprocess 3]
 
-    AdminDash --> AdminChoice{Admin Action?}
-    StaffDash --> OpsFlow[Go to Flowchart 3:<br/>Operational Features]
-
-    AdminChoice -->|Admin Features| AdminFlow[Go to Flowchart 2:<br/>Admin-Only Features]
-    AdminChoice -->|Operational| OpsFlow
-
-    AdminFlow --> End2([✅ Complete])
-    OpsFlow --> End2
+        StaffDash --> StaffSub[Go to Subprocess 3]
+    end
 
     style Start fill:#4CAF50,color:#fff
-    style End1 fill:#f44336,color:#fff
-    style End2 fill:#2196F3,color:#fff
-    style AdminDash fill:#ffccbc
-    style StaffDash fill:#c5e1a5
+    style AccessDenied fill:#f44336,color:#fff
+    style AdminDash fill:#e3f2fd
+    style StaffDash fill:#fff3e0
     style ValidateCreds fill:#ffd93d
     style CheckRole fill:#ffd93d
 ```
 
 ---
 
-#### 👑 Flowchart 2: Admin-Only Features
+#### 👑 Subprocess 2: Admin-Only Functions
 
-**Purpose:** Features exclusively available to administrators
+**Actor:** Admin Only  
+**Purpose:** System configuration, user management, and audit functions
 
 ```mermaid
 flowchart TD
-    Start([Admin Dashboard]) --> AdminMenu{Select Admin Feature}
+    subgraph Admin["SUBPROCESS 2: ADMIN FUNCTIONS"]
+        Start([Admin Dashboard]) --> Menu{Select Function}
 
-    AdminMenu -->|System Settings| Settings[⚙️ System Settings]
-    AdminMenu -->|User Management| Users[👥 User Management]
-    AdminMenu -->|Audit Logs| Audit[📋 Audit Logs]
-    AdminMenu -->|Site Analytics| SiteVisits[📈 Site Visit Analytics]
+        Menu -->|System Settings| Settings[System Settings]
+        Menu -->|User Management| Users[User Management]
+        Menu -->|Audit Logs| Audit[Audit Logs]
+        Menu -->|Return| ReturnOps[Go to Subprocess 3]
 
-    Settings --> SettingsAction{Action?}
-    SettingsAction -->|Update Barangay Info| UpdateInfo[Edit Province/City/Barangay]
-    SettingsAction -->|Upload Logos| UploadLogo[Upload Barangay/City Logos]
-    SettingsAction -->|Save| SaveSettings[💾 Save to Database]
+        %% System Settings
+        Settings --> SettingsAction{Action?}
+        SettingsAction -->|Edit Info| EditBarangay[Edit Barangay Info<br/>Province/City/Officials]
+        SettingsAction -->|Upload Logo| UploadLogo[Upload Logos<br/>Barangay/City]
+        EditBarangay --> SaveSettings[Save Settings]
+        UploadLogo --> SaveSettings
+        SaveSettings --> SettingsOK[Settings Updated]
 
-    SaveSettings --> SettingsSuccess[✅ Settings Updated]
+        %% User Management
+        Users --> UserAction{Action?}
+        UserAction -->|Create| CreateUser[Create User<br/>Email/Role/Name]
+        UserAction -->|Edit| EditUser[Edit User Details]
+        UserAction -->|Delete| DeleteUser[Delete User]
+        CreateUser --> UserOK[User Saved]
+        EditUser --> UserOK
+        DeleteUser --> UserOK
 
-    Users --> UserAction{Action?}
-    UserAction -->|Create User| CreateUser[Create New Staff/Admin Account]
-    UserAction -->|Edit User| EditUser[Modify User Role/Details]
-    UserAction -->|Deactivate| DeactivateUser[Deactivate User Account]
+        %% Audit Logs
+        Audit --> AuditFilters[Filter by:<br/>Date/User/Action]
+        AuditFilters --> ViewLogs[View Audit Trail<br/>Action/User/Timestamp]
 
-    CreateUser --> UserSuccess[✅ User Created]
-    EditUser --> UserSuccess
-    DeactivateUser --> UserSuccess
+        %% End States
+        SettingsOK --> End([Return to Dashboard])
+        UserOK --> End
+        ViewLogs --> End
+    end
 
-    Audit --> SelectFilters[Select Filters:<br/>Date Range, User, Action Type]
-    SelectFilters --> FetchLogs[📡 Fetch Audit Logs from DB]
-    FetchLogs --> DisplayLogs[Display Audit Trail<br/>User, Action, Timestamp, Details]
-
-    SiteVisits --> ViewVisits[View Site Visit Metrics<br/>Unique Visitors, Page Views, Devices]
-
-    SettingsSuccess --> End([Return to Dashboard])
-    UserSuccess --> End
-    DisplayLogs --> End
-    ViewVisits --> End
-
-    style Start fill:#ffccbc
+    style Start fill:#e3f2fd
     style End fill:#2196F3,color:#fff
     style SettingsAction fill:#ffd93d
     style UserAction fill:#ffd93d
@@ -516,179 +720,186 @@ flowchart TD
 
 ---
 
-#### 📂 Flowchart 3: Operational Features (Admin & Staff)
+#### 📂 Subprocess 3: Operational Case Management
 
-**Purpose:** Core case management features shared by both Admin and Staff
-
-```mermaid
-flowchart TD
-    Start([Dashboard]) --> Menu{Select Feature}
-
-    Menu -->|File Case| FileCase[📝 File New Case]
-    Menu -->|Manage Case| ManageCase[🔍 Search/View Cases]
-    Menu -->|Generate Document| GenDoc[📄 Generate Document]
-    Menu -->|Create Guest Link| GuestLink[🔗 Create Guest Link]
-    Menu -->|View Analytics| Analytics[📊 View Analytics]
-
-    %% File Case Flow
-    FileCase --> EnterCaseInfo[Enter Case Information:<br/>Parties, Incident Type, Date, Narrative]
-    EnterCaseInfo --> ValidateCase{Form Valid?}
-    ValidateCase -->|No| ShowErrors[❌ Show Validation Errors]
-    ShowErrors --> FileCase
-    ValidateCase -->|Yes| SaveCase[💾 Save Case<br/>Generate Case Number<br/>Status: New]
-    SaveCase --> CheckPriority{High Priority<br/>Incident?}
-    CheckPriority -->|Yes<br/>Theft/Injury/Harassment| NotifyAdmins[📧 Email All Admins]
-    CheckPriority -->|No| CaseCreated[✅ Case Created]
-    NotifyAdmins --> CaseCreated
-
-    %% Manage Case Flow
-    ManageCase --> SearchCase[Search by Case#/Name/Date]
-    SearchCase --> ViewCase[View Case Details]
-    ViewCase --> CaseAction{Action?}
-    CaseAction -->|Update Status| UpdateStatus[Change Case Status]
-    CaseAction -->|Add Note| AddNote[💬 Add Internal Note]
-    CaseAction -->|Schedule Hearing| ScheduleHearing[📅 Schedule Hearing]
-    CaseAction -->|View Evidence| ViewEvidence[📎 View Uploaded Evidence]
-
-    UpdateStatus --> TerminalCheck{Terminal Status?<br/>Settled/Closed/<br/>Dismissed/Referred}
-    TerminalCheck -->|Yes| LockCase[🔒 Lock Case Read-Only<br/>Deactivate Guest Links]
-    TerminalCheck -->|No| StatusUpdated[✅ Status Updated]
-    LockCase --> LogAudit[📋 Log to Audit Trail]
-    StatusUpdated --> LogAudit
-
-    AddNote --> NoteSaved[✅ Note Added]
-    ScheduleHearing --> HearingSaved[✅ Hearing Scheduled]
-    ViewEvidence --> EvidenceList[Display Evidence Files]
-
-    %% Document Generation Flow
-    GenDoc --> SelectDoc{Document Type?}
-    SelectDoc -->|Summons| GenSummons[Generate Summons PDF]
-    SelectDoc -->|Notice of Hearing| GenNotice[Generate Notice PDF]
-    SelectDoc -->|Amicable Settlement| GenSettlement[Generate Settlement PDF]
-    SelectDoc -->|Certificate to File Action| GenCFA[Generate CFA PDF]
-
-    GenSummons --> RenderPDF[🖨️ Render PDF with Puppeteer]
-    GenNotice --> RenderPDF
-    GenSettlement --> RenderPDF
-    GenCFA --> RenderPDF
-    RenderPDF --> DownloadPDF[⬇️ Download PDF]
-
-    %% Guest Link Flow
-    GuestLink --> EnterGuestInfo[Enter Guest Details:<br/>Name, Email, Phone, Duration]
-    EnterGuestInfo --> GenerateToken[Generate:<br/>Unique Token UUID<br/>6-Digit PIN 100000-999999]
-    GenerateToken --> SaveLink[💾 Save Guest Link<br/>Expiration Date]
-    SaveLink --> SendEmail[📧 Send Email via MailerSend<br/>Magic Link + PIN]
-    SendEmail --> EmailCheck{Email Sent?}
-    EmailCheck -->|Yes| LinkCreated[✅ Guest Link Created]
-    EmailCheck -->|No| EmailError[❌ Email Failed<br/>Check API/Email]
-
-    %% Analytics Flow
-    Analytics --> AnalyticsFilters[Select Filters:<br/>Date Range, Status, Incident Type]
-    AnalyticsFilters --> FetchData[📡 Fetch Analytics Data via RPC]
-    FetchData --> RenderCharts[📈 Render Charts:<br/>Status Distribution<br/>Incident Types<br/>Monthly Trends]
-    RenderCharts --> DisplayMetrics[Show KPIs:<br/>Total Cases, Active, Resolved,<br/>Comparison with Previous Period]
-
-    %% End States
-    CaseCreated --> End([Return to Dashboard])
-    LogAudit --> End
-    NoteSaved --> End
-    HearingSaved --> End
-    EvidenceList --> End
-    DownloadPDF --> End
-    LinkCreated --> End
-    EmailError --> End
-    DisplayMetrics --> End
-
-    style Start fill:#c5e1a5
-    style End fill:#2196F3,color:#fff
-    style LockCase fill:#ff6b6b,color:#fff
-    style ValidateCase fill:#ffd93d
-    style CheckPriority fill:#ffd93d
-    style TerminalCheck fill:#ffd93d
-    style EmailCheck fill:#ffd93d
-```
-
----
-
-#### 👤 Flowchart 4: Guest Portal
-
-**Purpose:** Guest evidence upload workflow via magic link
+**Actor:** Admin + Staff (Shared)  
+**Purpose:** Core case management, document generation, and evidence handling
 
 ```mermaid
 flowchart TD
-    Start([📧 Guest Receives Email]) --> ClickLink[🖱️ Click Magic Link]
-    ClickLink --> LoadPortal[Load Guest Portal]
-    LoadPortal --> EnterPIN[🔢 Enter 6-Digit PIN]
-    EnterPIN --> ValidatePIN{PIN Correct?}
+    subgraph Operations["SUBPROCESS 3: CASE OPERATIONS"]
+        Start([Dashboard]) --> Menu{Select Operation}
 
-    ValidatePIN -->|No| PINAttempts{PIN Attempts<br/>≥ 3?}
-    PINAttempts -->|Yes| PINLocked[🔒 Locked for 10 Minutes]
-    PINAttempts -->|No| EnterPIN
-    PINLocked --> End1([❌ Access Denied])
+        Menu -->|New Case| NewCase[File New Case]
+        Menu -->|Manage Cases| ManageCases[Search Cases]
+        Menu -->|Documents| Documents[Generate Documents]
+        Menu -->|Guest Links| GuestLinks[Create Guest Link]
+        Menu -->|Analytics| CaseAnalytics[View Analytics]
 
-    ValidatePIN -->|Yes| CheckExpiry{Link Active &<br/>Not Expired?}
-    CheckExpiry -->|No| ShowExpired[❌ Link Expired or<br/>Case Closed]
-    ShowExpired --> End1
+        %% NEW CASE FLOW
+        NewCase --> CaseForm[Enter Case Details]
+        CaseForm --> AddParties[Add Involved Parties<br/>Name Validation Applied]
+        AddParties --> ValidateForm{Form Valid?}
+        ValidateForm -->|No| ShowErrors[Show Errors] --> CaseForm
+        ValidateForm -->|Yes| SaveCase[Save Case<br/>Auto-Generate Case#]
+        SaveCase --> CheckPriority{High Priority?<br/>Theft/Injury}
+        CheckPriority -->|Yes| NotifyAdmin[Email Admins]
+        CheckPriority -->|No| CaseCreated
+        NotifyAdmin --> CaseCreated[Case Created]
 
-    CheckExpiry -->|Yes| ShowTerms[📜 Show Terms & Conditions]
-    ShowTerms --> AcceptTerms{Terms<br/>Accepted?}
-    AcceptTerms -->|No| End1
+        %% MANAGE CASES FLOW
+        ManageCases --> SearchCase[Search: Case#/Name/Date]
+        SearchCase --> ViewCase[View Case Details]
+        ViewCase --> CaseAction{Action?}
+        CaseAction -->|Update Status| UpdateStatus[Change Status]
+        CaseAction -->|Add Note| AddNote[Add Note]
+        CaseAction -->|Schedule Hearing| AddHearing[Add Hearing]
+        CaseAction -->|View Evidence| ViewEvidence[View Files]
 
-    AcceptTerms -->|Yes| LogAcceptance[💾 Log Terms Acceptance<br/>with Timestamp]
-    LogAcceptance --> GrantAccess[✅ Access Granted]
-    GrantAccess --> ShowCaseInfo[Display:<br/>📋 Case Narrative<br/>📅 Hearing Schedule<br/>📎 Existing Evidence]
+        UpdateStatus --> IsTerminal{Terminal Status?<br/>Settled/Closed/<br/>Dismissed/Referred}
+        IsTerminal -->|Yes| LockCase[Lock Case<br/>Deactivate Links]
+        IsTerminal -->|No| StatusOK
+        LockCase --> LogAudit[Log Audit]
+        StatusOK[Updated] --> LogAudit
 
-    ShowCaseInfo --> GuestAction{Action?}
-    GuestAction -->|Upload Photo| SelectFile[📁 Select Photo File<br/>JPEG/PNG/WebP]
-    GuestAction -->|View Only| ShowCaseInfo
-    GuestAction -->|Exit| End2([Exit Portal])
+        AddNote --> NoteOK[Note Saved]
+        AddHearing --> HearingOK[Hearing Scheduled]
+        ViewEvidence --> ShowFiles[Display Evidence]
 
-    SelectFile --> ValidateFile{Valid File?<br/>Type: JPEG/PNG/WebP<br/>Size: ≤ 5MB<br/>Count: ≤ 5}
-    ValidateFile -->|No| FileError[❌ File Rejected<br/>Show Error Message]
-    FileError --> ShowCaseInfo
+        %% DOCUMENT GENERATION
+        Documents --> SelectDoc{Document Type?}
+        SelectDoc -->|Summons| GenSummons[Generate Summons]
+        SelectDoc -->|Notice| GenNotice[Generate Notice]
+        SelectDoc -->|Settlement| GenSettlement[Generate Settlement]
+        SelectDoc -->|CFA| GenCFA[Generate CFA]
+        GenSummons --> RenderPDF[Render PDF]
+        GenNotice --> RenderPDF
+        GenSettlement --> RenderPDF
+        GenCFA --> RenderPDF
+        RenderPDF --> DownloadPDF[Download]
 
-    ValidateFile -->|Yes| UploadToStorage[☁️ Upload to Supabase<br/>evidence/ bucket]
-    UploadToStorage --> CreateRecord[🔗 Create Evidence Record<br/>Link to Case + Guest Link]
-    CreateRecord --> UploadSuccess[✅ Evidence Uploaded Successfully]
-    UploadSuccess --> ShowCaseInfo
+        %% GUEST LINKS
+        GuestLinks --> EnterRecipient[Enter Recipient:<br/>Name/Email/Phone]
+        EnterRecipient --> SetExpiry[Set Expiration<br/>24-72 hours]
+        SetExpiry --> GenerateLink[Generate Token + PIN]
+        GenerateLink --> SendEmail{Send Email?}
+        SendEmail -->|Yes| EmailSent[Email Sent]
+        SendEmail -->|Failed| EmailFail[Email Failed]
+        EmailSent --> LinkOK[Link Created]
+
+        %% ANALYTICS
+        CaseAnalytics --> SetFilters[Set Filters:<br/>Date/Status/Type]
+        SetFilters --> FetchStats[Fetch Stats]
+        FetchStats --> ShowCharts[Display Charts]
+
+        %% END STATES
+        CaseCreated --> End([Return])
+        LogAudit --> End
+        NoteOK --> End
+        HearingOK --> End
+        ShowFiles --> End
+        DownloadPDF --> End
+        LinkOK --> End
+        EmailFail --> End
+        ShowCharts --> End
+    end
 
     style Start fill:#fff3e0
-    style End1 fill:#f44336,color:#fff
-    style End2 fill:#2196F3,color:#fff
-    style ValidatePIN fill:#ffd93d
-    style CheckExpiry fill:#ffd93d
-    style ValidateFile fill:#ffd93d
-    style AcceptTerms fill:#ffd93d
+    style End fill:#2196F3,color:#fff
+    style LockCase fill:#ff6b6b,color:#fff
+    style ValidateForm fill:#ffd93d
+    style IsTerminal fill:#ffd93d
+    style SendEmail fill:#ffd93d
 ```
 
 ---
 
-### 🔗 Flowchart Connections
+#### 👤 Subprocess 4: Guest Evidence Upload Portal
 
-**How the 4 flowcharts connect:**
+**Actor:** Guest Only (via Magic Link)  
+**Purpose:** Secure evidence upload for case-related residents
+
+```mermaid
+flowchart TD
+    subgraph Guest["SUBPROCESS 4: GUEST PORTAL"]
+        Start([Receive Email]) --> ClickLink[Click Magic Link]
+        ClickLink --> LoadPortal[Load Guest Portal]
+
+        LoadPortal --> EnterPIN[Enter 6-Digit PIN]
+        EnterPIN --> ValidatePIN{PIN Correct?}
+
+        ValidatePIN -->|No| CheckAttempts{Attempts >= 3?}
+        CheckAttempts -->|Yes| PINLocked[Locked 10 min]
+        CheckAttempts -->|No| EnterPIN
+        PINLocked --> Denied([Access Denied])
+
+        ValidatePIN -->|Yes| CheckLink{Link Valid?<br/>Active & Not Expired}
+        CheckLink -->|No| LinkExpired[Link Expired]
+        LinkExpired --> Denied
+
+        CheckLink -->|Yes| CheckTerms{Terms Already<br/>Accepted?}
+        CheckTerms -->|No| ShowTerms[Show Terms & Conditions]
+        ShowTerms --> AcceptTerms{Accept?}
+        AcceptTerms -->|No| Denied
+        AcceptTerms -->|Yes| LogTerms[Log Acceptance<br/>Timestamp + IP]
+        LogTerms --> GrantAccess
+        CheckTerms -->|Yes| GrantAccess[Access Granted]
+
+        GrantAccess --> ShowCase[Display Case Info:<br/>Narrative<br/>Hearings<br/>Evidence]
+
+        ShowCase --> GuestAction{Action?}
+        GuestAction -->|Upload| SelectFile[Select File<br/>JPEG/PNG/WebP]
+        GuestAction -->|View| ShowCase
+        GuestAction -->|Exit| ExitPortal([Exit])
+
+        SelectFile --> ValidateFile{File Valid?<br/>Type: Image<br/>Size: ≤5MB<br/>Count: ≤5}
+        ValidateFile -->|No| FileError[Invalid File]
+        FileError --> ShowCase
+        ValidateFile -->|Yes| UploadFile[Upload to Storage]
+        UploadFile --> SaveRecord[Save Evidence Record]
+        SaveRecord --> UploadOK[Upload Success]
+        UploadOK --> ShowCase
+    end
+
+    style Start fill:#fff3e0
+    style Denied fill:#f44336,color:#fff
+    style ExitPortal fill:#2196F3,color:#fff
+    style ValidatePIN fill:#ffd93d
+    style CheckLink fill:#ffd93d
+    style AcceptTerms fill:#ffd93d
+    style ValidateFile fill:#ffd93d
+```
+
+---
+
+### 🔗 Subprocess Connection Map
 
 ```
-┌──────────────────────────────────────────────┐
-│  Flowchart 1: System Entry & Authentication │
-│  (All users start here)                      │
-└─────────┬────────────────────┬───────────────┘
-          │                    │
-    ┌─────▼────────┐    ┌──────▼────────┐
-    │ Admin        │    │ Guest         │
-    │ Dashboard    │    │ with Link     │
-    └─────┬────────┘    └───────┬───────┘
-          │                     │
-    ┌─────▼────────┐            │
-    │ Flowchart 2: │     ┌──────▼────────────┐
-    │ Admin-Only   │     │ Flowchart 4:      │
-    │ Features     │     │ Guest Portal      │
-    └─────┬────────┘     └───────────────────┘
-          │
-    ┌─────▼────────────────────────┐
-    │ Flowchart 3:               │
-    │ Operational Features       │
-    │ (Admin & Staff Share This) │
-    └──────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│           SUBPROCESS 1: ENTRY & AUTHENTICATION                │
+│                    (All Users Start Here)                     │
+└──────────┬────────────────────────────────────┬───────────────┘
+           │                                    │
+           ▼                                    ▼
+┌──────────────────────┐              ┌─────────────────────────┐
+│   Role: ADMIN        │              │   Role: GUEST           │
+│   ┌──────────────┐   │              │                         │
+│   │ SUBPROCESS 2 │   │              │   ┌─────────────────┐   │
+│   │ Admin-Only   │   │              │   │ SUBPROCESS 4    │   │
+│   │ Functions    │   │              │   │ Guest Portal    │   │
+│   └──────┬───────┘   │              │   │ (Evidence Upload)│   │
+│          │           │              │   └─────────────────┘   │
+│          ▼           │              └─────────────────────────┘
+│   ┌──────────────┐   │
+│   │ SUBPROCESS 3 │   │       ┌─────────────────────────┐
+│   │ Operations   │◄──┼───────│   Role: STAFF           │
+│   │ (Shared)     │   │       │                         │
+│   └──────────────┘   │       │   ┌─────────────────┐   │
+└──────────────────────┘       │   │ SUBPROCESS 3    │   │
+                               │   │ Operations      │   │
+                               │   │ (Case Mgmt)     │   │
+                               │   └─────────────────┘   │
+                               └─────────────────────────┘
 ```
 
 ---
@@ -706,6 +917,270 @@ Throughout the system, these security measures are enforced:
 | **Guest Link Expiration**    | Auto-expire links after duration    | Database trigger        |
 | **Case Lock**                | Prevent edits to terminal cases     | Application logic       |
 | **Audit Logging**            | Log all critical actions            | Database trigger        |
+
+---
+
+### 🏗️ System Architecture Diagram
+
+The following diagram shows the high-level system architecture and component relationships:
+
+```mermaid
+flowchart TB
+    subgraph Client["CLIENT LAYER"]
+        Browser["Web Browser<br/>(Chrome, Firefox, Safari)"]
+        Mobile["Mobile Browser<br/>(Responsive PWA)"]
+    end
+
+    subgraph NextJS["APPLICATION LAYER (Next.js 16)"]
+        AppRouter["App Router<br/>(Server Components)"]
+        ServerActions["Server Actions<br/>(Form Handling)"]
+        APIRoutes["API Routes<br/>(/api/*)"]
+        Middleware["Middleware<br/>(Auth, Rate Limiting)"]
+    end
+
+    subgraph Supabase["BACKEND SERVICES (Supabase)"]
+        Auth["Supabase Auth<br/>(JWT, Sessions)"]
+        Database["PostgreSQL<br/>(RLS Enabled)"]
+        Storage["Supabase Storage<br/>(Evidence Bucket)"]
+    end
+
+    subgraph External["EXTERNAL SERVICES"]
+        MailerSend["MailerSend<br/>(Email API)"]
+        Puppeteer["Puppeteer<br/>(PDF Generation)"]
+    end
+
+    subgraph Security["SECURITY LAYER"]
+        RLS["Row Level Security"]
+        RateLimiter["Rate Limiter"]
+        Encryption["TLS/HTTPS"]
+    end
+
+    Browser --> AppRouter
+    Mobile --> AppRouter
+    AppRouter --> ServerActions
+    AppRouter --> APIRoutes
+    AppRouter --> Middleware
+
+    Middleware --> Auth
+    ServerActions --> Database
+    ServerActions --> Storage
+    APIRoutes --> MailerSend
+    APIRoutes --> Puppeteer
+
+    Auth --> Database
+    Database --> RLS
+    Middleware --> RateLimiter
+
+    style Browser fill:#e3f2fd
+    style NextJS fill:#000,color:#fff
+    style Supabase fill:#3ecf8e,color:#fff
+    style MailerSend fill:#0078d4,color:#fff
+    style Puppeteer fill:#00d8a2,color:#fff
+```
+
+**Technology Stack Summary:**
+
+| Layer          | Technology              | Purpose                            |
+| -------------- | ----------------------- | ---------------------------------- |
+| Frontend       | Next.js 16 (React 19)   | Server-side rendering, App Router  |
+| Styling        | Tailwind CSS 4          | Utility-first CSS framework        |
+| UI Components  | Flowbite + Lucide React | Pre-built components and icons     |
+| Database       | PostgreSQL (Supabase)   | Relational data storage with RLS   |
+| Authentication | Supabase Auth           | JWT-based session management       |
+| File Storage   | Supabase Storage        | Encrypted evidence files           |
+| Email          | MailerSend API          | Transactional emails (guest links) |
+| PDF Generation | Puppeteer               | Server-side document rendering     |
+| Validation     | Zod                     | Runtime type validation            |
+
+</details>
+
+<details>
+<summary><strong>🔄 Data Flow Diagram (Click to Expand)</strong></summary>
+
+### System Data Flow
+
+This diagram illustrates how data moves through the **BlotterSys** ecosystem, connecting users, internal processes, and external services.
+
+```mermaid
+graph TD
+    %% Entities
+    UserAdmin[Admin]
+    UserStaff[Staff]
+    UserGuest[Guest / Resident]
+
+    %% External Services
+    MailerSend[MailerSend API]
+
+    %% System Boundaries
+    subgraph "BlotterSys System"
+        direction TB
+
+        %% Processes
+        ProcAuth[Authentication & RBAC]
+        ProcCaseMgmt[Case Management]
+        ProcDocGen[Document Generator]
+        ProcEvidence[Evidence Handler]
+        ProcNotify[Notification Service]
+
+        %% Data Stores
+        DB[(Supabase DB)]
+        Storage[(Supabase Storage)]
+    end
+
+    %% Data Flows
+
+    %% Auth Flow
+    UserAdmin & UserStaff -->|Credentials| ProcAuth
+    ProcAuth <-->|Verify / Create Session| DB
+    ProcAuth -->|Token| UserAdmin & UserStaff
+
+    %% Case Management Flow
+    UserStaff -->|File Case / Update Status| ProcCaseMgmt
+    ProcCaseMgmt -->|Persist Case Data| DB
+    DB -->|Retrieved Case Data| ProcCaseMgmt
+
+    %% Document Generation Flow
+    UserStaff -->|Request Document| ProcDocGen
+    ProcDocGen -->|Fetch Template Data| DB
+    ProcDocGen -->|Generate PDF| UserStaff
+
+    %% Evidence Flow (Staff)
+    UserStaff -->|Upload Files| ProcEvidence
+    ProcEvidence -->|Store Metadata| DB
+    ProcEvidence -->|Store Binary| Storage
+
+    %% Evidence Flow (Guest)
+    UserAdmin & UserStaff -->|Generate Magic Link| ProcEvidence
+    ProcEvidence -->|Link Details| DB
+    ProcEvidence -->|Send Link via Email| ProcNotify
+    ProcNotify -->|Dispatch Request| MailerSend
+    MailerSend -->|Email Delivery| UserGuest
+
+    UserGuest -->|Access Link + Upload| ProcEvidence
+    ProcEvidence -->|Validate Token| DB
+
+    %% Read / View Flows
+    UserAdmin -->|View Audit Logs| DB
+    UserStaff -->|Search Cases| DB
+
+    %% Styling
+    style UserAdmin fill:#e3f2fd,stroke:#1976d2
+    style UserStaff fill:#fff3e0,stroke:#f57c00
+    style UserGuest fill:#f3e5f5,stroke:#7b1fa2
+    style DB fill:#e0f2f1,stroke:#00695c
+    style Storage fill:#e0f2f1,stroke:#00695c
+    style MailerSend fill:#ffebee,stroke:#c62828
+```
+
+</details>
+
+---
+
+### 🔄 Case Status State Machine
+
+The following state machine diagram shows valid case status transitions:
+
+```mermaid
+stateDiagram-v2
+    [*] --> New: Case Filed
+
+    New --> UnderInvestigation: Start Investigation
+    New --> Dismissed: Dismiss Case
+    New --> Referred: Refer to Higher Authority
+
+    UnderInvestigation --> HearingScheduled: Schedule Hearing
+    UnderInvestigation --> Dismissed: Dismiss Case
+    UnderInvestigation --> Referred: Refer to Higher Authority
+
+    HearingScheduled --> Settled: Amicable Settlement
+    HearingScheduled --> Closed: Case Closed
+    HearingScheduled --> Dismissed: Dismiss Case
+    HearingScheduled --> Referred: Refer to Higher Authority
+    HearingScheduled --> HearingScheduled: Reschedule Hearing
+
+    Settled --> [*]: Terminal State
+    Closed --> [*]: Terminal State
+    Dismissed --> [*]: Terminal State
+    Referred --> [*]: Terminal State
+
+    note right of New
+        Initial status when
+        case is first filed
+    end note
+
+    note right of Settled
+        Terminal states lock
+        the case read-only
+        and deactivate guest links
+    end note
+```
+
+**Status Definitions:**
+
+| Status                  | Description                      | Editable  | Guest Links    |
+| ----------------------- | -------------------------------- | --------- | -------------- |
+| **New**                 | Case just filed, awaiting action | ✅ Yes    | ✅ Active      |
+| **Under Investigation** | Case is being investigated       | ✅ Yes    | ✅ Active      |
+| **Hearing Scheduled**   | Hearing date set                 | ✅ Yes    | ✅ Active      |
+| **Settled**             | Resolved via amicable settlement | ❌ Locked | ❌ Deactivated |
+| **Closed**              | Case closed by authority         | ❌ Locked | ❌ Deactivated |
+| **Dismissed**           | Case dismissed (no merit)        | ❌ Locked | ❌ Deactivated |
+| **Referred**            | Referred to higher authority     | ❌ Locked | ❌ Deactivated |
+
+---
+
+### 📡 Sequence Diagram: Guest Evidence Upload
+
+The following sequence diagram illustrates the interaction flow when a guest uploads evidence:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant G as Guest (Browser)
+    participant N as Next.js Server
+    participant A as Supabase Auth
+    participant D as PostgreSQL DB
+    participant S as Supabase Storage
+    participant E as Email (MailerSend)
+
+    Note over G,E: Phase 1: Staff Creates Guest Link
+    N->>D: Insert guest_links record
+    D-->>N: Return token + PIN
+    N->>E: Send email with magic link
+    E-->>G: Email delivered
+
+    Note over G,E: Phase 2: Guest Accesses Portal
+    G->>N: Click magic link (/guest/[token])
+    N->>D: Validate token exists & active
+    D-->>N: Return guest_link data
+    N-->>G: Render PIN entry page
+
+    G->>N: Submit 6-digit PIN
+    N->>D: Verify PIN matches
+    alt PIN Incorrect
+        D-->>N: PIN mismatch
+        N-->>G: Show error, increment attempts
+    else PIN Correct
+        D-->>N: PIN verified
+        N-->>G: Check terms acceptance
+    end
+
+    alt Terms Not Accepted
+        G->>N: Accept terms & conditions
+        N->>D: Update terms_accepted_at
+    end
+
+    N-->>G: Render case details + upload form
+
+    Note over G,E: Phase 3: Evidence Upload
+    G->>N: Upload image file
+    N->>N: Validate file (type, size)
+    N->>S: Upload to evidence/ bucket
+    S-->>N: Return file path
+    N->>D: Insert evidence record
+    D-->>N: Confirm saved
+    N-->>G: Show success message
+```
 
 ---
 
@@ -776,7 +1251,7 @@ Throughout the system, these security measures are enforced:
 | FR-6.3 | System shall display monthly case trends             | Medium   |
 | FR-6.4 | System shall allow filtering analytics by date range | Medium   |
 | FR-6.5 | System shall show comparison with previous period    | Low      |
-| FR-6.6 | System shall track site visit analytics              | Low      |
+
 
 ### FR-7: System Configuration
 

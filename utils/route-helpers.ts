@@ -7,9 +7,8 @@ const PUBLIC_ROUTES = [
   '/forgot-password',
   '/change-password',
   '/auth/callback',
-  '/_next',
+  '_next',
   '/favicon.ico',
-  '/api/track-visit', // Track-visit should not block
 ]
 
 const GUEST_ROUTE_PREFIX = '/guest/'

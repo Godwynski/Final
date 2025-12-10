@@ -217,26 +217,7 @@ CREATE TABLE IF NOT EXISTS hearings (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Site Visits Table (with tracking extensions)
-CREATE TABLE IF NOT EXISTS site_visits (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  ip_address TEXT,
-  user_agent TEXT,
-  page_path TEXT NOT NULL,
-  referrer TEXT,
-  country TEXT,
-  city TEXT,
-  device_type TEXT,
-  browser TEXT,
-  os TEXT,
-  visit_type TEXT DEFAULT 'page_view' CHECK (visit_type IN ('page_view', 'session', 'unique_daily')),
-  session_id TEXT,
-  user_id UUID REFERENCES auth.users(id),
-  visitor_email TEXT,
-  visitor_name TEXT,
-  visitor_role TEXT DEFAULT 'anonymous',
-  visited_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+
 
 
 -- ==========================================
@@ -253,7 +234,7 @@ alter table guest_links enable row level security;
 alter table notifications enable row level security;
 alter table barangay_settings enable row level security;
 alter table hearings enable row level security;
-alter table site_visits enable row level security;
+
 
 -- Audit Logs Policies
 DROP POLICY IF EXISTS "Allow insert for authenticated users" ON audit_logs;
@@ -348,21 +329,7 @@ DROP POLICY IF EXISTS "Enable delete access for authenticated users" ON hearings
 CREATE POLICY "Enable delete access for authenticated users" ON hearings
     FOR DELETE TO authenticated USING (true);
 
--- Site Visits Policies
-DROP POLICY IF EXISTS "Admins can view site visits" ON site_visits;
-CREATE POLICY "Admins can view site visits" ON site_visits
-    FOR SELECT TO authenticated
-    USING (EXISTS (SELECT 1 FROM profiles WHERE id = (SELECT auth.uid()) AND role = 'admin'));
 
-DROP POLICY IF EXISTS "Anyone can insert site visits" ON site_visits;
-CREATE POLICY "Anyone can insert site visits" ON site_visits
-    FOR INSERT TO anon, authenticated
-    WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Admins can delete site visits" ON site_visits;
-CREATE POLICY "Admins can delete site visits" ON site_visits
-    FOR DELETE TO authenticated
-    USING (EXISTS (SELECT 1 FROM profiles WHERE id = (SELECT auth.uid()) AND role = 'admin'));
 
 
 -- ==========================================
@@ -422,11 +389,7 @@ CREATE INDEX IF NOT EXISTS idx_guest_links_case_id ON guest_links(case_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
 
--- Site Visits
-CREATE INDEX IF NOT EXISTS idx_site_visits_visited_at ON site_visits(visited_at DESC);
-CREATE INDEX IF NOT EXISTS idx_site_visits_page_path ON site_visits(page_path);
-CREATE INDEX IF NOT EXISTS idx_site_visits_ip_address ON site_visits(ip_address);
-CREATE INDEX IF NOT EXISTS idx_site_visits_user_id ON site_visits(user_id);
+
 
 -- Performance optimization indexes (added for query speed)
 -- Optimize hearing date range queries (used in calendar)

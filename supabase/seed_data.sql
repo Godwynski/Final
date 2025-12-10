@@ -369,52 +369,11 @@ BEGIN
         );
     END LOOP;
 
-    -- ==========================================
-    -- 3. GENERATE SITE VISITS (Analytics)
-    -- ==========================================
-    RAISE NOTICE 'Generating site visits data...';
-    FOR i IN 1..500 LOOP
-        random_date := NOW() - (random() * INTERVAL '30 days'); -- Last 30 days
-        INSERT INTO site_visits (
-            ip_address,
-            user_agent,
-            page_path,
-            referrer,
-            country,
-            city,
-            device_type,
-            browser,
-            os,
-            visit_type,
-            session_id,
-            user_id,
-            visitor_email,
-            visitor_role,
-            visited_at
-        ) VALUES (
-            '192.168.1.' || floor(random() * 255),
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64)...',
-            (ARRAY['/dashboard', '/dashboard/cases', '/dashboard/calendar', '/dashboard/reports', '/login'])[1 + floor(random() * 5)],
-            (ARRAY['direct', 'google.com', 'facebook.com'])[1 + floor(random() * 3)],
-            'Philippines',
-            (ARRAY['Manila', 'Quezon City', 'Makati', 'Cebu'])[1 + floor(random() * 4)],
-            (ARRAY['desktop', 'mobile', 'tablet'])[1 + floor(random() * 3)],
-            (ARRAY['Chrome', 'Firefox', 'Safari', 'Edge'])[1 + floor(random() * 4)],
-            (ARRAY['Windows', 'MacOS', 'iOS', 'Android'])[1 + floor(random() * 4)],
-            (ARRAY['page_view', 'session', 'unique_daily'])[1 + floor(random() * 3)],
-            md5(random()::text),
-            (ARRAY[NULL, user_ids[1 + floor(random() * array_length(user_ids, 1))]])[1 + floor(random() * 2)], -- 50% chance logged in
-            NULL,
-            'anonymous',
-            random_date
-        );
-    END LOOP;
 
     RAISE NOTICE 'Seed data generation complete!';
     RAISE NOTICE '- Verified/Created Staff users';
     RAISE NOTICE '- 200 cases created with resolution details';
     RAISE NOTICE '- Included guest links with recipient info';
     RAISE NOTICE '- Evidence linked to guest uploads';
-    RAISE NOTICE '- 500 site visit records for analytics';
 
 END $$;
