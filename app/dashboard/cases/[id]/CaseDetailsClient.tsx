@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import AlertModal from '@/components/ui/AlertModal'
 import ConfirmModal from '@/components/ui/ConfirmModal'
@@ -62,13 +62,8 @@ export default function CaseDetailsClient({
         (CONFIG.FILE_UPLOAD.ALLOWED_IMAGE_TYPES as readonly string[]).includes(e.file_type)
     ).length
 
-    const [origin, setOrigin] = useState('')
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            setOrigin(window.location.origin)
-        }
-    }, [])
+// Local derivation of origin (safe with suppressHydrationWarning in this specific context)
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
 
     // Alert Modal State
     const [alertState, setAlertState] = useState<{
@@ -330,6 +325,7 @@ export default function CaseDetailsClient({
                                     caseId={caseData.id}
                                     hearings={hearings}
                                     isReadOnly={isReadOnly}
+                                    involvedParties={involvedParties}
                                 />
 
                                 {/* Case Info Metadata */}
@@ -688,9 +684,9 @@ export default function CaseDetailsClient({
                                                     <div className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1">
                                                         <span className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">URL</span>
                                                         <span className="font-mono text-blue-600 dark:text-blue-400 truncate max-w-[150px] sm:max-w-xs block">
-                                                            {origin}/guest/{link.token.slice(0, 8)}...
+                                                            .../guest/{link.token.slice(0, 8)}...
                                                         </span>
-                                                        <CopyButton text={`${origin}/guest/${link.token}`} label="" />
+                                                        <CopyButton text={`/guest/${link.token}`} label="" />
                                                     </div>
                                                     <div className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1">
                                                         <span className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">PIN</span>
@@ -723,7 +719,7 @@ export default function CaseDetailsClient({
                                                 {link.is_active && (
                                                     <div className="pt-2 border-t border-gray-100 dark:border-gray-700/50">
                                                         <form action={emailGuestLink} className="flex gap-2 items-center">
-                                                            <input type="hidden" name="link" value={`${origin}/guest/${link.token}`} />
+                                                            <input type="hidden" name="link" value={`${origin}/guest/${link.token}`} suppressHydrationWarning />
                                                             <input type="hidden" name="pin" value={link.pin} />
                                                             <input type="hidden" name="caseId" value={caseData.id} />
                                                             <div className="relative flex-1 max-w-sm">

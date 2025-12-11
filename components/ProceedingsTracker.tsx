@@ -6,16 +6,21 @@ import {
   updateHearingStatus,
   deleteHearing,
 } from "@/app/dashboard/cases/[id]/actions";
-import { Hearing } from "@/types";
+import { Hearing, InvolvedParty } from "@/types";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import AlertModal from "@/components/ui/AlertModal";
+import InputModal from "@/components/ui/InputModal";
 
 export default function ProceedingsTracker({
   caseId,
   hearings,
   isReadOnly,
+  involvedParties = [],
 }: {
   caseId: string;
   hearings: Hearing[];
   isReadOnly: boolean;
+  involvedParties?: InvolvedParty[];
 }) {
   const [isScheduling, setIsScheduling] = useState(false);
   const [newDate, setNewDate] = useState("");
@@ -23,6 +28,49 @@ export default function ProceedingsTracker({
   const [newType, setNewType] = useState("Mediation");
   const [newNotes, setNewNotes] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Modal states
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    message: string;
+    type: "danger" | "warning" | "info";
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    message: "",
+    type: "info",
+    onConfirm: () => {},
+  });
+
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "info";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
+
+  const [inputModal, setInputModal] = useState<{
+    isOpen: boolean;
+    hearingId: string;
+  }>({
+    isOpen: false,
+    hearingId: "",
+  });
+
+  const [emailSending, setEmailSending] = useState(false);
+
+  // Prepare email options from involved parties
+  const emailOptions = involvedParties
+    .filter((party) => party.email?.trim())
+    .map((party) => ({
+      name: `${party.name} (${party.type})`,
+      email: party.email!,
+    }));
 
   // Get today's date in YYYY-MM-DD format for min attribute
   const today = new Date().toISOString().split("T")[0];
@@ -40,19 +88,83 @@ export default function ProceedingsTracker({
   };
 
   const handleStatusUpdate = async (hearingId: string, status: string) => {
-    if (confirm(`Mark hearing as ${status}?`)) {
-      await updateHearingStatus(
-        hearingId,
-        caseId,
-        status,
-        `Marked as ${status}`,
-      );
-    }
+    const statusMessages = {
+      Completed: "Mark this hearing as completed?",
+      "No Show": "Mark this hearing as no show?",
+      Rescheduled: "Reset this hearing status to rescheduled?",
+    };
+
+    const statusTypes: Record<string, "danger" | "warning" | "info"> = {
+      Completed: "info",
+      "No Show": "warning",
+      Rescheduled: "info",
+    };
+
+    setConfirmModal({
+      isOpen: true,
+      message: statusMessages[status as keyof typeof statusMessages] || `Mark hearing as ${status}?`,
+      type: statusTypes[status] || "info",
+      onConfirm: async () => {
+        await updateHearingStatus(
+          hearingId,
+          caseId,
+          status,
+          `Marked as ${status}`,
+        );
+      },
+    });
   };
 
   const handleDelete = async (hearingId: string) => {
-    if (confirm("Are you sure you want to delete this hearing record?")) {
-      await deleteHearing(hearingId, caseId);
+    setConfirmModal({
+      isOpen: true,
+      message: "Are you sure you want to delete this hearing record? This action cannot be undone.",
+      type: "danger",
+      onConfirm: async () => {
+        await deleteHearing(hearingId, caseId);
+      },
+    });
+  };
+
+  const handleEmailNotice = (hearingId: string) => {
+    setInputModal({
+      isOpen: true,
+      hearingId,
+    });
+  };
+
+  const handleSendEmail = async (email: string) => {
+    setEmailSending(true);
+    try {
+      const { sendHearingNotice } = await import(
+        "@/app/dashboard/cases/[id]/actions"
+      );
+      const res = await sendHearingNotice(inputModal.hearingId, email);
+
+      if (res.error) {
+        setAlertModal({
+          isOpen: true,
+          title: "Error",
+          message: res.error,
+          type: "error",
+        });
+      } else if (res.success) {
+        setAlertModal({
+          isOpen: true,
+          title: "Success",
+          message: res.message || "Hearing notice sent successfully!",
+          type: "success",
+        });
+      }
+    } catch {
+      setAlertModal({
+        isOpen: true,
+        title: "Error",
+        message: "Failed to send email. Please try again.",
+        type: "error",
+      });
+    } finally {
+      setEmailSending(false);
     }
   };
 
@@ -244,7 +356,8 @@ export default function ProceedingsTracker({
                   )}
                 </div>
 
-                {!isReadOnly && hearing.status === "Scheduled" && (
+                {!isReadOnly &&
+                  ["Scheduled", "Rescheduled"].includes(hearing.status) && (
                   <div className="flex flex-col gap-1">
                     <button
                       onClick={() =>
@@ -269,31 +382,9 @@ export default function ProceedingsTracker({
                       📅 Reset
                     </button>
                     <button
-                      onClick={() => {
-                        const email = prompt(
-                          "Enter recipient email for hearing notice:",
-                        );
-                        if (email) {
-                          // Dynamic import to avoid client-side error if action not ready,
-                          // but we imported it at top. However, we need to add it to imports.
-                          // For now, let's assume we can add it to imports in next step or use a prop function.
-                          // Better to just call the action directly if imported.
-                          // I will update imports in ProceedingsTracker.tsx separately.
-                          alert("Sending email to " + email + "...");
-                          import("@/app/dashboard/cases/[id]/actions").then(
-                            (mod) => {
-                              mod
-                                .sendHearingNotice(hearing.id, email)
-                                .then((res) => {
-                                  if (res.error) alert("Error: " + res.error);
-                                  if (res.success)
-                                    alert("Success: " + res.message);
-                                });
-                            },
-                          );
-                        }
-                      }}
-                      className="text-xs text-blue-600 hover:bg-blue-50 px-2 py-1 rounded border border-blue-200 dark:border-blue-800 dark:hover:bg-blue-900/30"
+                      onClick={() => handleEmailNotice(hearing.id)}
+                      disabled={emailSending}
+                      className="text-xs text-blue-600 hover:bg-blue-50 px-2 py-1 rounded border border-blue-200 dark:border-blue-800 dark:hover:bg-blue-900/30 disabled:opacity-50"
                     >
                       ✉️ Email Notice
                     </button>
@@ -325,6 +416,40 @@ export default function ProceedingsTracker({
           ))
         )}
       </div>
+
+      {/* Modals */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={confirmModal.onConfirm}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText="Confirm"
+        cancelText="Cancel"
+      />
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
+
+      <InputModal
+        isOpen={inputModal.isOpen}
+        onClose={() => setInputModal({ ...inputModal, isOpen: false })}
+        onConfirm={handleSendEmail}
+        title="Send Hearing Notice"
+        message="Enter the recipient's email address to send the hearing notice."
+        placeholder="example@email.com"
+        inputType="email"
+        validateEmail={true}
+        confirmText="Send Email"
+        cancelText="Cancel"
+        emailOptions={emailOptions}
+        showEmailSelect={emailOptions.length > 0}
+      />
     </div>
   );
 }
