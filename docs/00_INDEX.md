@@ -40,6 +40,12 @@ Visual representation of user roles and their system interactions.
 
 - **Go here for:** Actor definitions, Feature access matrix, and User journey summaries.
 
+### [07. Architecture & Codebase Visualization](./07_ARCHITECTURE.md)
+
+Comprehensive visualization of the entire codebase structure and connections.
+
+- **Go here for:** System Architecture, Component Dependencies, Data Flow, Database ERD, Auth Flow, State Machines, and Technology Stack.
+
 ---
 
 > 💡 **Tip:** Start with the **README** to get the app running, then consult **Scope and Limitations** for feature details, and **Technical Background** for architectural insights.
