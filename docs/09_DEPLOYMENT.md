@@ -37,12 +37,19 @@ In your Railway dashboard, ensure these environment variables are set:
 - `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anon key
 - `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key
-- `MAILERSEND_API_KEY` - Your MailerSend API key (if using email)
+- `NEXT_PUBLIC_APP_URL` - Your Railway app URL (e.g., `https://your-app.railway.app`)
+- `NEXT_PUBLIC_SITE_URL` - Same as NEXT_PUBLIC_APP_URL for authentication callbacks
+- `MAILERSEND_API_KEY` - Your MailerSend API key (if using email features)
 
 **Automatically set by nixpacks.toml:**
 
 - `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true`
 - `PUPPETEER_EXECUTABLE_PATH=/nix/var/nix/profiles/default/bin/chromium`
+
+**Important Notes:**
+- After deployment, update `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_SITE_URL` with your actual Railway domain
+- Add your Railway domain to Supabase → Authentication → URL Configuration → Site URL
+- Add your Railway domain to Supabase → Authentication → URL Configuration → Redirect URLs
 
 ### Step 3: Deploy
 
