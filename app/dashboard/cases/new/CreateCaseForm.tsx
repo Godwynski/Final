@@ -18,6 +18,10 @@ export default function CreateCaseForm() {
 
   // Initialize parties from localStorage using lazy initialization
   const [parties, setParties] = useState<Party[]>(() => {
+    // Check if we're on the client side (localStorage is not available on server)
+    if (typeof window === "undefined") {
+      return [];
+    }
     const savedParties = localStorage.getItem("draft_case_parties");
     if (savedParties) {
       try {
@@ -36,6 +40,12 @@ export default function CreateCaseForm() {
   }, [parties]);
 
   const [missingFields, setMissingFields] = useState<string[]>([]);
+
+  // Compute the actual fields to display (combines form validation + real-time party check)
+  const displayMissingFields =
+    parties.length === 0
+      ? Array.from(new Set([...missingFields, "At least one involved party"]))
+      : missingFields.filter((f) => f !== "At least one involved party");
 
   const validateForm = (form: HTMLFormElement) => {
     const formData = new FormData(form);
@@ -69,7 +79,7 @@ export default function CreateCaseForm() {
       )}
 
       {/* Validation Summary */}
-      {missingFields.length > 0 && (
+      {displayMissingFields.length > 0 && (
         <div className="p-4 mb-4 text-sm text-yellow-800 rounded-lg bg-yellow-50 dark:bg-gray-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-700">
           <div className="flex items-center gap-2 mb-2 font-medium">
             <svg
@@ -88,7 +98,7 @@ export default function CreateCaseForm() {
             Required Information Missing:
           </div>
           <ul className="list-disc list-inside space-y-1 ml-2">
-            {missingFields.map((field) => (
+            {displayMissingFields.map((field) => (
               <li key={field}>{field}</li>
             ))}
           </ul>
@@ -122,8 +132,8 @@ export default function CreateCaseForm() {
         </a>
         <button
           type="submit"
-          disabled={isPending || missingFields.length > 0}
-          className={`text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 flex items-center gap-2 ${isPending || missingFields.length > 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+          disabled={isPending || displayMissingFields.length > 0}
+          className={`text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 flex items-center gap-2 ${isPending || displayMissingFields.length > 0 ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           {isPending ? (
             <>

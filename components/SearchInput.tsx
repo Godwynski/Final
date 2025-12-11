@@ -1,49 +1,48 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useCallback, useEffect } from "react";
-import { useDebounce } from "@/hooks";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useState, useCallback, useTransition } from "react";
+import { useDebouncedCallback } from "use-debounce";
 
 export default function SearchInput() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
+  const [isPending, startTransition] = useTransition();
 
-  const query = searchParams.get("query")?.toString() || "";
-  const [searchTerm, setSearchTerm] = useState(query);
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const initialQuery = searchParams.get("query")?.toString() || "";
+  const [searchTerm, setSearchTerm] = useState(initialQuery);
 
-  // Sync with URL when query changes externally (e.g., browser back/forward)
-  useEffect(() => {
-    if (query !== searchTerm) {
-      setSearchTerm(query);
-    }
-  }, [query]); // Only depend on query
-
-  // Memoized search handler
-  const handleSearch = useCallback(() => {
-    const params = new URLSearchParams(searchParams);
-    if (debouncedSearchTerm) {
-      params.set("query", debouncedSearchTerm);
+  // Debounced search handler that updates URL
+  const debouncedSearch = useDebouncedCallback((term: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (term) {
+      params.set("query", term);
     } else {
       params.delete("query");
     }
-    router.replace(`?${params.toString()}`);
-  }, [debouncedSearchTerm, router, searchParams]);
+    // Reset to page 1 when searching
+    params.delete("page");
 
-  // Trigger search when debounced value changes
-  useEffect(() => {
-    handleSearch();
-  }, [handleSearch]);
+    startTransition(() => {
+      router.replace(`${pathname}?${params.toString()}`);
+    });
+  }, 300);
 
-  const onInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  }, []);
+  const onInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setSearchTerm(value);
+      debouncedSearch(value);
+    },
+    [debouncedSearch],
+  );
 
   return (
     <div className="relative flex-1">
       <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
         <svg
-          className="w-5 h-5 text-gray-400"
+          className={`w-5 h-5 ${isPending ? "text-blue-400 animate-pulse" : "text-gray-400"}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

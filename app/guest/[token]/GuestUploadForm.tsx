@@ -12,6 +12,8 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
     const [error, setError] = useState('')
     const [isVisible, setIsVisible] = useState(false)
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+    const [selectedFile, setSelectedFile] = useState<File | null>(null)
+    const [isDocument, setIsDocument] = useState(false)
 
     const isAtLimit = currentPhotoCount >= CONFIG.GUEST_LINK.MAX_UPLOADS_PER_LINK
 
@@ -25,19 +27,33 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
-            // Validate type image
-            if (!file.type.startsWith('image/')) {
-                setError('Please select an image file.')
+            // Check if it's an allowed file type
+            const isImage = file.type.startsWith('image/')
+            const isDoc = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type)
+            
+            if (!isImage && !isDoc) {
+                setError('Please select an image or document file (PDF, DOC, DOCX).')
                 return
             }
             
+            setSelectedFile(file)
+            setIsDocument(isDoc)
+            
             if (previewUrl) URL.revokeObjectURL(previewUrl)
-            const url = URL.createObjectURL(file)
-            setPreviewUrl(url)
+            
+            if (isImage) {
+                const url = URL.createObjectURL(file)
+                setPreviewUrl(url)
+            } else {
+                setPreviewUrl(null) // No preview for documents
+            }
+            
             setError('')
             setMessage('')
         } else {
             setPreviewUrl(null)
+            setSelectedFile(null)
+            setIsDocument(false)
         }
     }
 
@@ -100,17 +116,17 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
     }
 
     async function handleSubmit(formData: FormData) {
-        if (!previewUrl && !formData.get('file')) {
+        if (!selectedFile) {
             setError('Please select a file first.')
             return
         }
 
         setIsLoading(true)
-        setMessage('Compressing and uploading...')
+        setMessage(isDocument ? 'Uploading document...' : 'Compressing and uploading...')
         setError('')
 
         try {
-            // Compress the image before upload
+            // Only compress images, not documents
             const file = formData.get('file') as File
             if (file && file.type.startsWith('image/')) {
                 const compressedFile = await compressImage(file)
@@ -132,6 +148,8 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
                 const form = document.getElementById('upload-form') as HTMLFormElement
                 form.reset()
                 setPreviewUrl(null)
+                setSelectedFile(null)
+                setIsDocument(false)
                 setIsVisible(false) 
             }
         } catch {
@@ -155,11 +173,11 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
             <form id="upload-form" action={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-900 dark:text-white" htmlFor="file_input">
-                        1. Select Evidence (Image)
+                        1. Select Evidence (Image or Document)
                     </label>
                     <input
                         name="file"
-                        accept="image/*"
+                        accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                         onChange={handleFileChange}
                         className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
                         id="file_input"
@@ -168,12 +186,12 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
                         disabled={isAtLimit || isLoading}
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-300">
-                        SVG, PNG, JPG or GIF (MAX. {CONFIG.FILE_UPLOAD.GUEST_MAX_SIZE_MB}MB)
+                        Images (PNG, JPG, WebP) or Documents (PDF, DOC, DOCX) - Max {CONFIG.FILE_UPLOAD.GUEST_MAX_SIZE_MB}MB
                     </p>
                 </div>
 
                 {/* File Preview Section */}
-                {previewUrl && (
+                {previewUrl && !isDocument && (
                     <div className="p-4 border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex flex-col items-center animate-in fade-in zoom-in duration-300">
                         <p className="text-sm font-semibold mb-2 text-blue-800 dark:text-blue-300">
                             Ready to Upload
@@ -185,6 +203,24 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
                                 alt="Evidence Preview" 
                                 className="w-full h-full object-contain" 
                             />
+                        </div>
+                    </div>
+                )}
+                
+                {/* Document Preview */}
+                {selectedFile && isDocument && (
+                    <div className="p-4 border-2 border-dashed border-green-300 rounded-lg bg-green-50 dark:bg-green-900/20 flex flex-col items-center animate-in fade-in zoom-in duration-300">
+                        <p className="text-sm font-semibold mb-2 text-green-800 dark:text-green-300">
+                            Document Ready to Upload
+                        </p>
+                        <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                            <svg className="w-10 h-10 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                            </svg>
+                            <div>
+                                <p className="font-medium text-gray-900 dark:text-white">{selectedFile.name}</p>
+                                <p className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -242,7 +278,7 @@ export default function GuestUploadForm({ token, currentPhotoCount }: { token: s
 
                 <button
                     type="submit"
-                    disabled={isLoading || isAtLimit || !previewUrl}
+                    disabled={isLoading || isAtLimit || !selectedFile}
                     className="w-full relative flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-3 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                     {isLoading ? (

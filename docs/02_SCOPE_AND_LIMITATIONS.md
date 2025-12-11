@@ -11,7 +11,7 @@ The system handles the digital management of barangay blotter cases, specificall
 - **Digital Blotter**: Full lifecycle management of cases from filing to resolution (Filed → Hearing → Amicable Settlement/CFA → Closed).
 - **Search & Retrieval**: Advanced filtering of cases by Case Number, Title, Date, Status, or Involved Parties.
 - **Dashboard & Analytics**: Real-time visualization of case statistics, status distribution, and incident trends.
-- **Audit Trails**: automatic logging of critical system actions (login, status changes, document generation) for accountability.
+- **Audit Trails**: Automatic logging of critical system actions (login, status changes, document generation) for accountability.
 
 ### 1.2 User Roles & Access Control
 
