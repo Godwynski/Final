@@ -30,6 +30,7 @@ export async function createUser(formData: FormData) {
     })
 
     if (error) {
+        console.error('Create user error:', JSON.stringify(error, null, 2))
         return { error: error.message }
     }
 
@@ -72,7 +73,10 @@ export async function deleteUser(formData: FormData) {
 
     const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
 
-    if (error) redirect(`/dashboard/admin?error=${encodeURIComponent(error.message)}`)
+    if (error) {
+        console.error('Delete user error:', JSON.stringify(error, null, 2))
+        redirect(`/dashboard/admin?error=${encodeURIComponent(error.message)}`)
+    }
 
     await supabase.from('audit_logs').insert({
         user_id: currentUser.id,
@@ -103,7 +107,10 @@ export async function updateUserRole(formData: FormData) {
 
     const { error } = await supabaseAdmin.from('profiles').update({ role }).eq('id', userId)
 
-    if (error) redirect(`/dashboard/admin?error=${encodeURIComponent(error.message)}`)
+    if (error) {
+        console.error('Update user role error:', JSON.stringify(error, null, 2))
+        redirect(`/dashboard/admin?error=${encodeURIComponent(error.message)}`)
+    }
 
     await supabase.from('audit_logs').insert({
         user_id: currentUser.id,
@@ -136,6 +143,7 @@ export async function updateUser(formData: FormData) {
         .eq('id', userId)
 
     if (profileError) {
+        console.error('Update user profile error:', JSON.stringify(profileError, null, 2))
         redirect(`/dashboard/admin?error=${encodeURIComponent(profileError.message)}`)
     }
 
@@ -173,6 +181,7 @@ export async function adminResetPassword(formData: FormData) {
     })
 
     if (passwordError) {
+        console.error('Admin reset password error:', JSON.stringify(passwordError, null, 2))
         redirect(`/dashboard/admin?error=${encodeURIComponent(passwordError.message)}`)
     }
 

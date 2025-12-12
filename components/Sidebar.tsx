@@ -58,14 +58,13 @@ export default function Sidebar({
       )}
 
       <aside
-        className={`fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700 print:hidden ${
-          isOpen
+        className={`fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700 print:hidden ${isOpen
             ? "translate-x-0"
             : "-translate-x-full sm:translate-x-0 invisible sm:visible"
-        }`}
+          }`}
         aria-label="Sidebar"
       >
-        <div className="h-full px-3 pb-4 overflow-y-auto bg-white dark:bg-gray-800 flex flex-col justify-between no-scrollbar">
+        <div className="h-full px-3 pb-4 overflow-y-auto bg-white dark:bg-gray-800 flex flex-col justify-between custom-scrollbar">
           <ul className="space-y-2 font-medium">
             <li>
               <div className="px-2 py-2 mb-2 flex items-center justify-between">
