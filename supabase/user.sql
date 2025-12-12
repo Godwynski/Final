@@ -55,3 +55,5 @@ BEGIN
   SET role = new_role, full_name = new_full_name;
   RAISE NOTICE 'Admin user created/updated: % (ID: %)', new_email, new_user_id;
 END $$;
+
+--Godwyn was here
