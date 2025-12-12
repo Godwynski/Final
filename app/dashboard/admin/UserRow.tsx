@@ -12,7 +12,9 @@ type User = {
 };
 
 export default function UserRow({ user }: { user: User }) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const [editedName, setEditedName] = useState(user.full_name || "");
   const [editedRole, setEditedRole] = useState(user.role);
 
@@ -36,59 +38,31 @@ export default function UserRow({ user }: { user: User }) {
         <td className="px-6 py-4">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => setIsEditModalOpen(true)}
               className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
             >
               Edit
             </button>
 
-            <form
-              action={adminResetPassword}
-              onSubmit={(e) => {
-                if (
-                  !confirm(
-                    'Are you sure you want to reset this user\'s password to "Blotter123!"?',
-                  )
-                ) {
-                  e.preventDefault();
-                }
-              }}
+            <button
+              onClick={() => setIsResetPasswordModalOpen(true)}
+              className="font-medium text-yellow-600 dark:text-yellow-500 hover:underline"
             >
-              <input type="hidden" name="userId" value={user.id} />
-              <button
-                type="submit"
-                className="font-medium text-yellow-600 dark:text-yellow-500 hover:underline"
-              >
-                Reset Pass
-              </button>
-            </form>
+              Reset Pass
+            </button>
 
-            <form
-              action={deleteUser}
-              onSubmit={(e) => {
-                if (
-                  !confirm(
-                    "Are you sure you want to delete this user? This action cannot be undone.",
-                  )
-                ) {
-                  e.preventDefault();
-                }
-              }}
+            <button
+              onClick={() => setIsDeleteModalOpen(true)}
+              className="font-medium text-red-600 dark:text-red-500 hover:underline"
             >
-              <input type="hidden" name="userId" value={user.id} />
-              <button
-                type="submit"
-                className="font-medium text-red-600 dark:text-red-500 hover:underline"
-              >
-                Delete
-              </button>
-            </form>
+              Delete
+            </button>
           </div>
         </td>
       </tr>
 
       {/* Edit Modal */}
-      {isModalOpen && (
+      {isEditModalOpen && (
         <tr>
           <td colSpan={5} className="p-0">
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -98,7 +72,7 @@ export default function UserRow({ user }: { user: User }) {
                     Edit User
                   </h3>
                   <button
-                    onClick={() => setIsModalOpen(false)}
+                    onClick={() => setIsEditModalOpen(false)}
                     className="text-gray-400 hover:text-gray-500 focus:outline-none"
                   >
                     <svg
@@ -120,7 +94,7 @@ export default function UserRow({ user }: { user: User }) {
                 <form
                   action={async (formData) => {
                     await updateUser(formData);
-                    setIsModalOpen(false);
+                    setIsEditModalOpen(false);
                   }}
                   className="p-6 space-y-4"
                 >
@@ -237,7 +211,7 @@ export default function UserRow({ user }: { user: User }) {
                   <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
                     <button
                       type="button"
-                      onClick={() => setIsModalOpen(false)}
+                      onClick={() => setIsEditModalOpen(false)}
                       className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-700"
                     >
                       Cancel
@@ -264,6 +238,101 @@ export default function UserRow({ user }: { user: User }) {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <tr>
+          <td colSpan={5} className="p-0">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <div className="px-6 py-4 border-b dark:border-gray-700 bg-red-50 dark:bg-red-900/20">
+                  <h3 className="text-lg font-bold text-red-900 dark:text-red-400 flex items-center gap-2">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Delete User
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <p className="text-gray-700 dark:text-gray-300 mb-4">
+                    Are you sure you want to delete <strong>{user.full_name || user.email}</strong>?
+                  </p>
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    This action cannot be undone.
+                  </p>
+                </div>
+                <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsDeleteModalOpen(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                  <form action={deleteUser}>
+                    <input type="hidden" name="userId" value={user.id} />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 dark:bg-red-500 dark:hover:bg-red-600"
+                    >
+                      Delete User
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+
+      {/* Reset Password Confirmation Modal */}
+      {isResetPasswordModalOpen && (
+        <tr>
+          <td colSpan={5} className="p-0">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <div className="px-6 py-4 border-b dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/20">
+                  <h3 className="text-lg font-bold text-yellow-900 dark:text-yellow-400 flex items-center gap-2">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    </svg>
+                    Reset Password
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <p className="text-gray-700 dark:text-gray-300 mb-4">
+                    Reset password for <strong>{user.full_name || user.email}</strong> to default:
+                  </p>
+                  <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg font-mono text-sm">
+                    Blotter123!
+                  </div>
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-3">
+                    User will be required to change password on next login.
+                  </p>
+                </div>
+                <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsResetPasswordModalOpen(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                  <form action={adminResetPassword}>
+                    <input type="hidden" name="userId" value={user.id} />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-700 focus:ring-4 focus:outline-none focus:ring-yellow-300 dark:bg-yellow-500 dark:hover:bg-yellow-600"
+                    >
+                      Reset Password
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
           </td>
