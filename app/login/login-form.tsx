@@ -123,16 +123,6 @@ export function LoginForm() {
         </SubmitButton>
       </div>
 
-      <div
-        className="p-4 mb-4 text-sm text-blue-800 rounded-lg bg-blue-50 dark:bg-gray-700 dark:text-blue-400"
-        role="alert"
-      >
-        <span className="font-medium">Demo Credentials:</span>
-        <ul className="mt-1.5 ml-4 list-disc list-inside">
-          <li>Email: admin@barangay.gov.ph</li>
-          <li>Password: admin123</li>
-        </ul>
-      </div>
     </form>
   );
 }

@@ -93,11 +93,90 @@ export default function CaseTimeline({
                 // For other details, create a more readable format
                 const entries = Object.entries(log.details)
                     .filter(([key, value]) => value !== null && value !== undefined && key !== 'case_id')
-                    .map(([key, value]) => {
-                        const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                        return `${label}: ${value}`;
-                    });
-                description = entries.length > 0 ? entries.join(', ') : 'Action performed';
+                    .map(([originalKey, value]) => {
+                        const key = originalKey.toLowerCase();
+                        const label = originalKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        
+                        let val = value;
+                        // Try to parse stringified JSON if it looks like JSON
+                        if (typeof value === 'string' && (value.trim().startsWith('{') || value.trim().startsWith('['))) {
+                            try {
+                                val = JSON.parse(value);
+                            } catch (e) {
+                                // Not JSON, keep original value
+                            }
+                        }
+
+                        // Skip Action Key if it's just repeating the action or internal code
+                        if (key === 'action_key') {
+                             return `${label}: ${String(val).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`;
+                        }
+
+                        // Handle 'resolution' object
+                        if (key === 'resolution' && typeof val === 'object' && val !== null) {
+                            const res = val as any;
+                            const parts = [];
+                            if (res.type) parts.push(`Type: ${res.type}`);
+                            if (res.terms) parts.push(`Terms: ${res.terms}`);
+                            if (res.officer) parts.push(`Officer: ${res.officer}`);
+                            // Handle date in resolution
+                            if (res.date) {
+                                try {
+                                    parts.push(`Date: ${new Date(res.date).toLocaleDateString()}`);
+                                } catch (e) {
+                                    parts.push(`Date: ${res.date}`);
+                                }
+                            }
+                            return `${label}:\n  ${parts.join('\n  ')}`;
+                        }
+                        
+                        // Handle 'input' object (common in re-scheduling etc)
+                        if (key === 'input' && typeof val === 'object' && val !== null) {
+                            const input = val as any;
+                            const parts = [];
+                            if (input.type) parts.push(`Type: ${input.type}`);
+                            if (input.date) {
+                                try {
+                                    parts.push(`Date: ${new Date(input.date).toLocaleString()}`);
+                                } catch (e) {
+                                    parts.push(`Date: ${input.date}`);
+                                }
+                            }
+                            // Add other input fields if they exist
+                            Object.keys(input).forEach(k => {
+                                if (k !== 'type' && k !== 'date') {
+                                    parts.push(`${k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}: ${input[k]}`);
+                                }
+                            });
+                            return `${label}: ${parts.join(', ')}`;
+                        }
+                        
+                        // Handle generic objects (recurse slightly or just JSON stringify safely)
+                        if (typeof val === 'object' && val !== null) {
+                            // Try to extract meaningful info from objects
+                            const objEntries = Object.entries(val)
+                                .filter(([, v]) => v !== null && v !== undefined)
+                                .map(([k, v]) => {
+                                    const niceKey = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                    return `${niceKey}: ${v}`;
+                                })
+                                .join(', ');
+                            return objEntries ? `${label}: ${objEntries}` : `${label}: ${JSON.stringify(val)}`;
+                        }
+                        
+                        return `${label}: ${val}`;
+                    })
+                    .filter(entry => entry !== null); // Remove null entries
+                
+                // If there are multiple entries, format them as a list
+                if (entries.length > 3) {
+                    description = entries.join('\n• ');
+                    description = '• ' + description;
+                } else if (entries.length > 0) {
+                    description = entries.join(' • ');
+                } else {
+                    description = 'Action performed';
+                }
             } else {
                 description = 'Action performed';
             }
@@ -119,7 +198,7 @@ export default function CaseTimeline({
 
     return (
         <div className="relative border-l border-gray-200 dark:border-gray-700 ml-3 space-y-8">
-            {events.map((event, index) => (
+            {events.map((event) => (
                 <div key={event.id} className="relative ml-6">
                     <span className={`absolute flex items-center justify-center w-8 h-8 rounded-full -left-10 ring-8 ring-white dark:ring-gray-900 
                         ${event.type === 'creation' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : ''}
@@ -140,7 +219,7 @@ export default function CaseTimeline({
                                 {event.date.toLocaleString()}
                             </span>
                         </div>
-                        <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap mb-2">{event.description}</p>
+                        <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words mb-2">{event.description}</p>
 
                         {event.metadata?.url && (
                             <a

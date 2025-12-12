@@ -39,7 +39,7 @@ export default async function AuditLogsTable({ page, sort = 'created_at', order 
                                     <div className="text-xs text-gray-500">{log.profiles?.email}</div>
                                 </td>
                                 <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{log.action}</td>
-                                <td className="px-6 py-4 text-xs">
+                                <td className="px-6 py-4 text-xs break-words whitespace-normal max-w-md">
                                     {log.details && (
                                         <div className="space-y-1">
                                             {log.details.narrative_action && (
@@ -58,14 +58,77 @@ export default async function AuditLogsTable({ page, sort = 'created_at', order 
                                             )}
                                             {!log.details.narrative_action && (!log.details.old_status || !log.details.new_status) && (
                                                 <div className="space-y-1">
-                                                    {Object.entries(log.details).map(([key, value]) => {
-                                                        const formattedKey = key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+                                                    {Object.entries(log.details).map(([originalKey, value]) => {
+                                                        const key = originalKey.toLowerCase();
+                                                        // Skip internal or redundant keys
+                                                        if (['action_key', 'file_path', 'path', 'storage_path', 'url', 'type', 'size', 'mime_type', 'public_url'].includes(key)) return null;
+
+                                                        const label = originalKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                                        
+                                                        let val = value;
+                                                        // Try to parse stringified JSON
+                                                        if (typeof value === 'string' && (value.trim().startsWith('{') || value.trim().startsWith('['))) {
+                                                            try { val = JSON.parse(value); } catch (e) { /* keep as string */ }
+                                                        }
+
+                                                        // Helper to format Input/Resolution objects
+                                                        const renderFormattedObject = (obj: any, type: 'input' | 'resolution') => {
+                                                            const parts = [];
+                                                            if (obj.type) parts.push(<div key="type"><span className="font-medium">Type:</span> {obj.type}</div>);
+                                                            
+                                                            if (type === 'resolution') {
+                                                                if (obj.terms) parts.push(<div key="terms"><span className="font-medium">Terms:</span> {obj.terms}</div>);
+                                                                if (obj.officer) parts.push(<div key="officer"><span className="font-medium">Officer:</span> {obj.officer}</div>);
+                                                            }
+
+                                                            if (obj.date) {
+                                                                try {
+                                                                    const d = new Date(obj.date);
+                                                                    parts.push(<div key="date"><span className="font-medium">Date:</span> {type === 'input' ? d.toLocaleString() : d.toLocaleDateString()}</div>);
+                                                                } catch (e) {
+                                                                    parts.push(<div key="date"><span className="font-medium">Date:</span> {obj.date}</div>);
+                                                                }
+                                                            }
+
+                                                            // For input, add any other keys
+                                                            if (type === 'input') {
+                                                                Object.keys(obj).forEach(k => {
+                                                                    if (k !== 'type' && k !== 'date') {
+                                                                        parts.push(
+                                                                            <div key={k}>
+                                                                                <span className="font-medium">{k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span> {String(obj[k])}
+                                                                            </div>
+                                                                        );
+                                                                    }
+                                                                });
+                                                            }
+
+                                                            return <div className="ml-2 pl-2 border-l-2 border-gray-200 dark:border-gray-700 space-y-0.5 mt-1">{parts}</div>;
+                                                        };
+
+                                                        // Render content based on key
+                                                        let content;
+                                                        if ((key === 'resolution' || key === 'input') && typeof val === 'object' && val !== null) {
+                                                            content = renderFormattedObject(val, key as 'input' | 'resolution');
+                                                        } else if (typeof val === 'object' && val !== null) {
+                                                            // Generic object formatter
+                                                            content = (
+                                                                <div className="ml-2 mt-1 text-xs text-gray-500">
+                                                                    {Object.entries(val).map(([k, v]) => (
+                                                                        <div key={k}>
+                                                                            <span className="font-medium">{k.replace(/_/g, ' ')}:</span> {String(v)}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            );
+                                                        } else {
+                                                            content = <span className="text-gray-600 dark:text-gray-300">{String(val)}</span>;
+                                                        }
+
                                                         return (
-                                                            <div key={key}>
-                                                                <span className="font-semibold text-gray-900 dark:text-white">{formattedKey}: </span>
-                                                                <span className="text-gray-600 dark:text-gray-300">
-                                                                    {typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)}
-                                                                </span>
+                                                            <div key={originalKey}>
+                                                                <span className="font-semibold text-gray-900 dark:text-white">{label}: </span>
+                                                                {content}
                                                             </div>
                                                         )
                                                     })}
