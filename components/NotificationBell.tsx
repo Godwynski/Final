@@ -154,7 +154,7 @@ export default function NotificationBell() {
               </button>
             )}
           </div>
-          <div className="max-h-80 sm:max-h-96 overflow-y-auto">
+          <div className="max-h-80 sm:max-h-96 overflow-y-auto custom-scrollbar">
             {notifications.length === 0 ? (
               <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
                 No notifications
