@@ -323,12 +323,13 @@ export const getActionItems = unstable_cache(
                 .lt('updated_at', staleDate.toISOString())
                 .limit(5),
 
-            // 2. Upcoming Hearings (Next 7 days)
+                // 2. Upcoming Hearings (Next 7 days)
             supabase
                 .from('hearings')
-                .select('*, cases(id, case_number, title)')
+                .select('*, cases!inner(id, case_number, title, status)')
                 .gte('hearing_date', now.toISOString())
                 .lte('hearing_date', next7Days.toISOString())
+                .in('cases.status', ['New', 'Under Investigation', 'Hearing Scheduled'])
                 .order('hearing_date', { ascending: true })
                 .limit(5)
         ])

@@ -1304,7 +1304,19 @@ export async function scheduleHearing(caseId: string, date: string, type: string
         return { error: 'Cannot modify a closed or settled case' }
     }
 
-    // 1. Insert Hearing
+    // 1. Validate Date
+    const hearingDate = new Date(date)
+    const now = new Date()
+    // Allow scheduling for "now" but not "past". 
+    // If strict equality, it's fine. 
+    // Let's add a small buffer of 5 minutes to account for network delay/clock skew, 
+    // ensuring we don't annoy users for "just now".
+    // Or just strictly, because "schedule hearings" usually means future.
+    if (hearingDate < now) {
+        return { error: 'Cannot schedule hearing in the past.' }
+    }
+
+    // 2. Insert Hearing
     const { error } = await supabase.from('hearings').insert({
         case_id: caseId,
         hearing_date: date,
@@ -1343,7 +1355,11 @@ export async function scheduleHearing(caseId: string, date: string, type: string
     })
 
     revalidatePath(`/dashboard/cases/${caseId}`)
-    return { success: true, message: 'Hearing scheduled successfully.' }
+    return { 
+        success: true, 
+        message: 'Hearing scheduled successfully.',
+        downloadUrl: `/api/documents/download?caseId=${caseId}&formType=hearing`
+    }
 }
 
 export async function updateHearingStatus(hearingId: string, caseId: string, status: string, outcomeNotes: string) {

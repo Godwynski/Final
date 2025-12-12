@@ -35,6 +35,8 @@ export default function ProceedingsTracker({
     message: string;
     type: "danger" | "warning" | "info";
     onConfirm: () => void;
+    confirmText?: string;
+    cancelText?: string;
   }>({
     isOpen: false,
     message: "",
@@ -79,12 +81,53 @@ export default function ProceedingsTracker({
     e.preventDefault();
     setLoading(true);
     const dateTimeString = `${newDate}T${newTime}`;
-    await scheduleHearing(caseId, dateTimeString, newType, newNotes);
-    setLoading(false);
-    setIsScheduling(false);
-    setNewDate("");
-    setNewTime("10:00");
-    setNewNotes("");
+    
+    try {
+        const res = await scheduleHearing(caseId, dateTimeString, newType, newNotes);
+
+        if (res.error) {
+            setAlertModal({
+                isOpen: true,
+                title: "Error",
+                message: res.error,
+                type: "error",
+            });
+        } else if (res.success) {
+            setNewDate("");
+            setNewTime("10:00");
+            setNewNotes("");
+            setIsScheduling(false);
+
+            if (res.downloadUrl) {
+                setConfirmModal({
+                    isOpen: true,
+                    message: "Hearing scheduled successfully. Do you want to download the Hearing Notice document?",
+                    type: "info",
+                    confirmText: "Download Notice",
+                    cancelText: "No, Thanks",
+                    onConfirm: () => {
+                        window.open(res.downloadUrl, '_blank');
+                    },
+                });
+            } else {
+                 setAlertModal({
+                    isOpen: true,
+                    title: "Success",
+                    message: res.message || "Hearing scheduled successfully.",
+                    type: "success",
+                });
+            }
+        }
+    } catch {
+         setAlertModal({
+            isOpen: true,
+            title: "Error",
+            message: "An unexpected error occurred.",
+            type: "error",
+        });
+    } finally {
+        setLoading(false);
+    }
   };
 
   const handleStatusUpdate = async (hearingId: string, status: string) => {
@@ -424,8 +467,8 @@ export default function ProceedingsTracker({
         onConfirm={confirmModal.onConfirm}
         message={confirmModal.message}
         type={confirmModal.type}
-        confirmText="Confirm"
-        cancelText="Cancel"
+        confirmText={confirmModal.confirmText || "Confirm"}
+        cancelText={confirmModal.cancelText || "Cancel"}
       />
 
       <AlertModal
