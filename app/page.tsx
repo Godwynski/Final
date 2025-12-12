@@ -73,7 +73,7 @@ export default function Home() {
               <div className="inline-flex items-center gap-2 px-4 py-2 mb-8 text-sm font-semibold bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 border border-blue-200 dark:border-blue-800 rounded-full shadow-sm">
                 <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Next-Generation Justice Management
+                  DILG-Compliant Barangay Management System
                 </span>
               </div>
 
@@ -354,56 +354,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* STATS SECTION */}
-        <section className="py-24 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIxIDEuNzktNCA0LTRzNCAxLjc5IDQgNC0xLjc5IDQtNCA0LTQtMS43OS00LTR6bTAgMjBjMC0yLjIxIDEuNzktNCA0LTRzNCAxLjc5IDQgNC0xLjc5IDQtNCA0LTQtMS43OS00LTR6TTIwIDM0YzAtMi4yMSAxLjc5LTQgNC00czQgMS43OSA0IDQtMS43OSA0LTQgNC00LTEuNzktNC00eiIvPjwvZz48L2c+PC9zdmc+')] opacity-20"></div>
 
-          <div className="relative z-10 max-w-7xl mx-auto px-6">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-black text-white mb-4">
-                Trusted by Communities Nationwide
-              </h2>
-              <p className="text-xl text-blue-100">
-                Join the digital transformation movement
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              <div className="text-center">
-                <div className="text-5xl md:text-6xl font-black text-white mb-2">
-                  50%
-                </div>
-                <div className="text-lg text-blue-100 font-semibold">
-                  Faster Resolution
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-5xl md:text-6xl font-black text-white mb-2">
-                  100%
-                </div>
-                <div className="text-lg text-blue-100 font-semibold">
-                  Paperless Option
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-5xl md:text-6xl font-black text-white mb-2">
-                  24/7
-                </div>
-                <div className="text-lg text-blue-100 font-semibold">
-                  System Uptime
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-5xl md:text-6xl font-black text-white mb-2">
-                  99.9%
-                </div>
-                <div className="text-lg text-blue-100 font-semibold">
-                  Data Security
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
 
         {/* CTA SECTION */}
         <section className="py-24 lg:py-32 bg-gray-50 dark:bg-gray-950 relative overflow-hidden">
@@ -452,7 +403,7 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2">
                 <FileCheck className="w-5 h-5 text-green-500" />
-                <span>DILG Certified</span>
+                <span>DILG Compliant</span>
               </div>
               <div className="flex items-center gap-2">
                 <Lock className="w-5 h-5 text-green-500" />
